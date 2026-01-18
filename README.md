@@ -1,7 +1,3 @@
-# BSDP——Bike sharing hourly demand prediction project based on LSTM
-基于 LSTM 的共享单车小时级需求预测项目，涵盖数据预处理、LSTM 模型训练、Django Web 预测系统部署的完整流程。技术栈：Python+TensorFlow+Django+Pandas/Numpy。包含可复现代码、环境配置指南、踩坑解决方案，适合机器学习新手入门时间序列预测，也可作为本科毕设参考项目。
-Bike sharing hourly demand prediction project based on LSTM, covering the full workflow of data preprocessing, LSTM model training, and Django web prediction system deployment. Tech stack: Python+TensorFlow+Django+Pandas/Numpy. Includes reproducible code, environment setup guide, and troubleshooting solutions. Suitable for ML beginners to get started with time series prediction, and can be used as a reference for undergrad thesis.
-
 # 基于LSTM的共享单车小时级需求预测
 
 ## 项目背景
@@ -27,3 +23,15 @@ python -m venv bsdp_env
 
 # 安装依赖（一键复现环境）
 pip install -r requirements.txt
+
+项目运行流程
+数据预处理：执行utils/data_preprocess.py（处理原始数据集，构造 24 小时时序窗口）；
+模型训练：执行models/train_lstm.py（双层 LSTM+Dropout，早停机制防止过拟合）；
+Web 部署：进入web/目录，执行python manage.py runserver（可视化预测界面）。
+
+实验结果
+验证集 MAE：93.83 辆，RMSE：134.62 辆；
+模型可有效捕捉早高峰（7-9 点）、晚高峰（17-19 点）的骑行量峰值。
+
+数据集来源
+UCI Machine Learning Repository - Bike Sharing Dataset：https://archive.ics.uci.edu/ml/datasets/Bike+Sharing+Dataset
