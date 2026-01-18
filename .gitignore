@@ -1,0 +1,14 @@
+# 虚拟环境（体积大，无需提交）
+bsdp_env/
+# 模型文件（若超过100MB，GitHub无法直接提交，建议注释说明获取方式）
+models/bike_lstm_model.h5
+# Python缓存文件
+__pycache__/
+*.pyc
+*.pyd
+# IDE配置文件（VSCode/PyCharm）
+.idea/
+.vscode/
+# 系统临时文件
+.DS_Store
+Thumbs.db
