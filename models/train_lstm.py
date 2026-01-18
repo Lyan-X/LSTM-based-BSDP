@@ -31,6 +31,21 @@ model = tf.keras.Sequential([
 # ===================== 3. LSTM模型结构详情 =====================
 print("===================== LSTM模型结构详情 =====================")
 model.summary()
+# 新增：生成神经网络结构图（高清PNG）
+try:
+    from tensorflow.keras.utils import plot_model
+    plot_model(
+        model,
+        to_file="./results/lstm_model_structure.png",  # 保存到results目录
+        show_shapes=True,    # 显示输入/输出维度
+        show_layer_names=True,  # 显示层名称
+        rankdir="TB",  # 从上到下布局
+        dpi=300  # 高清分辨率
+    )
+    print("✅ 神经网络结构图已保存到 results/lstm_model_structure.png")
+except Exception as e:
+    print(f"⚠️ 若要生成结构图，需安装依赖：pip install pydot==1.4.2 graphviz==0.20.1，错误详情：{e}")
+
 
 # ===================== 4. 编译模型 =====================
 model.compile(optimizer="adam", loss="mean_squared_error")
