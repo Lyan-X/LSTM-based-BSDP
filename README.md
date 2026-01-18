@@ -30,7 +30,7 @@ pip install -r requirements.txt
 Web 部署：进入web/目录，执行python manage.py runserver（可视化预测界面）。
 
 实验结果
-验证集 MAE：93.83 辆，RMSE：134.62 辆；
+验证集 平均绝对误差（MAE）：91.14 辆，均方根误差（RMSE）：129.24 辆；
 模型可有效捕捉早高峰（7-9 点）、晚高峰（17-19 点）的骑行量峰值。
 
 数据集来源

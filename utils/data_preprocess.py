@@ -45,6 +45,6 @@ np.save("../data/y_val.npy", y_val)
 joblib.dump(scaler_x, "../utils/scaler_x.pkl")
 joblib.dump(scaler_y, "../utils/scaler_y.pkl")
 
-print("✅ 数据预处理+序列构造完成！")
+print("数据预处理+序列构造完成！")
 print(f"训练集形状：{x_train.shape}（样本数, 时间步, 特征数）")
 print(f"验证集形状：{x_val.shape}")

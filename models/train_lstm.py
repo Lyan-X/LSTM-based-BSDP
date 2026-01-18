@@ -57,7 +57,7 @@ print("模型已保存到 models/bike_lstm_model.h5")
 scaler_y = joblib.load("../utils/scaler_y.pkl")
 y_pred_scaled = model.predict(x_val)
 y_pred = scaler_y.inverse_transform(y_pred_scaled)
-y_true = scaler_y.inverse_transform(y_val)
+y_true = scaler_y.inverse_transform(y_val.reshape(-1, 1))  # 补充维度适配反归一化
 
 # 计算预测误差
 mae = mean_absolute_error(y_true, y_pred)
