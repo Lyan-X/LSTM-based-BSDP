@@ -34,4 +34,4 @@ Web 部署：进入web/目录，执行python manage.py runserver（可视化预�
 模型可有效捕捉早高峰（7-9 点）、晚高峰（17-19 点）的骑行量峰值。
 
 数据集来源
-UCI Machine Learning Repository - Bike Sharing Dataset：https://archive.ics.uci.edu/ml/datasets/Bike+Sharing+Dataset
+UCI Bike Sharing Demand——Forecast use of a city bikeshare system：https://www.kaggle.com/c/bike-sharing-demand/data?select=train.csv
