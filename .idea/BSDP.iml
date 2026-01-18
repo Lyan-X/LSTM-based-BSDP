@@ -4,7 +4,7 @@
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/bsdp_env" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.9 (BSDP)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.9 virtualenv at E:\develop\BSDP-Bike Sharing Demand Prediction Based on LSTM Model\BSDP\bsdp_env" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>
