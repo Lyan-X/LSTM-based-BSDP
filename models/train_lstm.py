@@ -31,21 +31,21 @@ model = tf.keras.Sequential([
 # ===================== 3. LSTM模型结构详情 =====================
 print("===================== LSTM模型结构详情 =====================")
 model.summary()
-# 新增：生成神经网络结构图（高清PNG）
+
+# 新增：生成神经网络横向结构图（高清PNG）
 try:
     from tensorflow.keras.utils import plot_model
     plot_model(
         model,
-        to_file="./results/lstm_model_structure.png",  # 保存到results目录
-        show_shapes=True,    # 显示输入/输出维度
+        to_file="./results/lstm_model_structure_horizontal.png",  # 横向图单独命名
+        show_shapes=True,    # 显示输入/输出维度（关键，便于核对结构）
         show_layer_names=True,  # 显示层名称
-        rankdir="TB",  # 从上到下布局
+        rankdir="LR",  # 核心修改：LR=Left to Right（横向布局），替代原TB（纵向）
         dpi=300  # 高清分辨率
     )
-    print("✅ 神经网络结构图已保存到 results/lstm_model_structure.png")
+    print("神经网络横向结构图已保存到 results/lstm_model_structure_horizontal.png")
 except Exception as e:
-    print(f"⚠️ 若要生成结构图，需安装依赖：pip install pydot==1.4.2 graphviz==0.20.1，错误详情：{e}")
-
+    print(f"若要生成结构图，需安装依赖：pip install pydot==1.4.2 graphviz==0.20.1，错误详情：{e}")
 
 # ===================== 4. 编译模型 =====================
 model.compile(optimizer="adam", loss="mean_squared_error")
@@ -79,9 +79,9 @@ plt.xlabel('训练轮数（Epoch）')
 plt.ylabel('均方误差损失（MSE）')
 plt.legend()
 plt.grid(True, alpha=0.3)
-plt.savefig("./results/training_loss.png")
+plt.savefig("./results/lstm_training_loss.png")
 plt.show()
-print("训练损失曲线已保存到 results/training_loss.png")
+print("训练损失曲线已保存到 results/lstm_training_loss.png")
 
 # ===================== 8. 模型评估与可视化（修复utils路径！） =====================
 scaler_y = joblib.load("./utils/scaler_y.pkl")
@@ -103,7 +103,7 @@ plt.xlabel("时间（小时）")
 plt.ylabel("骑行量（辆）")
 plt.legend()
 plt.grid(True, alpha=0.3)
-plt.savefig("./results/prediction_result.png")
+plt.savefig("./results/lstm_prediction_result.png")
 plt.show()
 
-print("\n模型训练完成！预测对比图已保存到 results/prediction_result.png")
+print("\n模型训练完成！预测对比图已保存到 results/lstm_prediction_result.png")
