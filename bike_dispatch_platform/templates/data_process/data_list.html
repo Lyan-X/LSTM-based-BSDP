@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>数据列表</title>
+</head>
+<body>
+    <h1>已上传数据列表（共{{ total_count }}条）</h1>
+    <a href="{% url 'data_process:data_upload' %}">返回上传页面</a>
+    <br><br>
+
+    {% if data_list %}
+        <table border="1">
+            <tr>
+                <th>ID</th>
+                <th>数据来源</th>
+                <th>起点</th>
+                <th>终点</th>
+                <th>骑行时间</th>
+                <th>时长</th>
+                <th>距离</th>
+                <th>天气</th>
+                <th>温度</th>
+                <th>风速</th>
+            </tr>
+            {% for item in data_list %}
+            <tr>
+                <td>{{ item.id }}</td>
+                <td>{{ item.data_source }}</td>
+                <td>{{ item.start_point }}</td>
+                <td>{{ item.end_point }}</td>
+                <td>{{ item.ride_datetime }}</td>
+                <td>{{ item.duration }}</td>
+                <td>{{ item.distance }}</td>
+                <td>{{ item.weather }}</td>
+                <td>{{ item.temperature }}</td>
+                <td>{{ item.wind_speed }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>暂无数据，请先上传</p>
+    {% endif %}
+</body>
+</html>
