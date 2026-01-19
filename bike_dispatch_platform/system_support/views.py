@@ -1,11 +1,11 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required, permission_required
 from django.http import FileResponse
 import os
 import shutil
 from datetime import datetime
-from .models import OperationLog, DataBackup
-from bike_dispatch_platform.settings import BASE_DIR, DATABASES
+from .models import DataBackup
+from bike_dispatch_platform.bike_dispatch_platform.settings import BASE_DIR, DATABASES
 
 
 @login_required

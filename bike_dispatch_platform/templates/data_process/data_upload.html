@@ -1,28 +1,29 @@
-{% extends 'base.html' %}
-{% block title %}数据上传 - 数据处理模块{% endblock %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>数据上传</title>
+</head>
+<body>
+    <h1>骑行数据上传</h1>
+    <!-- 显示Django提示信息（错误/成功） -->
+    {% if messages %}
+        {% for msg in messages %}
+            <p style="color: {% if msg.tags == 'error' %}red{% else %}green{% endif %}">{{ msg }}</p>
+        {% endfor %}
+    {% endif %}
 
-{% block content %}
-<div class="card">
-    <div class="card-header">
-        <h4>共享单车数据上传（公开数据集/本地录入）</h4>
-    </div>
-    <div class="card-body">
-        <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            <div class="mb-3">
-                <label for="data_source" class="form-label">数据来源</label>
-                <select class="form-select" id="data_source" name="data_source" required>
-                    <option value="public">公开数据集</option>
-                    <option value="local">本地录入数据</option>
-                </select>
-            </div>
-            <div class="mb-3">
-                <label for="data_file" class="form-label">上传文件（Excel/CSV）</label>
-                <input type="file" class="form-control" id="data_file" name="data_file" accept=".xlsx,.csv" required>
-                <div class="form-text">支持包含起止点、时间、天气的结构化数据</div>
-            </div>
-            <button type="submit" class="btn btn-primary">上传并清洗数据</button>
-        </form>
-    </div>
-</div>
-{% endblock %}
+    <!-- 文件上传表单（必须加enctype="multipart/form-data"） -->
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div>
+            <label>数据来源：</label>
+            <input type="text" name="data_source" placeholder="例如：公开数据集" required>
+        </div>
+        <div>
+            <label>选择文件：</label>
+            <input type="file" name="data_file" accept=".xlsx,.csv" required>
+        </div>
+        <button type="submit">上传并清洗</button>
+    </form>
+</body>
+</html>

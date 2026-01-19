@@ -1,28 +1,26 @@
 from django.db import models
-from system_support.models import User
+# 核心修正：现在能导入全局的REGION_CHOICES（因为已移到类外）
+from demand_prediction.models import PredictionResult, REGION_CHOICES
 
 class Vehicle(models.Model):
-    """车辆状态模型（任务书"车辆状态实时监控"）"""
-    vehicle_id = models.CharField(max_length=50, unique=True, verbose_name="车辆编号")
-    STATUS_CHOICES = [('available', '可用'), ('maintenance', '维修中'), ('in_use', '使用中')]
-    status = models.CharField(max_length=20, default='available', choices=STATUS_CHOICES, verbose_name="状态")
-    current_region = models.CharField(max_length=20, choices=PredictionResult.REGION_CHOICES, verbose_name="当前区域")
+    """运维车辆/单车模型（任务书"运维管理模块"核心）"""
+    bike_id = models.CharField(max_length=30, unique=True, verbose_name="单车编号")
+    status = models.CharField(
+        max_length=20, 
+        choices=[('normal', '正常'), ('fault', '故障'), ('maintain', '维护中')], 
+        verbose_name="车辆状态"
+    )
+    # 引用全局导入的REGION_CHOICES（现在无报错）
+    current_region = models.CharField(
+        max_length=20, 
+        choices=REGION_CHOICES, 
+        verbose_name="当前区域"
+    )
     update_time = models.DateTimeField(auto_now=True, verbose_name="更新时间")
 
-class ScheduleTask(models.Model):
-    """调度任务模型（任务书"调度任务生成与分配"）"""
-    task_id = models.CharField(max_length=50, unique=True, verbose_name="任务编号")
-    target_region = models.CharField(max_length=20, choices=PredictionResult.REGION_CHOICES, verbose_name="目标区域")
-    demand_count = models.IntegerField(verbose_name="需求车辆数")
-    assign_to = models.ForeignKey(User, on_delete=models.CASCADE, related_name="assigned_tasks", verbose_name="分配给")
-    STATUS_CHOICES = [('pending', '待执行'), ('executing', '执行中'), ('completed', '已完成')]
-    status = models.CharField(max_length=20, default='pending', choices=STATUS_CHOICES, verbose_name="任务状态")
-    create_time = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
-    complete_time = models.DateTimeField(null=True, blank=True, verbose_name="完成时间")
-
-class ScheduleEvaluation(models.Model):
-    """调度效果评估（任务书要求）"""
-    task = models.OneToOneField(ScheduleTask, on_delete=models.CASCADE, verbose_name="关联任务")
-    actual_demand = models.IntegerField(verbose_name="实际需求数")
-    satisfaction_rate = models.FloatField(verbose_name="需求满足率（%）")
-    evaluation_time = models.DateTimeField(auto_now_add=True, verbose_name="评估时间")
+    class Meta:
+        verbose_name = "运维车辆"
+        verbose_name_plural = "运维车辆"
+        
+    def __str__(self):
+        return f"单车{self.bike_id} - {self.get_status_display()} - {self.get_current_region_display()}"

@@ -1,12 +1,11 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 import tensorflow as tf
 import numpy as np
 import joblib
 import os
-from datetime import date
 from .models import PredictionResult
-from bike_dispatch_platform.settings import BASE_DIR
+from bike_dispatch_platform.bike_dispatch_platform.settings import BASE_DIR
 
 # 加载训练好的模型和归一化器（任务书"基于LSTM、BP神经网络"）
 LSTM_MODEL_PATH = os.path.join(BASE_DIR, '../models/bike_lstm_model.h5')
