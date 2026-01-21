@@ -1,0 +1,3 @@
+start_point,end_point,ride_datetime,duration,distance,weather,temperature,wind_speed
+区域A-地铁站,区域A-商场,2026-01-20 07:30:00,12.5,2.8,sunny,20.5,1.2
+区域B-公交站,区域B-公园,2026-01-20 08:15:00,18.0,4.1,cloudy,19.0,2.0
