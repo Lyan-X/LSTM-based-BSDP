@@ -16,9 +16,10 @@
             <div class="collapse navbar-collapse">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link" href="{% url 'data_process:data_upload' %}">数据处理</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'demand_prediction:demand_predict' %}">需求预测</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'operation_management:dashboard' %}">运维管理</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'system_support:backup_list' %}">系统支撑</a></li>
+                   {# 用Django模板注释，彻底屏蔽未实现的模块，避免解析报错 #}
+                    {# <li class="nav-item"><a class="nav-link" href="{% url 'demand_prediction:demand_predict' %}">需求预测</a></li> #}
+                    {# <li class="nav-item"><a class="nav-link" href="{% url 'operation_management:dashboard' %}">运维管理</a></li> #}
+                    {# <li class="nav-item"><a class="nav-link" href="{% url 'system_support:backup_list' %}">系统支撑</a></li> #}
                 </ul>
                 <span class="navbar-text me-3">欢迎，{{ user.username }}</span>
                 <a href="{% url 'logout' %}" class="btn btn-light">退出登录</a>

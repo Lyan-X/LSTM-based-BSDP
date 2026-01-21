@@ -9,4 +9,6 @@ urlpatterns = [
     path('upload/', views.data_upload, name='data_upload'),
     # 数据列表页面
     path('list/', views.data_list, name='data_list'),
+    # 新增天气数据上传路由（关键！）
+    path("weather/upload/", views.weather_data_upload, name="weather_upload"),
 ]
