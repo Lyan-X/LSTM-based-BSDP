@@ -1,9 +1,13 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from .forms import WeatherDataUploadForm  # 导入天气数据上传表单
+
+# ========== 关键修改1：补充WeatherData导入 ==========
+from .models import BikeRideData, WeatherData
+
 import pandas as pd
 import numpy as np
-from .models import BikeRideData
 from .utils import data_cleaning  # 自定义数据清洗工具（去重、缺失值填充）
 
 
@@ -19,14 +23,14 @@ def data_upload(request):
         if 'data_file' not in request.FILES:
             messages.error(request, "请选择要上传的Excel/CSV文件")
             return redirect('data_process:data_upload')
-        
+
         file = request.FILES['data_file']
-        
+
         # 2. 检查文件是否为空
         if file.size == 0:
             messages.error(request, "上传的文件为空，请选择有效文件")
             return redirect('data_process:data_upload')
-        
+
         # 3. 检查文件格式
         allowed_formats = ('.xlsx', '.csv')
         if not file.name.lower().endswith(allowed_formats):
@@ -59,18 +63,18 @@ def data_upload(request):
 
         # 6. 批量写入数据库（增加字段容错和类型转换）
         data_list = []
-        # 定义必填字段和默认值，避免KeyError
+        # ========== 关键修改2：删除weather字符串默认值（外键不能赋值字符串） ==========
         default_values = {
             'start_point': '',
             'end_point': '',
             'ride_datetime': None,
             'duration': 0.0,
             'distance': 0.0,
-            'weather': 'sunny',
+            # 'weather': 'sunny',  # 注释：weather是外键，不再赋值字符串
             'temperature': 25.0,
             'wind_speed': 0.0
         }
-        
+
         for _, row in cleaned_df.iterrows():
             # 逐个字段取值，确保类型正确
             data_item = BikeRideData(
@@ -81,22 +85,22 @@ def data_upload(request):
                 # 骑行终点：转字符串，空值设默认
                 end_point=str(row.get('end_point', default_values['end_point'])).strip(),
                 # 骑行时间：确保是datetime类型
-                ride_datetime=pd.to_datetime(row.get('ride_datetime'), errors='coerce') 
-                             or default_values['ride_datetime'],
+                ride_datetime=pd.to_datetime(row.get('ride_datetime'), errors='coerce')
+                              or default_values['ride_datetime'],
                 # 骑行时长：转数值型，失败设默认
-                duration=float(row.get('duration', default_values['duration'])) 
-                         if pd.notna(row.get('duration')) else default_values['duration'],
+                duration=float(row.get('duration', default_values['duration']))
+                if pd.notna(row.get('duration')) else default_values['duration'],
                 # 骑行距离：转数值型，失败设默认
-                distance=float(row.get('distance', default_values['distance'])) 
-                         if pd.notna(row.get('distance')) else default_values['distance'],
-                # 天气：转字符串，空值设默认
-                weather=str(row.get('weather', default_values['weather'])).strip(),
+                distance=float(row.get('distance', default_values['distance']))
+                if pd.notna(row.get('distance')) else default_values['distance'],
+                # ========== 关键修改3：删除weather字符串赋值（外键字段留空，后续自动关联） ==========
+                # weather=str(row.get('weather', default_values['weather'])).strip(),
                 # 温度：转数值型，失败设默认
-                temperature=float(row.get('temperature', default_values['temperature'])) 
-                             if pd.notna(row.get('temperature')) else default_values['temperature'],
+                temperature=float(row.get('temperature', default_values['temperature']))
+                if pd.notna(row.get('temperature')) else default_values['temperature'],
                 # 风速：转数值型，失败设默认
-                wind_speed=float(row.get('wind_speed', default_values['wind_speed'])) 
-                           if pd.notna(row.get('wind_speed')) else default_values['wind_speed'],
+                wind_speed=float(row.get('wind_speed', default_values['wind_speed']))
+                if pd.notna(row.get('wind_speed')) else default_values['wind_speed'],
                 # 数据状态：固定为清洗后
                 status='cleaned',
                 # 上传用户：关联当前登录用户
@@ -112,7 +116,7 @@ def data_upload(request):
             messages.success(request, f"成功导入{len(data_list)}条清洗后的骑行数据")
         else:
             messages.warning(request, "清洗后无有效数据，请检查文件内容")
-        
+
         return redirect('data_process:data_list')
 
     # GET请求：返回上传页面
@@ -133,3 +137,27 @@ def data_list(request):
         'total_count': data_list.count()  # 数据总数，便于页面展示
     }
     return render(request, 'data_process/data_list.html', context)
+
+
+@login_required
+def weather_data_upload(request):
+    """天气数据上传视图（毕设“数据上传模块”核心接口）"""
+    if request.method == "POST":
+        form = WeatherDataUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            try:
+                import_count = form.process_file()
+                messages.success(request, f"✅ 成功导入{import_count}条天气数据！")
+                return redirect("data_process:weather_upload")  # 上传后刷新页面
+            except Exception as e:
+                messages.error(request, f"❌ 数据导入失败：{str(e)}")
+    else:
+        form = WeatherDataUploadForm()
+
+    # 传入已有的天气数据，方便查看（可选，提升体验）
+    weather_list = WeatherData.objects.all().order_by("-date")[:10]
+    return render(
+        request,
+        "data_process/weather_upload.html",
+        {"form": form, "weather_list": weather_list}
+    )
