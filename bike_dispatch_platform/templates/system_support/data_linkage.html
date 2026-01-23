@@ -1,0 +1,245 @@
+{% extends 'base.html' %}
+
+{% block title %}多源数据联动查询 - 共享单车运维平台{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="bi bi-database"></i> 多源数据联动查询
+            </h1>
+            
+            <!-- 查询选项卡 -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">查询类型</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="nav nav-tabs" id="queryTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="ride-weather-tab" data-bs-toggle="tab" data-bs-target="#ride-weather" type="button" role="tab">
+                                <i class="bi bi-bicycle"></i> 骑行与天气数据
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="prediction-task-tab" data-bs-toggle="tab" data-bs-target="#prediction-task" type="button" role="tab">
+                                <i class="bi bi-graph-up"></i> 预测与调度任务
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="vehicle-track-tab" data-bs-toggle="tab" data-bs-target="#vehicle-track" type="button" role="tab">
+                                <i class="bi bi-geo-alt"></i> 车辆与运维轨迹
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content mt-4" id="queryTabsContent">
+                        <!-- 骑行与天气数据联动 -->
+                        <div class="tab-pane fade show active" id="ride-weather" role="tabpanel">
+                            <form method="post" class="row g-3">
+                                {% csrf_token %}
+                                <input type="hidden" name="query_type" value="ride_weather">
+                                <div class="col-md-4">
+                                    <label class="form-label">开始日期</label>
+                                    <input type="date" class="form-control" name="start_date" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">结束日期</label>
+                                    <input type="date" class="form-control" name="end_date" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">区域</label>
+                                    <input type="text" class="form-control" name="region" placeholder="例如：区域1">
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-search"></i> 查询
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <!-- 预测与调度任务联动 -->
+                        <div class="tab-pane fade" id="prediction-task" role="tabpanel">
+                            <form method="post" class="row g-3">
+                                {% csrf_token %}
+                                <input type="hidden" name="query_type" value="prediction_task">
+                                <div class="col-md-6">
+                                    <label class="form-label">预测日期</label>
+                                    <input type="date" class="form-control" name="predict_date" required>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-search"></i> 查询
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <!-- 车辆与运维轨迹联动 -->
+                        <div class="tab-pane fade" id="vehicle-track" role="tabpanel">
+                            <form method="post" class="row g-3">
+                                {% csrf_token %}
+                                <input type="hidden" name="query_type" value="vehicle_track">
+                                <div class="col-md-4">
+                                    <label class="form-label">车辆ID</label>
+                                    <input type="text" class="form-control" name="vehicle_id" placeholder="例如：Bike001">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">车辆状态</label>
+                                    <select class="form-select" name="status">
+                                        <option value="">所有状态</option>
+                                        <option value="normal">正常</option>
+                                        <option value="fault">故障</option>
+                                        <option value="maintenance">维护中</option>
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-search"></i> 查询
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 查询结果 -->
+            {% if ride_weather_data %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">骑行与天气数据查询结果</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>骑行ID</th>
+                                    <th>起点</th>
+                                    <th>终点</th>
+                                    <th>骑行时间</th>
+                                    <th>时长(分钟)</th>
+                                    <th>距离(公里)</th>
+                                    <th>温度(℃)</th>
+                                    <th>天气类型</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in ride_weather_data %}
+                                <tr>
+                                    <td>{{ item.ride_id }}</td>
+                                    <td>{{ item.start_point }}</td>
+                                    <td>{{ item.end_point }}</td>
+                                    <td>{{ item.ride_datetime }}</td>
+                                    <td>{{ item.duration }}</td>
+                                    <td>{{ item.distance }}</td>
+                                    <td>{{ item.weather.temperature|default:"-" }}</td>
+                                    <td>{{ item.weather.get_weather_type_display|default:"-" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if prediction_task_data %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">预测与调度任务查询结果</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>预测ID</th>
+                                    <th>区域</th>
+                                    <th>时段</th>
+                                    <th>需求数量</th>
+                                    <th>使用模型</th>
+                                    <th>关联任务</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in prediction_task_data %}
+                                <tr>
+                                    <td>{{ item.prediction_id }}</td>
+                                    <td>{{ item.region }}</td>
+                                    <td>{{ item.time_period }}</td>
+                                    <td>{{ item.demand_count }}</td>
+                                    <td>{{ item.model_used }}</td>
+                                    <td>
+                                        {% if item.tasks %}
+                                        <ul class="list-unstyled">
+                                            {% for task in item.tasks %}
+                                            <li>{{ task.task_id }} ({{ task.get_status_display }})</li>
+                                            {% endfor %}
+                                        </ul>
+                                        {% else %}
+                                        无
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if vehicle_track_data %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">车辆与运维轨迹查询结果</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>车辆ID</th>
+                                    <th>状态</th>
+                                    <th>区域</th>
+                                    <th>更新时间</th>
+                                    <th>关联轨迹</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in vehicle_track_data %}
+                                <tr>
+                                    <td>{{ item.vehicle_id }}</td>
+                                    <td>{{ item.status }}</td>
+                                    <td>{{ item.region }}</td>
+                                    <td>{{ item.update_time }}</td>
+                                    <td>
+                                        {% if item.tracks %}
+                                        <ul class="list-unstyled">
+                                            {% for track in item.tracks|slice:':3' %}
+                                            <li>{{ track.track_time }} ({{ track.description|default:'无描述' }})</li>
+                                            {% endfor %}
+                                            {% if item.tracks|length > 3 %}
+                                            <li>...</li>
+                                            {% endif %}
+                                        </ul>
+                                        {% else %}
+                                        无
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

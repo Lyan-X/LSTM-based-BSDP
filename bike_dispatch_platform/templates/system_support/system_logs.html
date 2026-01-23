@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}系统日志 - 共享单车调度需求预测与运维管理平台{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-journal-text"></i> 系统日志</h5>
+    </div>
+    <div class="card-body">
+        <!-- 筛选 -->
+        <form method="get" class="mb-3">
+            <div class="row">
+                <div class="col-md-4">
+                    <select name="action" class="form-select" onchange="this.form.submit()">
+                        <option value="">全部操作</option>
+                        <option value="login" {% if action_filter == 'login' %}selected{% endif %}>登录</option>
+                        <option value="logout" {% if action_filter == 'logout' %}selected{% endif %}>登出</option>
+                        <option value="upload" {% if action_filter == 'upload' %}selected{% endif %}>数据上传</option>
+                        <option value="predict" {% if action_filter == 'predict' %}selected{% endif %}>需求预测</option>
+                        <option value="schedule" {% if action_filter == 'schedule' %}selected{% endif %}>调度任务</option>
+                        <option value="backup" {% if action_filter == 'backup' %}selected{% endif %}>数据备份</option>
+                        <option value="export" {% if action_filter == 'export' %}selected{% endif %}>报表导出</option>
+                        <option value="error" {% if action_filter == 'error' %}selected{% endif %}>错误操作</option>
+                    </select>
+                </div>
+            </div>
+        </form>
+        
+        <!-- 日志列表 -->
+        {% if logs %}
+        <div class="table-responsive">
+            <table class="table table-hover table-sm">
+                <thead>
+                    <tr>
+                        <th>时间</th>
+                        <th>用户</th>
+                        <th>操作类型</th>
+                        <th>操作描述</th>
+                        <th>IP地址</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>{{ log.create_time|date:"Y-m-d H:i:s" }}</td>
+                        <td>{{ log.user.username|default:"匿名" }}</td>
+                        <td>
+                            <span class="badge bg-{% if log.action == 'error' %}danger{% elif log.action == 'login' %}success{% else %}primary{% endif %}">
+                                {{ log.get_action_display }}
+                            </span>
+                        </td>
+                        <td>{{ log.description }}</td>
+                        <td>{{ log.ip_address|default:"-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted text-center">暂无日志记录</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

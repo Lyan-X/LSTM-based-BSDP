@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}调度任务列表 - 共享单车调度需求预测与运维管理平台{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-list-task"></i> 调度任务列表</h5>
+            {% if user.is_admin %}
+            <a href="{% url 'operation_management:task_create' %}" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-circle"></i> 创建任务
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- 筛选 -->
+        <form method="get" class="mb-3">
+            <div class="row">
+                <div class="col-md-4">
+                    <select name="status" class="form-select" onchange="this.form.submit()">
+                        <option value="">全部状态</option>
+                        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>待分配</option>
+                        <option value="assigned" {% if status_filter == 'assigned' %}selected{% endif %}>已分配</option>
+                        <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>进行中</option>
+                        <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>已完成</option>
+                    </select>
+                </div>
+            </div>
+        </form>
+        
+        <!-- 任务列表 -->
+        {% if tasks %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>任务编号</th>
+                        <th>目标区域</th>
+                        <th>需求数量</th>
+                        <th>状态</th>
+                        <th>分配给</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in tasks %}
+                    <tr>
+                        <td><strong>{{ task.task_id }}</strong></td>
+                        <td>{{ task.get_target_region_display }}</td>
+                        <td>{{ task.demand_count }}辆</td>
+                        <td>
+                            <span class="badge bg-{% if task.status == 'completed' %}success{% elif task.status == 'pending' %}warning{% elif task.status == 'in_progress' %}primary{% else %}secondary{% endif %}">
+                                {{ task.get_status_display }}
+                            </span>
+                        </td>
+                        <td>{{ task.assign_to.username|default:"未分配" }}</td>
+                        <td>{{ task.create_time|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            <a href="{% url 'operation_management:task_detail' task.task_id %}" class="btn btn-sm btn-outline-primary">详情</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 分页 -->
+        {% if tasks.has_other_pages %}
+        <nav>
+            <ul class="pagination justify-content-center">
+                {% if tasks.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ tasks.previous_page_number }}">上一页</a></li>
+                {% endif %}
+                <li class="page-item active"><span class="page-link">第 {{ tasks.number }} 页 / 共 {{ tasks.paginator.num_pages }} 页</span></li>
+                {% if tasks.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ tasks.next_page_number }}">下一页</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        {% else %}
+        <p class="text-muted text-center">暂无任务</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

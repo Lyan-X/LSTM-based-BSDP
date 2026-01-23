@@ -14,17 +14,17 @@ class BikeRideData(models.Model):
     duration = models.FloatField(default=0.0, verbose_name="骑行时长")
     # 骑行距离（公里）
     distance = models.FloatField(default=0.0, verbose_name="骑行距离")
+    # 温度和风速字段
+    temperature = models.FloatField(default=25.0, verbose_name="温度")
+    wind_speed = models.FloatField(default=0.0, verbose_name="风速")
     # 【可选优化】用外键关联WeatherData，替代冗余的天气字段
-    weather = models.ForeignKey(
-        "WeatherData",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        verbose_name="关联天气数据"
-    )
-    # 原冗余字段可删除（温度/风速等已在WeatherData中维护），如需保留需保证数据一致性
-    # temperature = models.FloatField(default=25.0, verbose_name="温度")
-    # wind_speed = models.FloatField(default=0.0, verbose_name="风速")
+    # weather = models.ForeignKey(
+    #     "WeatherData",
+    #     on_delete=models.SET_NULL,
+    #     null=True,
+    #     blank=True,
+    #     verbose_name="关联天气数据"
+    # )
     # 数据状态（原始/清洗后）
     status = models.CharField(max_length=20, default="cleaned", verbose_name="数据状态")
     # 上传用户（关联系统用户）

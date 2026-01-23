@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}数据备份 - 共享单车调度需求预测与运维管理平台{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-database"></i> 数据备份管理</h5>
+            <a href="{% url 'system_support:backup_create' %}" class="btn btn-primary btn-sm" onclick="return confirm('确定要创建备份吗？')">
+                <i class="bi bi-plus-circle"></i> 创建备份
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if backups %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>备份文件</th>
+                        <th>备份大小</th>
+                        <th>是否加密</th>
+                        <th>备份用户</th>
+                        <th>备份时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for backup in backups %}
+                    <tr>
+                        <td>{{ backup.backup_file }}</td>
+                        <td>{{ backup.backup_size }} MB</td>
+                        <td>
+                            {% if backup.is_encrypted %}
+                            <span class="badge bg-success">已加密</span>
+                            {% else %}
+                            <span class="badge bg-warning">未加密</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ backup.backup_user.username|default:"系统" }}</td>
+                        <td>{{ backup.create_time|date:"Y-m-d H:i:s" }}</td>
+                        <td>
+                            <a href="{% url 'system_support:backup_download' backup.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-download"></i> 下载
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted text-center">暂无备份记录</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

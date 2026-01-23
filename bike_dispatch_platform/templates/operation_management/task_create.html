@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}创建调度任务 - 共享单车调度需求预测与运维管理平台{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-plus-circle"></i> 创建调度任务</h5>
+    </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="mb-3">
+                <label class="form-label">关联预测结果（可选）</label>
+                <select name="prediction_id" class="form-select" onchange="fillFromPrediction(this.value)">
+                    <option value="">手动输入</option>
+                    {% for pred in predictions %}
+                    <option value="{{ pred.id }}" data-region="{{ pred.region }}" data-count="{{ pred.demand_count }}">
+                        {{ pred.predict_date }} {{ pred.get_region_display }} {{ pred.get_time_period_display }} - {{ pred.demand_count }}辆
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">目标区域 <span class="text-danger">*</span></label>
+                    <select name="target_region" id="target_region" class="form-select" required>
+                        <option value="">请选择</option>
+                        {% for value, label in regions %}
+                        <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label">源区域（可选）</label>
+                    <select name="source_region" class="form-select">
+                        <option value="">无</option>
+                        {% for value, label in regions %}
+                        <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">需求车辆数 <span class="text-danger">*</span></label>
+                <input type="number" name="demand_count" id="demand_count" class="form-control" min="1" required>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">分配给（可选）</label>
+                <select name="assign_to" class="form-select">
+                    <option value="">待分配</option>
+                    {% for operator in operators %}
+                    <option value="{{ operator.id }}">{{ operator.username }} ({{ operator.get_full_name|default:operator.email }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> 创建任务
+                </button>
+                <a href="{% url 'operation_management:task_list' %}" class="btn btn-secondary">取消</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function fillFromPrediction(predictionId) {
+    if (!predictionId) return;
+    
+    const option = document.querySelector(`option[value="${predictionId}"]`);
+    if (option) {
+        document.getElementById('target_region').value = option.dataset.region;
+        document.getElementById('demand_count').value = option.dataset.count;
+    }
+}
+</script>
+{% endblock %}

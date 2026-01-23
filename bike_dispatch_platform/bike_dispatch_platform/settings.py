@@ -34,8 +34,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # ========== 注释这一行（核心！）==========
-    # 'system_support.middleware.OperationLogMiddleware',  # 无效的中间件配置
+    'system_support.middleware.OperationLogMiddleware',  # 操作日志中间件（任务书要求）
 ]
 # 根路由配置
 ROOT_URLCONF = 'bike_dispatch_platform.urls'

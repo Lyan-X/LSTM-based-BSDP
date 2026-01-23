@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}区域特征数据管理 - 共享单车运维平台{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="bi bi-map"></i> 区域特征数据管理
+            </h1>
+            
+            <!-- 添加区域特征按钮 -->
+            <div class="mb-4">
+                <a href="{% url 'system_support:region_feature_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus"></i> 添加区域特征
+                </a>
+            </div>
+            
+            <!-- 区域特征列表 -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">区域特征列表</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>区域名称</th>
+                                    <th>人口密度</th>
+                                    <th>商圈类型</th>
+                                    <th>地铁站数量</th>
+                                    <th>公交站数量</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for feature in region_features %}
+                                <tr>
+                                    <td>{{ feature.region }}</td>
+                                    <td>{{ feature.population_density }} 人/km²</td>
+                                    <td>{{ feature.get_business_type_display|default:"未分类" }}</td>
+                                    <td>{{ feature.subway_stations }}</td>
+                                    <td>{{ feature.bus_stations }}</td>
+                                    <td>{{ feature.create_time }}</td>
+                                    <td>
+                                        <a href="{% url 'system_support:region_feature_edit' feature.id %}" class="btn btn-sm btn-info">
+                                            <i class="bi bi-pencil"></i> 编辑
+                                        </a>
+                                        <a href="{% url 'system_support:region_feature_delete' feature.id %}" class="btn btn-sm btn-danger" onclick="return confirm('确定删除？')">
+                                            <i class="bi bi-trash"></i> 删除
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

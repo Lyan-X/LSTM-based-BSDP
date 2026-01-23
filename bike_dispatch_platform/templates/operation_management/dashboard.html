@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}运维管理 - 共享单车调度需求预测与运维管理平台{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="mb-4"><i class="bi bi-gear"></i> 运维管理</h2>
+    </div>
+</div>
+
+<!-- 统计卡片 -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-primary h-100">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2">车辆总数</h6>
+                <h3 class="card-title mb-0">{{ stats.total_vehicles|default:0 }}</h3>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-success h-100">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2">正常车辆</h6>
+                <h3 class="card-title mb-0">{{ stats.normal_vehicles|default:0 }}</h3>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-warning h-100">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2">待分配任务</h6>
+                <h3 class="card-title mb-0">{{ stats.pending_tasks|default:0 }}</h3>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-info h-100">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2">进行中任务</h6>
+                <h3 class="card-title mb-0">{{ stats.in_progress_tasks|default:0 }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 快速功能 -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body text-center">
+                <i class="bi bi-bicycle" style="font-size: 2.5rem; color: #667eea;"></i>
+                <h5 class="card-title mt-3">车辆监控</h5>
+                <p class="card-text text-muted">实时查看车辆状态和位置</p>
+                <a href="{% url 'operation_management:vehicle_monitor' %}" class="btn btn-primary">进入</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body text-center">
+                <i class="bi bi-map" style="font-size: 2.5rem; color: #28a745;"></i>
+                <h5 class="card-title mt-3">供需热力图</h5>
+                <p class="card-text text-muted">动态展示区域骑行需求</p>
+                <a href="{% url 'operation_management:heatmap' %}" class="btn btn-success">进入</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body text-center">
+                <i class="bi bi-list-task" style="font-size: 2.5rem; color: #ffc107;"></i>
+                <h5 class="card-title mt-3">调度任务</h5>
+                <p class="card-text text-muted">查看和管理调度任务</p>
+                <a href="{% url 'operation_management:task_list' %}" class="btn btn-warning">进入</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 最近任务 -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-list-task"></i> 最近任务</h5>
+            </div>
+            <div class="card-body">
+                {% if tasks %}
+                <div class="list-group list-group-flush">
+                    {% for task in tasks %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ task.task_id }}</strong><br>
+                                <small class="text-muted">{{ task.get_target_region_display }} | {{ task.create_time|date:"m-d H:i" }}</small>
+                            </div>
+                            <span class="badge bg-{% if task.status == 'completed' %}success{% elif task.status == 'pending' %}warning{% else %}primary{% endif %}">
+                                {{ task.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center">暂无任务</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-bicycle"></i> 最近车辆</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_vehicles %}
+                <div class="list-group list-group-flush">
+                    {% for vehicle in recent_vehicles %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ vehicle.bike_id }}</strong><br>
+                                <small class="text-muted">{{ vehicle.get_current_region_display }}</small>
+                            </div>
+                            <span class="badge bg-{% if vehicle.status == 'normal' %}success{% elif vehicle.status == 'fault' %}danger{% else %}warning{% endif %}">
+                                {{ vehicle.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center">暂无车辆数据</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

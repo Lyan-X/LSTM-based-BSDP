@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+
+{% block title %}运维人员轨迹追踪 - 共享单车运维平台{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="bi bi-geo-alt"></i> 运维人员轨迹追踪
+            </h1>
+            
+            <!-- 轨迹记录表单 -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">记录当前位置</h5>
+                </div>
+                <div class="card-body">
+                    <form id="trackForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">经度</label>
+                                    <input type="number" class="form-control" id="longitude" step="0.000001" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">纬度</label>
+                                    <input type="number" class="form-control" id="latitude" step="0.000001" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">关联任务</label>
+                                    <select class="form-select" id="taskId">
+                                        <option value="">选择任务（可选）</option>
+                                        {% for task in request.user.scheduletask_set.filter(status__in=['assigned', 'in_progress']) %}
+                                        <option value="{{ task.task_id }}">{{ task.task_id }} - {{ task.get_target_region_display }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">位置描述</label>
+                                    <textarea class="form-control" id="description" rows="4" placeholder="例如：正在区域1进行车辆调度"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">自动获取位置</label>
+                                    <button type="button" class="btn btn-info w-100" onclick="getLocation()">
+                                        <i class="bi bi-compass"></i> 获取当前位置
+                                    </button>
+                                    <small class="form-text text-muted mt-1">需要浏览器位置权限</small>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-primary" onclick="submitTrack()">
+                            <i class="bi bi-save"></i> 记录轨迹
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 轨迹记录列表 -->
+            {% if tracks.exists %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">轨迹记录历史</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>时间</th>
+                                    <th>经度</th>
+                                    <th>纬度</th>
+                                    <th>关联任务</th>
+                                    <th>描述</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for track in tracks %}
+                                <tr>
+                                    <td>{{ track.track_time }}</td>
+                                    <td>{{ track.longitude }}</td>
+                                    <td>{{ track.latitude }}</td>
+                                    <td>{{ track.task.task_id|default:"无" }}</td>
+                                    <td>{{ track.description|default:"无" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-info mt-4">
+                <i class="bi bi-info-circle"></i> 暂无轨迹记录
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// 获取当前位置
+function getLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                document.getElementById('latitude').value = position.coords.latitude;
+                document.getElementById('longitude').value = position.coords.longitude;
+                alert('位置获取成功');
+            },
+            function(error) {
+                alert('位置获取失败：' + error.message);
+            }
+        );
+    } else {
+        alert('您的浏览器不支持地理定位');
+    }
+}
+
+// 提交轨迹记录
+function submitTrack() {
+    const latitude = document.getElementById('latitude').value;
+    const longitude = document.getElementById('longitude').value;
+    const taskId = document.getElementById('taskId').value;
+    const description = document.getElementById('description').value;
+    
+    if (!latitude || !longitude) {
+        alert('请填写经纬度');
+        return;
+    }
+    
+    fetch('{% url 'operation_management:operator_track' %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: `latitude=${latitude}&longitude=${longitude}&task_id=${taskId}&description=${encodeURIComponent(description)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('轨迹记录成功');
+            location.reload();
+        } else {
+            alert('记录失败：' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('记录失败');
+    });
+}
+</script>
+{% endblock %}

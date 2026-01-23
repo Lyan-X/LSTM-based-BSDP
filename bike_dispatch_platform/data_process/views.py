@@ -1,14 +1,11 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .forms import WeatherDataUploadForm  # 导入天气数据上传表单
 
 # ========== 关键修改1：补充WeatherData导入 ==========
 from .models import BikeRideData, WeatherData
-
-import pandas as pd
-import numpy as np
-from .utils import data_cleaning  # 自定义数据清洗工具（去重、缺失值填充）
+from .services.data_service import data_service
 
 
 @login_required
@@ -26,98 +23,30 @@ def data_upload(request):
 
         file = request.FILES['data_file']
 
-        # 2. 检查文件是否为空
-        if file.size == 0:
-            messages.error(request, "上传的文件为空，请选择有效文件")
+        # 2. 使用数据服务验证文件
+        valid, message = data_service.validate_file(file)
+        if not valid:
+            messages.error(request, message)
             return redirect('data_process:data_upload')
 
-        # 3. 检查文件格式
-        allowed_formats = ('.xlsx', '.csv')
-        if not file.name.lower().endswith(allowed_formats):
-            messages.error(request, "仅支持Excel（.xlsx）或CSV（.csv）格式")
+        # 3. 使用数据服务读取文件
+        df, error = data_service.read_file(file)
+        if error:
+            messages.error(request, error)
             return redirect('data_process:data_upload')
 
-        # 4. 读取文件（增加异常捕获）
-        try:
-            if file.name.lower().endswith('.csv'):
-                df = pd.read_csv(file, encoding='utf-8')  # 指定编码避免中文乱码
-            else:
-                df = pd.read_excel(file)
-        except UnicodeDecodeError:
-            # 兼容GBK编码的CSV文件
-            try:
-                df = pd.read_csv(file, encoding='gbk')
-            except Exception as e:
-                messages.error(request, f"文件编码错误，无法读取：{str(e)}")
-                return redirect('data_process:data_upload')
-        except Exception as e:
-            messages.error(request, f"文件读取失败：{str(e)}")
+        # 4. 使用数据服务处理骑行数据
+        count, error = data_service.process_ride_data(df, request.user)
+        if error:
+            messages.error(request, f"处理骑行数据失败：{error}")
             return redirect('data_process:data_upload')
 
-        # 5. 数据清洗（任务书"清洗、格式标准化"要求）
-        try:
-            cleaned_df = data_cleaning(df)
-        except Exception as e:
-            messages.error(request, f"数据清洗失败：{str(e)}")
-            return redirect('data_process:data_upload')
-
-        # 6. 批量写入数据库（增加字段容错和类型转换）
-        data_list = []
-        # ========== 关键修改2：删除weather字符串默认值（外键不能赋值字符串） ==========
-        default_values = {
-            'start_point': '',
-            'end_point': '',
-            'ride_datetime': None,
-            'duration': 0.0,
-            'distance': 0.0,
-            # 'weather': 'sunny',  # 注释：weather是外键，不再赋值字符串
-            'temperature': 25.0,
-            'wind_speed': 0.0
-        }
-
-        for _, row in cleaned_df.iterrows():
-            # 逐个字段取值，确保类型正确
-            data_item = BikeRideData(
-                # 数据来源：优先取POST参数，无则设默认值
-                data_source=request.POST.get('data_source', 'upload'),
-                # 骑行起点：转字符串，空值设默认
-                start_point=str(row.get('start_point', default_values['start_point'])).strip(),
-                # 骑行终点：转字符串，空值设默认
-                end_point=str(row.get('end_point', default_values['end_point'])).strip(),
-                # 骑行时间：确保是datetime类型
-                ride_datetime=pd.to_datetime(row.get('ride_datetime'), errors='coerce')
-                              or default_values['ride_datetime'],
-                # 骑行时长：转数值型，失败设默认
-                duration=float(row.get('duration', default_values['duration']))
-                if pd.notna(row.get('duration')) else default_values['duration'],
-                # 骑行距离：转数值型，失败设默认
-                distance=float(row.get('distance', default_values['distance']))
-                if pd.notna(row.get('distance')) else default_values['distance'],
-                # ========== 关键修改3：删除weather字符串赋值（外键字段留空，后续自动关联） ==========
-                # weather=str(row.get('weather', default_values['weather'])).strip(),
-                # 温度：转数值型，失败设默认
-                temperature=float(row.get('temperature', default_values['temperature']))
-                if pd.notna(row.get('temperature')) else default_values['temperature'],
-                # 风速：转数值型，失败设默认
-                wind_speed=float(row.get('wind_speed', default_values['wind_speed']))
-                if pd.notna(row.get('wind_speed')) else default_values['wind_speed'],
-                # 数据状态：固定为清洗后
-                status='cleaned',
-                # 上传用户：关联当前登录用户
-                upload_user=request.user
-            )
-            # 过滤掉骑行时间为空的数据（必选字段）
-            if data_item.ride_datetime is not None:
-                data_list.append(data_item)
-
-        # 批量入库（避免单条插入效率低）
-        if data_list:
-            BikeRideData.objects.bulk_create(data_list)
-            messages.success(request, f"成功导入{len(data_list)}条清洗后的骑行数据")
+        if count > 0:
+            messages.success(request, f"成功导入{count}条清洗后的骑行数据")
+            return redirect(f'/data/upload/?success=1&count={count}')
         else:
             messages.warning(request, "清洗后无有效数据，请检查文件内容")
-
-        return redirect('data_process:data_list')
+            return redirect('data_process:data_upload')
 
     # GET请求：返回上传页面
     return render(request, 'data_process/data_upload.html')
@@ -141,16 +70,38 @@ def data_list(request):
 
 @login_required
 def weather_data_upload(request):
-    """天气数据上传视图（毕设“数据上传模块”核心接口）"""
+    """天气数据上传视图（毕设"数据上传模块"核心接口）"""
     if request.method == "POST":
-        form = WeatherDataUploadForm(request.POST, request.FILES)
-        if form.is_valid():
-            try:
-                import_count = form.process_file()
-                messages.success(request, f"✅ 成功导入{import_count}条天气数据！")
-                return redirect("data_process:weather_upload")  # 上传后刷新页面
-            except Exception as e:
-                messages.error(request, f"❌ 数据导入失败：{str(e)}")
+        if 'weather_file' not in request.FILES:
+            messages.error(request, "请选择要上传的Excel/CSV文件")
+            return redirect("data_process:weather_upload")
+
+        file = request.FILES['weather_file']
+
+        # 使用数据服务验证文件
+        valid, message = data_service.validate_file(file)
+        if not valid:
+            messages.error(request, message)
+            return redirect("data_process:weather_upload")
+
+        # 使用数据服务读取文件
+        df, error = data_service.read_file(file)
+        if error:
+            messages.error(request, error)
+            return redirect("data_process:weather_upload")
+
+        # 使用数据服务处理天气数据
+        count, error = data_service.process_weather_data(df)
+        if error:
+            messages.error(request, f"处理天气数据失败：{error}")
+            return redirect("data_process:weather_upload")
+
+        if count > 0:
+            messages.success(request, f"✅ 成功导入{count}条天气数据！")
+        else:
+            messages.warning(request, "清洗后无有效数据，请检查文件内容")
+        
+        return redirect("data_process:weather_upload")  # 上传后刷新页面
     else:
         form = WeatherDataUploadForm()
 

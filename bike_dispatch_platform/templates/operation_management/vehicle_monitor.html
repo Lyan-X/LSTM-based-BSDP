@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}车辆监控 - 共享单车调度需求预测与运维管理平台{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-bicycle"></i> 车辆状态实时监控</h5>
+            {% if user.is_admin %}
+            <a href="{% url 'operation_management:vehicle_create' %}" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-circle"></i> 添加车辆
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- 筛选 -->
+        <form method="get" class="mb-3">
+            <div class="row">
+                <div class="col-md-4">
+                    <select name="status" class="form-select" onchange="this.form.submit()">
+                        <option value="">全部状态</option>
+                        <option value="normal" {% if status_filter == 'normal' %}selected{% endif %}>正常</option>
+                        <option value="fault" {% if status_filter == 'fault' %}selected{% endif %}>故障</option>
+                        <option value="maintain" {% if status_filter == 'maintain' %}selected{% endif %}>维护中</option>
+                        <option value="offline" {% if status_filter == 'offline' %}selected{% endif %}>离线</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <select name="region" class="form-select" onchange="this.form.submit()">
+                        <option value="">全部区域</option>
+                        {% for value, label in regions %}
+                        <option value="{{ value }}" {% if region_filter == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </form>
+        
+        <!-- 车辆列表 -->
+        {% if vehicles %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>单车编号</th>
+                        <th>状态</th>
+                        <th>当前区域</th>
+                        <th>位置</th>
+                        <th>更新时间</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for vehicle in vehicles %}
+                    <tr>
+                        <td><strong>{{ vehicle.bike_id }}</strong></td>
+                        <td>
+                            <span class="badge bg-{% if vehicle.status == 'normal' %}success{% elif vehicle.status == 'fault' %}danger{% elif vehicle.status == 'maintain' %}warning{% else %}secondary{% endif %}">
+                                {{ vehicle.get_status_display }}
+                            </span>
+                        </td>
+                        <td>{{ vehicle.get_current_region_display }}</td>
+                        <td>
+                            {% if vehicle.latitude and vehicle.longitude %}
+                            {{ vehicle.latitude|floatformat:4 }}, {{ vehicle.longitude|floatformat:4 }}
+                            {% else %}
+                            <span class="text-muted">未定位</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ vehicle.update_time|date:"Y-m-d H:i:s" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 分页 -->
+        {% if vehicles.has_other_pages %}
+        <nav>
+            <ul class="pagination justify-content-center">
+                {% if vehicles.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ vehicles.previous_page_number }}">上一页</a></li>
+                {% endif %}
+                <li class="page-item active"><span class="page-link">第 {{ vehicles.number }} 页 / 共 {{ vehicles.paginator.num_pages }} 页</span></li>
+                {% if vehicles.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ vehicles.next_page_number }}">下一页</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        {% else %}
+        <p class="text-muted text-center">暂无车辆数据</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 状态统计 -->
+{% if status_stats %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-bar-chart"></i> 状态统计</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for stat in status_stats %}
+            <div class="col-md-3">
+                <div class="alert alert-info">
+                    <strong>{{ stat.status }}:</strong> {{ stat.count }} 辆
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

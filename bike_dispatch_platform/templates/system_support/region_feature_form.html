@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if region_feature %}编辑区域特征{% else %}添加区域特征{% endif %} - 共享单车运维平台{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="bi bi-map"></i> {% if region_feature %}编辑区域特征{% else %}添加区域特征{% endif %}
+            </h1>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">区域特征信息</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">区域名称</label>
+                                    <input type="text" class="form-control" name="region" value="{{ region_feature.region|default:'' }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">人口密度</label>
+                                    <input type="number" class="form-control" name="population_density" step="0.1" value="{{ region_feature.population_density|default:'' }}" placeholder="单位：人/km²">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">商圈类型</label>
+                                    <select class="form-select" name="business_type">
+                                        <option value="">选择商圈类型</option>
+                                        <option value="commercial" {% if region_feature and region_feature.business_type == 'commercial' %}selected{% endif %}>商业区</option>
+                                        <option value="residential" {% if region_feature and region_feature.business_type == 'residential' %}selected{% endif %}>住宅区</option>
+                                        <option value="industrial" {% if region_feature and region_feature.business_type == 'industrial' %}selected{% endif %}>工业区</option>
+                                        <option value="mixed" {% if region_feature and region_feature.business_type == 'mixed' %}selected{% endif %}>混合区</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">地铁站数量</label>
+                                    <input type="number" class="form-control" name="subway_stations" value="{{ region_feature.subway_stations|default:0 }}" min="0">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">公交站数量</label>
+                                    <input type="number" class="form-control" name="bus_stations" value="{{ region_feature.bus_stations|default:0 }}" min="0">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> 保存
+                            </button>
+                            <a href="{% url 'system_support:region_feature_list' %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> 返回列表
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

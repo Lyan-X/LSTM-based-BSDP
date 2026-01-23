@@ -1,0 +1,344 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}系统首页 - 共享单车调度需求预测与运维管理平台{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="bi bi-speedometer2"></i> 系统总览
+            <small class="text-muted">欢迎，{{ user.get_full_name|default:user.username }}</small>
+        </h2>
+    </div>
+</div>
+
+<!-- 统计卡片 -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-primary h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-subtitle mb-2">骑行数据总量</h6>
+                        <h3 class="card-title mb-0">{{ stats.total_rides|default:0 }}</h3>
+                    </div>
+                    <i class="bi bi-bicycle" style="font-size: 3rem; opacity: 0.5;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-success h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-subtitle mb-2">今日预测数</h6>
+                        <h3 class="card-title mb-0">{{ stats.today_predictions|default:0 }}</h3>
+                    </div>
+                    <i class="bi bi-graph-up" style="font-size: 3rem; opacity: 0.5;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-warning h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-subtitle mb-2">待分配任务</h6>
+                        <h3 class="card-title mb-0">{{ stats.pending_tasks|default:0 }}</h3>
+                    </div>
+                    <i class="bi bi-list-task" style="font-size: 3rem; opacity: 0.5;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-info h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-subtitle mb-2">车辆总数</h6>
+                        <h3 class="card-title mb-0">{{ stats.total_vehicles|default:0 }}</h3>
+                    </div>
+                    <i class="bi bi-truck" style="font-size: 3rem; opacity: 0.5;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 快速功能入口 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h4 class="mb-3"><i class="bi bi-lightning-charge"></i> 快速功能</h4>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body text-center">
+                <i class="bi bi-cloud-upload" style="font-size: 2.5rem; color: #667eea;"></i>
+                <h5 class="card-title mt-3">数据导入</h5>
+                <p class="card-text text-muted">上传骑行数据和天气数据</p>
+                <a href="{% url 'data_process:data_upload' %}" class="btn btn-primary">进入</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body text-center">
+                <i class="bi bi-graph-up-arrow" style="font-size: 2.5rem; color: #28a745;"></i>
+                <h5 class="card-title mt-3">需求预测</h5>
+                <p class="card-text text-muted">基于LSTM模型预测调度需求</p>
+                <a href="{% url 'demand_prediction:predict' %}" class="btn btn-success">进入</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body text-center">
+                <i class="bi bi-gear" style="font-size: 2.5rem; color: #ffc107;"></i>
+                <h5 class="card-title mt-3">运维管理</h5>
+                <p class="card-text text-muted">车辆监控与调度任务管理</p>
+                <a href="{% url 'operation_management:dashboard' %}" class="btn btn-warning">进入</a>
+            </div>
+        </div>
+    </div>
+    
+    {% if user.is_admin %}
+    <div class="col-md-3 mb-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body text-center">
+                <i class="bi bi-shield-check" style="font-size: 2.5rem; color: #dc3545;"></i>
+                <h5 class="card-title mt-3">系统管理</h5>
+                <p class="card-text text-muted">数据备份与日志查看</p>
+                <a href="{% url 'system_support:backup_list' %}" class="btn btn-danger">进入</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- 数据集信息 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-database"></i> 数据集信息</h5>
+                    <button id="viewDatasetDetails" class="btn btn-sm btn-primary">
+                        <i class="bi bi-eye"></i> 查看详细信息
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>当前数据集：</strong><span id="currentDatasetName">{% if stats.total_rides > 0 %}实际数据集{% else %}无数据{% endif %}</span></p>
+                        <p><strong>数据条数：</strong><span id="currentDatasetCount">{{ stats.total_rides }}</span> 条</p>
+                        <p><strong>时间范围：</strong><span id="currentDatasetTimeRange">最近7天</span></p>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        {% if stats.total_rides > 0 %}
+                        <div class="alert alert-info d-inline-block" role="alert">
+                            <i class="bi bi-info-circle"></i> 数据已应用于系统各模块
+                        </div>
+                        {% else %}
+                        <div class="alert alert-warning d-inline-block" role="alert">
+                            <i class="bi bi-exclamation-triangle"></i> 暂无数据，请先导入数据
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 用户角色信息 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-person-badge"></i> 用户信息</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>用户名：</strong>{{ user.username }}</p>
+                        <p><strong>角色：</strong>
+                            <span class="badge bg-{% if user.is_admin %}danger{% elif user.is_operator %}warning{% else %}primary{% endif %}">
+                                {{ user.get_role_display }}
+                            </span>
+                        </p>
+                        {% if user.email %}
+                        <p><strong>邮箱：</strong>{{ user.email }}</p>
+                        {% endif %}
+                        {% if user.phone %}
+                        <p><strong>手机：</strong>{{ user.phone }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>最后登录：</strong>{{ user.last_login|date:"Y-m-d H:i:s"|default:"首次登录" }}</p>
+                        <p><strong>注册时间：</strong>{{ user.date_joined|date:"Y-m-d H:i:s" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script>
+// 显示数据集详情弹窗
+function showDatasetDetailsModal() {
+    // 创建弹窗
+    const modalHtml = `
+        <div class="modal fade show" id="datasetDetailsModal" tabindex="-1" aria-labelledby="datasetDetailsModalLabel" aria-hidden="false" style="display: block;">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="datasetDetailsModalLabel">
+                            <i class="bi bi-database"></i> 数据集详细信息
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <p><strong>数据集名称：</strong><span id="modalDatasetName">{% if stats.total_rides > 0 %}实际数据集{% else %}无数据{% endif %}</span></p>
+                                <p><strong>数据条数：</strong><span id="modalDatasetCount">{{ stats.total_rides }}</span> 条</p>
+                                <p><strong>时间范围：</strong><span id="modalDatasetTimeRange">最近7天</span></p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>数据类型：</strong>骑行数据</p>
+                                <p><strong>数据来源：</strong>系统上传</p>
+                                <p><strong>更新时间：</strong>${new Date().toLocaleString()}</p>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <h6>数据分布概览</h6>
+                            <div id="datasetDistribution" style="height: 300px;"></div>
+                        </div>
+                        <div>
+                            <h6>数据示例</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>时段</th>
+                                            <th>区域</th>
+                                            <th>需求（辆）</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="datasetSampleTable">
+                                        <tr><td>7:00</td><td>区域A</td><td>25</td></tr>
+                                        <tr><td>8:00</td><td>区域B</td><td>42</td></tr>
+                                        <tr><td>9:00</td><td>区域C</td><td>18</td></tr>
+                                        <tr><td>12:00</td><td>区域D</td><td>35</td></tr>
+                                        <tr><td>18:00</td><td>区域A</td><td>48</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x"></i> 关闭
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-backdrop fade show"></div>
+    `;
+    
+    // 添加到页面
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // 绑定关闭事件
+    document.querySelector('#datasetDetailsModal .btn-close').addEventListener('click', function() {
+        closeModal('datasetDetailsModal');
+    });
+    
+    document.querySelector('#datasetDetailsModal .btn-secondary').addEventListener('click', function() {
+        closeModal('datasetDetailsModal');
+    });
+    
+    // 初始化分布图表
+    initDatasetDistributionChart();
+}
+
+// 初始化数据集分布图表
+function initDatasetDistributionChart() {
+    const chartDom = document.getElementById('datasetDistribution');
+    const distributionChart = echarts.init(chartDom);
+    
+    // 模拟数据
+    const hours = ['7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21'];
+    const demands = [25, 42, 18, 15, 22, 35, 28, 20, 18, 25, 38, 48, 32, 25, 18];
+    
+    const option = {
+        tooltip: {
+            trigger: 'axis',
+            formatter: '{b}:00<br/>需求：{c} 辆'
+        },
+        xAxis: {
+            type: 'category',
+            data: hours,
+            name: '时段'
+        },
+        yAxis: {
+            type: 'value',
+            name: '需求（辆）'
+        },
+        series: [{
+            data: demands,
+            type: 'line',
+            smooth: true,
+            itemStyle: {
+                color: '#667eea'
+            },
+            areaStyle: {
+                color: {
+                    type: 'linear',
+                    x: 0,
+                    y: 0,
+                    x2: 0,
+                    y2: 1,
+                    colorStops: [{
+                        offset: 0, color: 'rgba(102, 126, 234, 0.3)'
+                    }, {
+                        offset: 1, color: 'rgba(102, 126, 234, 0.1)'
+                    }]
+                }
+            }
+        }]
+    };
+    
+    distributionChart.setOption(option);
+}
+
+// 关闭弹窗
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    const backdrop = document.querySelector('.modal-backdrop');
+    if (modal) modal.remove();
+    if (backdrop) backdrop.remove();
+}
+
+// 绑定数据集详情按钮事件
+document.addEventListener('DOMContentLoaded', function() {
+    const viewDetailsBtn = document.getElementById('viewDatasetDetails');
+    if (viewDetailsBtn) {
+        viewDetailsBtn.addEventListener('click', showDatasetDetailsModal);
+    }
+});
+</script>
+{% endblock %}

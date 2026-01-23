@@ -1,0 +1,774 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}供需热力图 - 共享单车调度需求预测与运维管理平台{% endblock %}
+
+{% block content %}
+<div class="card fade-in">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-map"></i> 供需热力图动态展示</h5>
+            <div class="d-flex gap-2">
+                <form method="get" class="d-inline">
+                    <select name="days" class="form-select form-select-sm d-inline-block" style="width: auto;" onchange="this.form.submit()">
+                        <option value="7" {% if days == 7 %}selected{% endif %}>最近7天</option>
+                        <option value="14" {% if days == 14 %}selected{% endif %}>最近14天</option>
+                        <option value="30" {% if days == 30 %}selected{% endif %}>最近30天</option>
+                    </select>
+                </form>
+                <button id="showRealMap" class="btn btn-sm btn-primary">显示城市地图</button>
+                <button id="showHeatmap" class="btn btn-sm btn-secondary">显示热力图</button>
+                <button id="refreshData" class="btn btn-sm btn-success">
+                    <i class="bi bi-arrow-clockwise"></i> 刷新数据
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div id="mapContainer" style="width: 100%; height: 600px; border-radius: 8px; overflow: hidden; border: 1px solid #ddd;"></div>
+        <div class="alert alert-info fade-in" role="alert">
+            <i class="bi bi-info-circle"></i> 提示：请先在<span class="fw-bold">数据导入</span>模块导入骑行数据，然后在<span class="fw-bold">数据处理</span>模块进行数据清洗，才能在热力图中查看供需分布。
+        </div>
+        
+        <!-- 数据集信息 -->
+        <div class="mt-3" id="datasetInfo" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-database"></i> 数据集信息</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>当前数据集：</strong><span id="currentDatasetName">默认数据集</span></p>
+                            <p><strong>数据条数：</strong><span id="currentDatasetCount">0</span> 条</p>
+                            <p><strong>时间范围：</strong><span id="currentDatasetTimeRange">最近7天</span></p>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <button id="viewDatasetDetails" class="btn btn-sm btn-primary">
+                                <i class="bi bi-eye"></i> 查看详细信息
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 数据状态提示 -->
+        <div id="dataStatus" class="mt-2 alert alert-warning fade-in" role="alert" style="display: none;">
+            <i class="bi bi-exclamation-triangle"></i> <span id="statusMessage"></span>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts/map/js/china.js"></script>
+<script>console.log('ECharts 加载完成，地图数据加载中...');</script>
+<script>
+// 从后端获取城市坐标信息
+var cityCoords = {{ city_coords|safe }};
+
+// 从后端获取停靠点信息
+var stations = {{ stations|safe }};
+
+// 从后端获取热力图数据
+var heatmap_data = {{ heatmap_data|safe }};
+
+// 转换为ECharts所需格式
+var cityPoints = stations.map(function(station) {
+    // 根据站点名称推断类型
+    var type = '商业区';
+    if (station.name.includes('科技')) {
+        type = '科技区';
+    } else if (station.name.includes('小区')) {
+        type = '居民区';
+    } else if (station.name.includes('交通')) {
+        type = '交通枢纽';
+    } else if (station.name.includes('教育')) {
+        type = '教育区';
+    } else if (station.name.includes('医疗')) {
+        type = '医疗区';
+    } else if (station.name.includes('文化')) {
+        type = '文化区';
+    }
+    return {
+        name: station.name,
+        value: station.coords,
+        demand: station.demand,
+        type: type
+    };
+});
+
+// 模拟数据（实际应从后端获取）
+var hasData = typeof heatmap_data !== 'undefined' && heatmap_data && heatmap_data.length > 0;
+var mapMode = 'real'; // 'real' 或 'heatmap'
+
+// 显示状态消息
+function showStatusMessage(message, type = 'warning') {
+    var statusDiv = document.getElementById('dataStatus');
+    var messageSpan = document.getElementById('statusMessage');
+    
+    statusDiv.className = `mt-2 alert alert-${type} fade-in`;
+    messageSpan.textContent = message;
+    statusDiv.style.display = 'block';
+    
+    // 3秒后自动隐藏
+    setTimeout(() => {
+        statusDiv.style.display = 'none';
+    }, 3000);
+}
+
+// 检查是否有数据
+function checkDataAvailability() {
+    // 检查是否有实际数据
+    if (typeof heatmap_data !== 'undefined' && heatmap_data && heatmap_data.length > 0) {
+        hasData = true;
+        showStatusMessage('数据加载完成', 'success');
+        
+        // 显示数据集信息
+        document.getElementById('datasetInfo').style.display = 'block';
+        document.getElementById('currentDatasetName').textContent = '实际数据集';
+        document.getElementById('currentDatasetCount').textContent = heatmap_data.length;
+        document.getElementById('currentDatasetTimeRange').textContent = '最近7天';
+    } else {
+        hasData = false;
+        showStatusMessage('未检测到导入的数据，请先导入并清洗数据', 'info');
+        
+        // 隐藏数据集信息
+        document.getElementById('datasetInfo').style.display = 'none';
+    }
+    return hasData;
+}
+
+// 获取热力图数据
+function getHeatmapData() {
+    if (!checkDataAvailability()) {
+        return [];
+    }
+    // 使用后端传递的实际数据
+    return heatmap_data || [];
+}
+
+var chartDom = document.getElementById('mapContainer');
+if (!chartDom) {
+    console.error('地图容器元素未找到');
+} else {
+    console.log('地图容器元素找到，尺寸：', chartDom.offsetWidth, 'x', chartDom.offsetHeight);
+}
+var myChart = echarts.init(chartDom);
+
+// 添加ECharts错误处理
+myChart.on('error', function(params) {
+    console.error('ECharts错误：', params);
+    showStatusMessage('地图加载失败：' + params.msg, 'danger');
+});
+
+// 检查ECharts实例
+if (!myChart) {
+    console.error('ECharts初始化失败');
+    showStatusMessage('地图初始化失败，请刷新页面重试', 'danger');
+} else {
+    console.log('ECharts初始化成功');
+}
+
+// 城市地图模式
+function showCityMap() {
+    mapMode = 'real';
+    var hasData = checkDataAvailability();
+    
+    // 添加加载动画
+    myChart.showLoading({
+        text: '加载地图数据...',
+        color: '#667eea',
+        textColor: '#667eea',
+        maskColor: 'rgba(255, 255, 255, 0.8)',
+        zlevel: 0
+    });
+    
+    setTimeout(() => {
+        try {
+            var option = {
+                title: {
+                    text: '城市共享单车供需分布',
+                    left: 'center',
+                    textStyle: {
+                        fontSize: 18,
+                        fontWeight: 'bold',
+                        color: '#333'
+                    }
+                },
+                tooltip: {
+                    trigger: 'item',
+                    formatter: function(params) {
+                        if (params.componentType === 'series') {
+                            if (params.seriesType === 'scatter') {
+                                return `
+                                    <div style="padding: 10px;">
+                                        <h6 style="margin: 0 0 5px 0; font-weight: bold;">${params.name}</h6>
+                                        <p style="margin: 2px 0;">类型: <span style="color: #667eea;">${params.data.type}</span></p>
+                                        <p style="margin: 2px 0;">需求: <span style="color: #667eea;">${params.data.demand} 辆</span></p>
+                                        <p style="margin: 2px 0;">坐标: <span style="color: #667eea;">${params.value[0].toFixed(4)}, ${params.value[1].toFixed(4)}</span></p>
+                                    </div>
+                                `;
+                            }
+                        }
+                        return params.name;
+                    },
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderColor: '#667eea',
+                    borderWidth: 1,
+                    borderRadius: 8,
+                    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)'
+                },
+                legend: {
+                    data: ['商业区', '科技区', '居民区', '交通枢纽', '教育区', '医疗区', '文化区'],
+                    top: 'bottom',
+                    textStyle: {
+                        fontSize: 12
+                    },
+                    itemGap: 10,
+                    itemWidth: 12,
+                    itemHeight: 12
+                },
+                visualMap: {
+                    type: 'continuous',
+                    min: 0,
+                    max: 50,
+                    left: 'left',
+                    bottom: '15%',
+                    text: ['高需求', '低需求'],
+                    calculable: true,
+                    inRange: {
+                        color: ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffcc', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026']
+                    },
+                    show: true,
+                    textStyle: {
+                        fontSize: 12
+                    }
+                },
+                xAxis: {
+                    type: 'value',
+                    min: cityCoords.center[0] - 0.1,
+                    max: cityCoords.center[0] + 0.1,
+                    show: false
+                },
+                yAxis: {
+                    type: 'value',
+                    min: cityCoords.center[1] - 0.1,
+                    max: cityCoords.center[1] + 0.1,
+                    show: false
+                },
+                series: [
+                    {
+                        name: '基础地图',
+                        type: 'scatter',
+                        coordinateSystem: 'cartesian2d',
+                        data: cityPoints.map(item => ({
+                            name: item.name,
+                            value: [item.value[0], item.value[1], item.demand],
+                            type: item.type
+                        })),
+                        symbolSize: function(val) {
+                            return val[2] / 5 + 10;
+                        },
+                        encode: {
+                            value: 2
+                        },
+                        label: {
+                            formatter: '{b}',
+                            position: 'right',
+                            show: false,
+                            fontSize: 10
+                        },
+                        emphasis: {
+                            label: {
+                                show: true,
+                                fontSize: 10,
+                                color: '#333',
+                                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                padding: [2, 5],
+                                borderRadius: 3
+                            },
+                            itemStyle: {
+                                shadowBlur: 15,
+                                shadowColor: 'rgba(84, 112, 198, 0.5)',
+                                scale: 1.2
+                            }
+                        },
+                        itemStyle: {
+                            color: function(params) {
+                                // 根据类型设置颜色
+                                const colorMap = {
+                                    '商业区': '#5470c6',
+                                    '科技区': '#91cc75',
+                                    '居民区': '#fac858',
+                                    '交通枢纽': '#ee6666',
+                                    '教育区': '#9966ff',
+                                    '医疗区': '#ff6384',
+                                    '文化区': '#ff9f40'
+                                };
+                                return colorMap[params.data.type] || '#5470c6';
+                            },
+                            opacity: 0.8
+                        }
+                    }
+                ]
+            };
+            
+            console.log('设置ECharts选项');
+            myChart.setOption(option);
+            console.log('ECharts选项设置完成');
+            myChart.hideLoading();
+            console.log('地图加载完成');
+        } catch (error) {
+            console.error('地图加载错误：', error);
+            showStatusMessage('地图加载失败：' + error.message, 'danger');
+            myChart.hideLoading();
+            
+            // 显示错误信息和默认内容
+            var errorOption = {
+                title: {
+                    text: '城市共享单车供需分布',
+                    left: 'center',
+                    textStyle: {
+                        fontSize: 18,
+                        fontWeight: 'bold',
+                        color: '#333'
+                    }
+                },
+                graphic: {
+                    elements: [{
+                        type: 'text',
+                        left: 'center',
+                        top: 'center',
+                        style: {
+                            text: '地图加载失败，显示站点数据',
+                            fontSize: 16,
+                            fontWeight: 'bold',
+                            fill: '#999'
+                        }
+                    }]
+                },
+                series: [{
+                    name: '站点数据',
+                    type: 'pie',
+                    radius: ['40%', '70%'],
+                    center: ['50%', '60%'],
+                    data: [
+                        {value: cityPoints.filter(item => item.type === '商业区').length, name: '商业区'},
+                        {value: cityPoints.filter(item => item.type === '科技区').length, name: '科技区'},
+                        {value: cityPoints.filter(item => item.type === '居民区').length, name: '居民区'},
+                        {value: cityPoints.filter(item => item.type === '交通枢纽').length, name: '交通枢纽'},
+                        {value: cityPoints.filter(item => item.type === '教育区').length, name: '教育区'},
+                        {value: cityPoints.filter(item => item.type === '医疗区').length, name: '医疗区'},
+                        {value: cityPoints.filter(item => item.type === '文化区').length, name: '文化区'}
+                    ],
+                    emphasis: {
+                        itemStyle: {
+                            shadowBlur: 10,
+                            shadowOffsetX: 0,
+                            shadowColor: 'rgba(0, 0, 0, 0.5)'
+                        }
+                    }
+                }]
+            };
+            myChart.setOption(errorOption);
+        }
+    }, 1000);
+}
+
+// 热力图模式
+function showHeatmapChart() {
+    mapMode = 'heatmap';
+    var hasData = checkDataAvailability();
+    var heatmapData = getHeatmapData();
+    
+    // 添加加载动画
+    myChart.showLoading({
+        text: '加载热力图数据...',
+        color: '#667eea',
+        textColor: '#667eea',
+        maskColor: 'rgba(255, 255, 255, 0.8)',
+        zlevel: 0
+    });
+    
+    setTimeout(() => {
+        try {
+            // 检查地图数据是否加载
+            if (!echarts.getMap('china')) {
+                console.error('中国地图数据未加载');
+                showStatusMessage('地图数据未加载，请刷新页面重试', 'danger');
+                
+                // 显示默认图表
+                var defaultOption = {
+                    title: {
+                        text: '共享单车供需热力图（暂无地图数据）',
+                        left: 'center',
+                        textStyle: {
+                            fontSize: 18,
+                            fontWeight: 'bold',
+                            color: '#333'
+                        }
+                    },
+                    tooltip: {
+                        trigger: 'axis'
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: ['区域A', '区域B', '区域C', '区域D']
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: '需求（辆）'
+                    },
+                    series: [{
+                        data: [15, 25, 18, 30],
+                        type: 'bar',
+                        itemStyle: {
+                            color: '#667eea'
+                        }
+                    }]
+                };
+                myChart.setOption(defaultOption);
+                myChart.hideLoading();
+                return;
+            }
+            
+            var option = {
+                title: {
+                    text: '共享单车供需热力图（地图模式）',
+                    left: 'center',
+                    textStyle: {
+                        fontSize: 18,
+                        fontWeight: 'bold',
+                        color: '#333'
+                    }
+                },
+                tooltip: {
+                    position: 'top',
+                    formatter: function (params) {
+                        if (params.componentType === 'series') {
+                            if (params.seriesType === 'heatmap') {
+                                return `
+                                    <div style="padding: 10px;">
+                                        <h6 style="margin: 0 0 5px 0; font-weight: bold;">需求详情</h6>
+                                        <p style="margin: 2px 0;">需求: <span style="color: #667eea;">${params.value[2]} 辆</span></p>
+                                    </div>
+                                `;
+                            }
+                        }
+                        return params.name;
+                    },
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderColor: '#667eea',
+                    borderWidth: 1,
+                    borderRadius: 8,
+                    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)'
+                },
+                visualMap: {
+                    min: 0,
+                    max: 50,
+                    calculable: true,
+                    orient: 'horizontal',
+                    left: 'center',
+                    bottom: '5%',
+                    inRange: {
+                        color: ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffcc', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026']
+                    },
+                    textStyle: {
+                        fontSize: 12
+                    },
+                    borderColor: '#667eea',
+                    borderWidth: 1
+                },
+                geo: {
+                    map: 'china',
+                    zoom: 5,
+                    center: [116.4074, 39.9042], // 北京坐标，更适合显示中国地图
+                    label: {
+                        emphasis: {
+                            show: true,
+                            fontSize: 10,
+                            color: '#333'
+                        }
+                    },
+                    roam: true,
+                    itemStyle: {
+                        normal: {
+                            areaColor: '#f0f0f0',
+                            borderColor: '#999'
+                        },
+                        emphasis: {
+                            areaColor: '#e0e0e0'
+                        }
+                    }
+                },
+                series: [{
+                    name: '骑行需求',
+                    type: 'heatmap',
+                    coordinateSystem: 'geo',
+                    data: hasData ? [
+                        [116.4074, 39.9042, 30], // 北京
+                        [121.4737, 31.2304, 25], // 上海
+                        [113.2644, 23.1291, 20], // 广州
+                        [120.1551, 30.2741, 15]  // 杭州
+                    ] : [],
+                    pointSize: 20,
+                    blurSize: 15,
+                    emphasis: {
+                        itemStyle: {
+                            shadowBlur: 10,
+                            shadowColor: 'rgba(0, 0, 0, 0.5)'
+                        }
+                    }
+                }]
+            };
+            
+            if (!hasData) {
+                option.title.text += '（暂无数据）';
+                option.graphic = {
+                    elements: [{
+                        type: 'text',
+                        left: 'center',
+                        top: 'center',
+                        style: {
+                            text: '请先导入并清洗数据',
+                            fontSize: 18,
+                            fontWeight: 'bold',
+                            fill: '#999'
+                        }
+                    }]
+                };
+            }
+            
+            console.log('设置热力图选项');
+            myChart.setOption(option);
+            console.log('热力图选项设置完成');
+        } catch (error) {
+            console.error('热力图加载错误：', error);
+            showStatusMessage('热力图加载失败：' + error.message, 'danger');
+            
+            // 显示错误信息和默认内容
+            var errorOption = {
+                title: {
+                    text: '共享单车供需热力图（加载失败）',
+                    left: 'center',
+                    textStyle: {
+                        fontSize: 18,
+                        fontWeight: 'bold',
+                        color: '#333'
+                    }
+                },
+                graphic: {
+                    elements: [{
+                        type: 'text',
+                        left: 'center',
+                        top: 'center',
+                        style: {
+                            text: '热力图加载失败，请刷新页面重试',
+                            fontSize: 16,
+                            fontWeight: 'bold',
+                            fill: '#999'
+                        }
+                    }]
+                }
+            };
+            myChart.setOption(errorOption);
+        } finally {
+            myChart.hideLoading();
+            console.log('热力图加载完成');
+        }
+    }, 1000);
+}
+
+// 刷新数据
+function refreshData() {
+    showStatusMessage('正在刷新数据...');
+    setTimeout(() => {
+        if (mapMode === 'real') {
+            showCityMap();
+        } else {
+            showHeatmapChart();
+        }
+        showStatusMessage('数据刷新完成', 'success');
+    }, 1500);
+}
+
+// 初始显示城市地图
+showCityMap();
+
+// 按钮事件
+document.getElementById('showRealMap').addEventListener('click', showCityMap);
+document.getElementById('showHeatmap').addEventListener('click', showHeatmapChart);
+document.getElementById('refreshData').addEventListener('click', refreshData);
+
+// 响应式调整
+window.addEventListener('resize', function() {
+    myChart.resize();
+});
+
+// 显示数据集详情弹窗
+function showDatasetDetailsModal() {
+    // 创建弹窗
+    const modalHtml = `
+        <div class="modal fade show" id="datasetDetailsModal" tabindex="-1" aria-labelledby="datasetDetailsModalLabel" aria-hidden="false" style="display: block;">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="datasetDetailsModalLabel">
+                            <i class="bi bi-database"></i> 数据集详细信息
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <p><strong>数据集名称：</strong><span id="modalDatasetName">实际数据集</span></p>
+                                <p><strong>数据条数：</strong><span id="modalDatasetCount">${heatmap_data ? heatmap_data.length : 0}</span> 条</p>
+                                <p><strong>时间范围：</strong><span id="modalDatasetTimeRange">最近7天</span></p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>数据类型：</strong>骑行数据</p>
+                                <p><strong>数据来源：</strong>系统上传</p>
+                                <p><strong>更新时间：</strong>${new Date().toLocaleString()}</p>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <h6>数据分布概览</h6>
+                            <div id="datasetDistribution" style="height: 300px;"></div>
+                        </div>
+                        <div>
+                            <h6>数据示例</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>时段</th>
+                                            <th>区域</th>
+                                            <th>需求（辆）</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="datasetSampleTable">
+                                        ${heatmap_data ? heatmap_data.slice(0, 5).map(item => `
+                                            <tr>
+                                                <td>${item[0]}:00</td>
+                                                <td>区域${item[1]}</td>
+                                                <td>${item[2]}</td>
+                                            </tr>
+                                        `).join('') : '<tr><td colspan="3" class="text-center">暂无数据</td></tr>'}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x"></i> 关闭
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-backdrop fade show"></div>
+    `;
+    
+    // 添加到页面
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // 绑定关闭事件
+    document.querySelector('#datasetDetailsModal .btn-close').addEventListener('click', function() {
+        closeModal('datasetDetailsModal');
+    });
+    
+    document.querySelector('#datasetDetailsModal .btn-secondary').addEventListener('click', function() {
+        closeModal('datasetDetailsModal');
+    });
+    
+    // 初始化分布图表
+    if (typeof heatmap_data !== 'undefined' && heatmap_data.length > 0) {
+        initDatasetDistributionChart();
+    }
+}
+
+// 初始化数据集分布图表
+function initDatasetDistributionChart() {
+    const chartDom = document.getElementById('datasetDistribution');
+    const distributionChart = echarts.init(chartDom);
+    
+    // 处理数据
+    const hourCounts = {};
+    heatmap_data.forEach(item => {
+        const hour = item[0];
+        if (!hourCounts[hour]) {
+            hourCounts[hour] = 0;
+        }
+        hourCounts[hour] += item[2];
+    });
+    
+    const hours = Object.keys(hourCounts).map(h => parseInt(h)).sort((a, b) => a - b);
+    const demands = hours.map(h => hourCounts[h]);
+    
+    const option = {
+        tooltip: {
+            trigger: 'axis',
+            formatter: '{b}:00<br/>需求：{c} 辆'
+        },
+        xAxis: {
+            type: 'category',
+            data: hours.map(h => h.toString()),
+            name: '时段'
+        },
+        yAxis: {
+            type: 'value',
+            name: '需求（辆）'
+        },
+        series: [{
+            data: demands,
+            type: 'line',
+            smooth: true,
+            itemStyle: {
+                color: '#667eea'
+            },
+            areaStyle: {
+                color: {
+                    type: 'linear',
+                    x: 0,
+                    y: 0,
+                    x2: 0,
+                    y2: 1,
+                    colorStops: [{
+                        offset: 0, color: 'rgba(102, 126, 234, 0.3)'
+                    }, {
+                        offset: 1, color: 'rgba(102, 126, 234, 0.1)'
+                    }]
+                }
+            }
+        }]
+    };
+    
+    distributionChart.setOption(option);
+}
+
+// 关闭弹窗
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    const backdrop = document.querySelector('.modal-backdrop');
+    if (modal) modal.remove();
+    if (backdrop) backdrop.remove();
+}
+
+// 添加地图点击事件
+myChart.on('click', function(params) {
+    if (mapMode === 'real' && params.componentType === 'series' && params.seriesType === 'scatter') {
+        showStatusMessage(`您点击了：${params.name}（${params.data.type}）`, 'info');
+    }
+});
+
+// 绑定数据集详情按钮事件
+document.addEventListener('DOMContentLoaded', function() {
+    const viewDetailsBtn = document.getElementById('viewDatasetDetails');
+    if (viewDetailsBtn) {
+        viewDetailsBtn.addEventListener('click', showDatasetDetailsModal);
+    }
+});
+</script>
+{% endblock %}
