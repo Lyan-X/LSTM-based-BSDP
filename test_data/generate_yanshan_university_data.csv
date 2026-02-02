@@ -1,0 +1,311 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+基于燕山大学具体停靠点生成测试数据集
+包括骑行数据和天气数据
+"""
+
+import pandas as pd
+import numpy as np
+import random
+from datetime import datetime, timedelta
+import sys
+import os
+
+# 添加项目根目录到路径
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from station_info.yanshan_university_stations import all_stations, station_coordinates
+
+class YanshanUniversityDataGenerator:
+    def __init__(self):
+        self.stations = all_stations
+        self.station_coordinates = station_coordinates
+        self.companies = ["小鲁班出行", "燕山共享", "校园单车", "绿色出行"]
+        self.weather_conditions = ["晴天", "多云", "阴天", "小雨", "中雨"]
+        self.weekdays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
+        self.holidays = ["2026-02-01", "2026-02-02", "2026-02-03", "2026-02-04", "2026-02-05"]
+    
+    def generate_time_based_on_pattern(self, is_weekend):
+        """根据时间模式生成骑行时间"""
+        # 工作日模式
+        if not is_weekend:
+            # 早高峰：7:00-9:00
+            if random.random() < 0.3:
+                hour = random.randint(7, 8)
+                minute = random.randint(0, 59)
+            # 上午课间：10:00-11:30
+            elif random.random() < 0.2:
+                hour = random.randint(10, 11)
+                minute = random.randint(0, 59)
+            # 中午：11:30-13:30
+            elif random.random() < 0.25:
+                hour = random.randint(11, 13)
+                minute = random.randint(0, 59)
+            # 下午课间：15:00-16:30
+            elif random.random() < 0.15:
+                hour = random.randint(15, 16)
+                minute = random.randint(0, 59)
+            # 晚高峰：16:30-18:30
+            else:
+                hour = random.randint(16, 18)
+                minute = random.randint(0, 59)
+        # 周末模式
+        else:
+            # 上午：9:00-12:00
+            if random.random() < 0.4:
+                hour = random.randint(9, 11)
+                minute = random.randint(0, 59)
+            # 下午：14:00-17:00
+            elif random.random() < 0.3:
+                hour = random.randint(14, 16)
+                minute = random.randint(0, 59)
+            # 晚上：18:00-20:00
+            else:
+                hour = random.randint(18, 19)
+                minute = random.randint(0, 59)
+        
+        return hour, minute
+    
+    def generate_station_pair(self, hour):
+        """根据时间生成合理的站点对"""
+        # 早高峰：宿舍区 -> 教学区/食堂
+        if 7 <= hour <= 9:
+            if random.random() < 0.7:
+                start_type = "宿舍区"
+                end_type = random.choice(["教学区", "生活区"])
+            else:
+                start_type = random.choice(["交通枢纽", "生活区"])
+                end_type = random.choice(["教学区", "宿舍区"])
+        # 中午：教学区 -> 生活区/宿舍区
+        elif 11 <= hour <= 13:
+            if random.random() < 0.6:
+                start_type = "教学区"
+                end_type = random.choice(["生活区", "宿舍区"])
+            else:
+                start_type = random.choice(["宿舍区", "交通枢纽"])
+                end_type = random.choice(["生活区", "教学区"])
+        # 下午：宿舍区 -> 教学区/生活区
+        elif 14 <= hour <= 16:
+            if random.random() < 0.6:
+                start_type = "宿舍区"
+                end_type = random.choice(["教学区", "生活区"])
+            else:
+                start_type = random.choice(["教学区", "交通枢纽"])
+                end_type = random.choice(["宿舍区", "生活区"])
+        # 晚高峰：教学区 -> 宿舍区/生活区
+        elif 16 <= hour <= 18:
+            if random.random() < 0.7:
+                start_type = "教学区"
+                end_type = random.choice(["宿舍区", "生活区"])
+            else:
+                start_type = random.choice(["生活区", "交通枢纽"])
+                end_type = random.choice(["宿舍区", "教学区"])
+        # 晚上：生活区 -> 宿舍区
+        else:
+            if random.random() < 0.6:
+                start_type = "生活区"
+                end_type = "宿舍区"
+            else:
+                start_type = random.choice(["宿舍区", "教学区"])
+                end_type = random.choice(["生活区", "交通枢纽"])
+        
+        # 从对应类型中选择具体站点
+        start_station = self._get_station_by_type(start_type)
+        end_station = self._get_station_by_type(end_type)
+        
+        # 确保起点和终点不同
+        while start_station == end_station:
+            end_station = self._get_station_by_type(end_type)
+        
+        return start_station, end_station
+    
+    def _get_station_by_type(self, station_type):
+        """根据站点类型选择具体站点"""
+        # 从西校区和东校区中选择站点
+        if random.random() < 0.6:
+            # 西校区
+            if station_type in ["宿舍区", "教学区", "生活区", "交通枢纽"]:
+                from station_info.yanshan_university_stations import west_campus_stations
+                stations = west_campus_stations.get(station_type, [])
+                if stations:
+                    return random.choice(stations)
+        else:
+            # 东校区
+            if station_type in ["宿舍区", "教学区", "生活区", "交通枢纽"]:
+                from station_info.yanshan_university_stations import east_campus_stations
+                stations = east_campus_stations.get(station_type, [])
+                if stations:
+                    return random.choice(stations)
+        
+        # 如果没有找到对应类型的站点，随机选择一个
+        return random.choice(self.stations)
+    
+    def calculate_duration(self, start_station, end_station):
+        """根据起点和终点计算骑行时长"""
+        # 获取站点坐标
+        start_coord = self.station_coordinates.get(start_station, [0, 0])
+        end_coord = self.station_coordinates.get(end_station, [0, 0])
+        
+        # 计算距离（简化计算）
+        distance = ((start_coord[0] - end_coord[0]) ** 2 + (start_coord[1] - end_coord[1]) ** 2) ** 0.5 * 10000
+        
+        # 根据距离计算时长（平均速度15km/h）
+        duration = max(1, int(distance / 15000 * 60))
+        
+        return duration
+    
+    def generate_weather_data(self, date_str):
+        """生成天气数据"""
+        base_temp = 5  # 2月份基础温度
+        
+        # 生成温度（5-15度）
+        temperature = round(base_temp + random.uniform(0, 10), 1)
+        
+        # 生成风速（0-5m/s）
+        wind_speed = round(random.uniform(0, 5), 1)
+        
+        # 生成天气状况
+        weather = random.choice(self.weather_conditions)
+        
+        # 根据天气调整温度
+        if weather in ["小雨", "中雨"]:
+            temperature -= random.uniform(1, 3)
+        
+        # 获取星期
+        date = datetime.strptime(date_str, "%Y-%m-%d")
+        weekday = self.weekdays[date.weekday()]
+        
+        # 判断是否为假期
+        is_holiday = 1 if date_str in self.holidays else 0
+        
+        return temperature, wind_speed, weather, weekday, is_holiday
+    
+    def generate_ride_data(self, start_date, days, records_per_day):
+        """生成骑行数据"""
+        ride_data = []
+        
+        for day in range(days):
+            current_date = (datetime.strptime(start_date, "%Y-%m-%d") + timedelta(days=day)).strftime("%Y-%m-%d")
+            date_obj = datetime.strptime(current_date, "%Y-%m-%d")
+            is_weekend = date_obj.weekday() >= 5
+            
+            for _ in range(records_per_day):
+                # 生成骑行时间
+                hour, minute = self.generate_time_based_on_pattern(is_weekend)
+                start_time = f"{current_date} {hour:02d}:{minute:02d}:00"
+                
+                # 生成站点对
+                start_station, end_station = self.generate_station_pair(hour)
+                
+                # 计算骑行时长
+                duration = self.calculate_duration(start_station, end_station)
+                
+                # 生成其他数据
+                company = random.choice(self.companies)
+                temperature, wind_speed, weather, weekday, is_holiday = self.generate_weather_data(current_date)
+                
+                # 生成订单状态
+                status = "cleaned" if random.random() > 0.05 else "pending"
+                
+                # 生成骑行距离（基于时长和平均速度）
+                distance = round(duration / 60 * 15, 1)
+                
+                # 生成用户类型
+                user_type = random.choice(["学生", "教师", "职工", "访客"])
+                
+                # 添加到数据列表
+                ride_data.append({
+                    "company": company,
+                    "start_station": start_station,
+                    "end_station": end_station,
+                    "start_time": start_time,
+                    "duration": duration,
+                    "distance": distance,
+                    "temperature": temperature,
+                    "wind_speed": wind_speed,
+                    "weather": weather,
+                    "weekday": weekday,
+                    "is_holiday": is_holiday,
+                    "status": status,
+                    "user_type": user_type
+                })
+        
+        return ride_data
+    
+    def generate_weather_data_csv(self, start_date, days, output_file):
+        """生成天气数据CSV文件"""
+        weather_data = []
+        
+        for day in range(days):
+            current_date = (datetime.strptime(start_date, "%Y-%m-%d") + timedelta(days=day)).strftime("%Y-%m-%d")
+            
+            # 生成24小时的天气数据
+            for hour in range(24):
+                # 基础温度
+                base_temp = 5
+                
+                # 温度变化（白天高，晚上低）
+                if 6 <= hour <= 14:
+                    temp_variation = hour - 6
+                elif 15 <= hour <= 20:
+                    temp_variation = 8 - (hour - 14)
+                else:
+                    temp_variation = -2 - abs(hour - 2)
+                
+                temperature = round(base_temp + temp_variation + random.uniform(-1, 1), 1)
+                wind_speed = round(random.uniform(0, 5), 1)
+                weather = random.choice(self.weather_conditions)
+                
+                # 根据天气调整温度
+                if weather in ["小雨", "中雨"]:
+                    temperature -= random.uniform(1, 2)
+                
+                date_obj = datetime.strptime(current_date, "%Y-%m-%d")
+                weekday = self.weekdays[date_obj.weekday()]
+                is_holiday = 1 if current_date in self.holidays else 0
+                
+                weather_data.append({
+                    "date": current_date,
+                    "hour": hour,
+                    "temperature": temperature,
+                    "wind_speed": wind_speed,
+                    "weather": weather,
+                    "weekday": weekday,
+                    "is_holiday": is_holiday
+                })
+        
+        # 保存为CSV
+        df = pd.DataFrame(weather_data)
+        df.to_csv(output_file, index=False, encoding='utf-8-sig')
+        print(f"天气数据已生成：{output_file}")
+    
+    def generate_ride_data_csv(self, start_date, days, records_per_day, output_file):
+        """生成骑行数据CSV文件"""
+        ride_data = self.generate_ride_data(start_date, days, records_per_day)
+        
+        # 保存为CSV
+        df = pd.DataFrame(ride_data)
+        df.to_csv(output_file, index=False, encoding='utf-8-sig')
+        print(f"骑行数据已生成：{output_file}")
+        print(f"生成记录数：{len(ride_data)}")
+
+if __name__ == "__main__":
+    generator = YanshanUniversityDataGenerator()
+    
+    # 创建输出目录
+    os.makedirs('test_data', exist_ok=True)
+    
+    # 生成骑行数据（2026年2月1日-2月7日，每天200条记录）
+    generator.generate_ride_data_csv(
+        start_date="2026-02-01",
+        days=7,
+        records_per_day=200,
+        output_file="test_data/yanshan_university_detailed_ride_data.csv"
+    )
+    
+    # 生成天气数据（2026年2月1日-2月7日）
+    generator.generate_weather_data_csv(
+        start_date="2026-02-01",
+        days=7,
+        output_file="test_data/yanshan_university_weather_data.csv"
+    )
