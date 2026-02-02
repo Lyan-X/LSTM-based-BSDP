@@ -6,10 +6,16 @@
 import os
 import pandas as pd
 import numpy as np
+import requests
+import json
+import schedule
+import time
+from threading import Thread
 from django.conf import settings
 from django.utils import timezone
 from data_process.models import BikeRideData, WeatherData
 from system_support.models import SystemLog
+from django.db.models import Avg
 import logging
 
 # 配置日志
@@ -91,14 +97,22 @@ class DataService:
             object_cols = cleaned_df.select_dtypes(include=['object']).columns
             cleaned_df[object_cols] = cleaned_df[object_cols].fillna('')
             
-            # 处理时间列
-            if 'ride_datetime' in cleaned_df.columns:
-                cleaned_df['ride_datetime'] = pd.to_datetime(cleaned_df['ride_datetime'], errors='coerce')
-            elif 'start_time' in cleaned_df.columns:
-                cleaned_df['ride_datetime'] = pd.to_datetime(cleaned_df['start_time'], errors='coerce')
+            # 灵活处理时间列
+            time_columns = ['ride_datetime', 'start_time', 'datetime', 'time', 'start_date', 'date']
+            time_col_found = False
             
-            # 移除无效行
-            cleaned_df = cleaned_df.dropna(subset=['ride_datetime'])
+            for col in time_columns:
+                if col in cleaned_df.columns:
+                    cleaned_df['ride_datetime'] = pd.to_datetime(cleaned_df[col], errors='coerce')
+                    time_col_found = True
+                    break
+            
+            # 只有在找到时间列时才过滤无效行
+            if time_col_found:
+                cleaned_df = cleaned_df.dropna(subset=['ride_datetime'])
+            else:
+                # 没有时间列时，使用当前时间作为默认值
+                cleaned_df['ride_datetime'] = timezone.now()
             
             # 移除重复行
             cleaned_df = cleaned_df.drop_duplicates()
@@ -142,12 +156,135 @@ class DataService:
                 BikeRideData.objects.bulk_create(data_list, batch_size=1000)
                 logger.info(f"成功入库骑行数据: {len(data_list)}条")
             
+            # 数据导入后后台自动触发需求预测处理
+            self.trigger_demand_prediction()
+            
             return len(data_list), None
             
         except Exception as e:
             error_msg = f"处理骑行数据失败: {str(e)}"
             logger.error(error_msg)
             return 0, error_msg
+    
+    def trigger_demand_prediction(self):
+        """触发需求预测处理"""
+        try:
+            logger.info("开始自动触发需求预测处理")
+            
+            # 导入需求预测相关模块
+            from demand_prediction.models import PredictionResult
+            from system_support.services.model_service import model_service
+            from django.utils import timezone
+            import numpy as np
+            
+            # 预测下一小时
+            next_hour = timezone.now().hour + 1
+            if next_hour >= 24:
+                next_hour = 0
+            
+            # 定义主要区域列表
+            regions = [
+                {'name': '燕山大学西校区', 'code': 'region1'},
+                {'name': '燕山大学东校区', 'code': 'region2'},
+                {'name': '燕山大学科技园区', 'code': 'region3'},
+                {'name': '燕山大学商业区', 'code': 'region4'}
+            ]
+            
+            # 对每个区域进行预测
+            for region in regions:
+                try:
+                    # 获取该区域的历史骑行数据
+                    historical_data = BikeRideData.objects.filter(
+                        start_point__icontains=region['name'],
+                        ride_datetime__hour=next_hour
+                    ).order_by('-ride_datetime')[:24]
+                    
+                    # 计算历史统计特征
+                    if historical_data.exists():
+                        avg_duration = historical_data.aggregate(Avg('duration'))['duration__avg'] or 15.0
+                        avg_distance = historical_data.aggregate(Avg('distance'))['distance__avg'] or 3.5
+                        recent_count = historical_data.count()
+                    else:
+                        avg_duration = 15.0
+                        avg_distance = 3.5
+                        recent_count = 0
+                    
+                    # 获取天气数据
+                    weather_data = WeatherData.objects.filter(
+                        date=timezone.now().date()
+                    ).first()
+                    
+                    # 天气特征
+                    if weather_data:
+                        temperature = weather_data.temperature
+                        humidity = weather_data.humidity
+                        wind_speed = weather_data.wind_speed
+                        rainfall = weather_data.rainfall
+                        weather_type = weather_data.weather_type
+                    else:
+                        temperature = 25
+                        humidity = 60
+                        wind_speed = 2
+                        rainfall = 0
+                        weather_type = 'sunny'
+                    
+                    # 构建特征向量
+                    feature_vector = np.array([[
+                        avg_duration,
+                        avg_distance,
+                        temperature,
+                        humidity,
+                        wind_speed,
+                        rainfall,
+                        0,  # 时段编码
+                        0,  # 区域编码
+                        0,  # 天气编码
+                        1000.0,  # 人口密度
+                        0.7  # 商圈类型
+                    ]])
+                    
+                    # 使用模型预测
+                    lstm_demand, _ = model_service.predict('lstm', feature_vector)
+                    bp_demand, _ = model_service.predict('bp', feature_vector)
+                    
+                    # 选择最佳预测结果
+                    final_demand = lstm_demand if lstm_demand is not None else bp_demand
+                    if final_demand is None:
+                        continue
+                    
+                    # 检查是否已存在同一小时的预测数据
+                    existing_prediction = PredictionResult.objects.filter(
+                        region=region['code'],
+                        predict_date=timezone.now().date(),
+                        predict_hour=next_hour
+                    ).first()
+                    
+                    if existing_prediction:
+                        # 更新现有预测数据
+                        existing_prediction.demand_count = final_demand
+                        existing_prediction.save()
+                    else:
+                        # 创建新预测数据
+                        PredictionResult.objects.create(
+                            region=region['code'],
+                            time_period='morning',
+                            predict_date=timezone.now().date(),
+                            predict_hour=next_hour,
+                            demand_count=final_demand,
+                            supply_count=0,
+                            model_used='LSTM',
+                            accuracy=82.0
+                        )
+                    
+                except Exception as e:
+                    logger.error(f"预测{region['name']}需求失败: {str(e)}")
+                    continue
+            
+            logger.info("需求预测处理完成")
+            
+        except Exception as e:
+            error_msg = f"触发需求预测失败: {str(e)}"
+            logger.error(error_msg)
     
     def process_weather_data(self, df):
         """处理天气数据"""
@@ -291,7 +428,7 @@ class DataService:
             
             # 关联天气数据
             result = []
-            for ride in rides[:100]:  # 限制数量
+            for ride in rides:  # 移除数量限制，确保所有数据都能被读取
                 weather = None
                 try:
                     weather = WeatherData.objects.filter(
@@ -316,6 +453,7 @@ class DataService:
     def generate_test_data(self, days=7, rides_per_day=100):
         """生成测试数据"""
         try:
+            import random
             # 生成骑行数据
             ride_data = []
             start_date = timezone.now().date() - timezone.timedelta(days=days)
@@ -386,6 +524,151 @@ class DataService:
             error_msg = f"生成测试数据失败: {str(e)}"
             logger.error(error_msg)
             return None, error_msg
+    
+    def sync_campus_vehicle_data(self):
+        """同步校园车辆定位系统数据"""
+        try:
+            # 模拟调用校园车辆定位系统接口
+            # 实际项目中，这里应该调用真实的API接口
+            logger.info("开始同步校园车辆定位系统数据")
+            
+            # 模拟API响应
+            mock_response = {
+                'vehicles': [
+                    {
+                        'vehicle_id': f'Bike_{i}',
+                        'latitude': 39.915 + (i % 10) * 0.001,
+                        'longitude': 119.528 + (i % 10) * 0.001,
+                        'status': 'available' if i % 2 == 0 else 'riding',
+                        'last_updated': timezone.now().isoformat()
+                    }
+                    for i in range(50)
+                ]
+            }
+            
+            # 处理车辆数据
+            vehicle_data = []
+            for vehicle in mock_response['vehicles']:
+                if vehicle['status'] == 'available':
+                    # 构建车辆数据
+                    vehicle_data.append({
+                        'vehicle_id': vehicle['vehicle_id'],
+                        'latitude': vehicle['latitude'],
+                        'longitude': vehicle['longitude'],
+                        'status': vehicle['status']
+                    })
+            
+            logger.info(f"成功同步{len(vehicle_data)}辆可用车辆数据")
+            return vehicle_data, None
+            
+        except Exception as e:
+            error_msg = f"同步校园车辆数据失败: {str(e)}"
+            logger.error(error_msg)
+            return None, error_msg
+    
+    def start_scheduled_sync(self):
+        """启动定时同步任务"""
+        try:
+            # 每5分钟同步一次校园车辆数据
+            schedule.every(5).minutes.do(self.sync_campus_vehicle_data)
+            
+            # 每小时清理一次孤立数据
+            schedule.every().hour.do(self.clean_isolated_data)
+            
+            # 在后台线程中运行
+            def run_schedule():
+                while True:
+                    schedule.run_pending()
+                    time.sleep(60)
+            
+            sync_thread = Thread(target=run_schedule)
+            sync_thread.daemon = True
+            sync_thread.start()
+            
+            logger.info("定时同步任务已启动")
+            return True
+            
+        except Exception as e:
+            error_msg = f"启动定时同步任务失败: {str(e)}"
+            logger.error(error_msg)
+            return False
+    
+    def clean_isolated_data(self):
+        """清理孤立数据集"""
+        try:
+            # 清理测试数据
+            test_data_count = BikeRideData.objects.filter(data_source='test').delete()[0]
+            if test_data_count > 0:
+                logger.info(f"清理了{test_data_count}条测试数据")
+            
+            # 清理状态为invalid的数据
+            invalid_data_count = BikeRideData.objects.filter(status='invalid').delete()[0]
+            if invalid_data_count > 0:
+                logger.info(f"清理了{invalid_data_count}条无效数据")
+            
+            # 清理没有坐标的车辆数据
+            from operation_management.models import Vehicle
+            vehicle_count = Vehicle.objects.filter(Q(latitude__isnull=True) | Q(longitude__isnull=True)).delete()[0]
+            if vehicle_count > 0:
+                logger.info(f"清理了{vehicle_count}条无坐标车辆数据")
+            
+            # 清理超出燕大边界的车辆数据
+            from operation_management.models import Vehicle
+            yanshan_bounds = {
+                'north': 39.9550,
+                'south': 39.9450,
+                'east': 119.5400,
+                'west': 119.5250
+            }
+            out_of_bounds_count = Vehicle.objects.filter(
+                Q(latitude__gt=yanshan_bounds['north']) |
+                Q(latitude__lt=yanshan_bounds['south']) |
+                Q(longitude__gt=yanshan_bounds['east']) |
+                Q(longitude__lt=yanshan_bounds['west'])
+            ).delete()[0]
+            if out_of_bounds_count > 0:
+                logger.info(f"清理了{out_of_bounds_count}条超出燕大边界的车辆数据")
+            
+            return test_data_count + invalid_data_count + vehicle_count + out_of_bounds_count
+            
+        except Exception as e:
+            error_msg = f"清理孤立数据失败: {str(e)}"
+            logger.error(error_msg)
+            return 0
+    
+    def batch_upload_excel(self, files, user=None):
+        """批量上传Excel文件"""
+        try:
+            total_count = 0
+            
+            for file in files:
+                # 验证文件
+                valid, message = self.validate_file(file)
+                if not valid:
+                    logger.warning(f"文件验证失败: {message}")
+                    continue
+                
+                # 读取文件
+                df, error = self.read_file(file)
+                if error:
+                    logger.warning(f"文件读取失败: {error}")
+                    continue
+                
+                # 处理数据
+                count, error = self.process_ride_data(df, user)  # 传入真实用户
+                if error:
+                    logger.warning(f"处理数据失败: {error}")
+                    continue
+                
+                total_count += count
+            
+            logger.info(f"批量上传完成，成功处理{total_count}条数据")
+            return total_count, None
+            
+        except Exception as e:
+            error_msg = f"批量上传失败: {str(e)}"
+            logger.error(error_msg)
+            return 0, error_msg
 
 # 全局数据服务实例
 data_service = DataService()

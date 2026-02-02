@@ -1100,7 +1100,7 @@
                     </li>
                     {% if user.is_authenticated %}
                     <li class="nav-item">
-                        <a class="nav-link {% if 'operation_management' in request.path %}active{% endif %}" href="{% url 'operation_management:dashboard' %}">
+                        <a class="nav-link {% if 'operation_management' in request.path %}active{% endif %}" href="{% url 'operation_management:operation_dashboard' %}">
                             <i class="bi bi-gear"></i> 运维管理
                         </a>
                     </li>
@@ -1191,7 +1191,7 @@
                         <li><a href="{% url 'system_support:dashboard' %}">首页</a></li>
                         <li><a href="{% url 'data_process:data_upload' %}">数据处理</a></li>
                         <li><a href="{% url 'demand_prediction:predict' %}">需求预测</a></li>
-                        <li><a href="{% url 'operation_management:dashboard' %}">运维管理</a></li>
+                        <li><a href="{% url 'operation_management:operation_dashboard' %}">运维管理</a></li>
                     </ul>
                 </div>
                 <div class="footer-section">

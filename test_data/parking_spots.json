@@ -1,0 +1,212 @@
+[
+  {
+    "id": "P00101",
+    "name": "燕山大学南门停车点1",
+    "latitude": 39.945,
+    "longitude": 119.530652,
+    "service_radius": 126
+  },
+  {
+    "id": "P00102",
+    "name": "燕山大学南门停车点2",
+    "latitude": 39.945,
+    "longitude": 119.530767,
+    "service_radius": 51
+  },
+  {
+    "id": "P00103",
+    "name": "燕山大学南门停车点3",
+    "latitude": 39.945,
+    "longitude": 119.529203,
+    "service_radius": 88
+  },
+  {
+    "id": "P00201",
+    "name": "燕山大学北门停车点1",
+    "latitude": 39.954567,
+    "longitude": 119.529018,
+    "service_radius": 65
+  },
+  {
+    "id": "P00202",
+    "name": "燕山大学北门停车点2",
+    "latitude": 39.955,
+    "longitude": 119.529141,
+    "service_radius": 133
+  },
+  {
+    "id": "P00203",
+    "name": "燕山大学北门停车点3",
+    "latitude": 39.955,
+    "longitude": 119.530122,
+    "service_radius": 131
+  },
+  {
+    "id": "P00301",
+    "name": "燕山大学东门停车点1",
+    "latitude": 39.949996,
+    "longitude": 119.54,
+    "service_radius": 124
+  },
+  {
+    "id": "P00302",
+    "name": "燕山大学东门停车点2",
+    "latitude": 39.949905,
+    "longitude": 119.54,
+    "service_radius": 80
+  },
+  {
+    "id": "P00303",
+    "name": "燕山大学东门停车点3",
+    "latitude": 39.949812,
+    "longitude": 119.54,
+    "service_radius": 71
+  },
+  {
+    "id": "P00401",
+    "name": "燕山大学西门停车点1",
+    "latitude": 39.949432,
+    "longitude": 119.525,
+    "service_radius": 131
+  },
+  {
+    "id": "P00402",
+    "name": "燕山大学西门停车点2",
+    "latitude": 39.949333,
+    "longitude": 119.525369,
+    "service_radius": 143
+  },
+  {
+    "id": "P00403",
+    "name": "燕山大学西门停车点3",
+    "latitude": 39.949933,
+    "longitude": 119.525,
+    "service_radius": 131
+  },
+  {
+    "id": "P00501",
+    "name": "燕山大学图书馆停车点1",
+    "latitude": 39.949144,
+    "longitude": 119.531742,
+    "service_radius": 139
+  },
+  {
+    "id": "P00502",
+    "name": "燕山大学图书馆停车点2",
+    "latitude": 39.948471,
+    "longitude": 119.532803,
+    "service_radius": 68
+  },
+  {
+    "id": "P00503",
+    "name": "燕山大学图书馆停车点3",
+    "latitude": 39.949499,
+    "longitude": 119.531782,
+    "service_radius": 61
+  },
+  {
+    "id": "P00601",
+    "name": "燕山大学教学楼停车点1",
+    "latitude": 39.948788,
+    "longitude": 119.533892,
+    "service_radius": 113
+  },
+  {
+    "id": "P00602",
+    "name": "燕山大学教学楼停车点2",
+    "latitude": 39.948377,
+    "longitude": 119.532023,
+    "service_radius": 74
+  },
+  {
+    "id": "P00603",
+    "name": "燕山大学教学楼停车点3",
+    "latitude": 39.947666,
+    "longitude": 119.533971,
+    "service_radius": 77
+  },
+  {
+    "id": "P00701",
+    "name": "燕山大学食堂停车点1",
+    "latitude": 39.946196,
+    "longitude": 119.530106,
+    "service_radius": 104
+  },
+  {
+    "id": "P00702",
+    "name": "燕山大学食堂停车点2",
+    "latitude": 39.947545,
+    "longitude": 119.530745,
+    "service_radius": 123
+  },
+  {
+    "id": "P00703",
+    "name": "燕山大学食堂停车点3",
+    "latitude": 39.946653,
+    "longitude": 119.530607,
+    "service_radius": 74
+  },
+  {
+    "id": "P00801",
+    "name": "燕山大学宿舍区停车点1",
+    "latitude": 39.945821,
+    "longitude": 119.532916,
+    "service_radius": 150
+  },
+  {
+    "id": "P00802",
+    "name": "燕山大学宿舍区停车点2",
+    "latitude": 39.946742,
+    "longitude": 119.532437,
+    "service_radius": 114
+  },
+  {
+    "id": "P00803",
+    "name": "燕山大学宿舍区停车点3",
+    "latitude": 39.945131,
+    "longitude": 119.532741,
+    "service_radius": 75
+  },
+  {
+    "id": "P00901",
+    "name": "燕山大学体育馆停车点1",
+    "latitude": 39.95105,
+    "longitude": 119.532051,
+    "service_radius": 135
+  },
+  {
+    "id": "P00902",
+    "name": "燕山大学体育馆停车点2",
+    "latitude": 39.950295,
+    "longitude": 119.533126,
+    "service_radius": 101
+  },
+  {
+    "id": "P00903",
+    "name": "燕山大学体育馆停车点3",
+    "latitude": 39.950868,
+    "longitude": 119.532596,
+    "service_radius": 110
+  },
+  {
+    "id": "P01001",
+    "name": "燕山大学行政楼停车点1",
+    "latitude": 39.949041,
+    "longitude": 119.531882,
+    "service_radius": 124
+  },
+  {
+    "id": "P01002",
+    "name": "燕山大学行政楼停车点2",
+    "latitude": 39.949401,
+    "longitude": 119.531255,
+    "service_radius": 109
+  },
+  {
+    "id": "P01003",
+    "name": "燕山大学行政楼停车点3",
+    "latitude": 39.949809,
+    "longitude": 119.531993,
+    "service_radius": 110
+  }
+]

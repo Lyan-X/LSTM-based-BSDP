@@ -1,454 +1,435 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
 from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Q, Count
 from django.utils import timezone
-from django.db.models import Count, Q, Sum
-from django.core.paginator import Paginator
+from datetime import datetime, timedelta
 import json
-from .models import Vehicle, ScheduleTask, ScheduleEvaluation, OperatorTrack
-from demand_prediction.models import PredictionResult, REGION_CHOICES
-from system_support.models import User
-from system_support.views import role_required, get_client_ip
-from system_support.models import SystemLog
+import random
+import csv
+import os
+from django.conf import settings
 
+from operation_management.models import Vehicle, ScheduleTask, ParkingSpot
+from demand_prediction.models import PredictionResult
+from operation_management.services.data_sync_service import DataSyncService
 
-@login_required
-def dashboard(request):
-    """运维管理首页"""
-    user = request.user
-    
+# 运维管理首页
+def operation_dashboard(request):
     # 统计数据
-    stats = {
-        'total_vehicles': Vehicle.objects.count(),
-        'normal_vehicles': Vehicle.objects.filter(status='normal').count(),
-        'fault_vehicles': Vehicle.objects.filter(status='fault').count(),
-        'pending_tasks': ScheduleTask.objects.filter(status='pending').count(),
-        'in_progress_tasks': ScheduleTask.objects.filter(status='in_progress').count(),
-    }
+    total_vehicles = Vehicle.objects.count()
+    available_vehicles = Vehicle.objects.filter(status='available').count()
+    ridden_vehicles = Vehicle.objects.filter(status='ridden').count()
+    faulty_vehicles = Vehicle.objects.filter(status='faulty').count()
     
-    # 根据角色过滤任务
-    if user.is_operator():
-        tasks = ScheduleTask.objects.filter(assign_to=user).order_by('-create_time')[:5]
-    else:
-        tasks = ScheduleTask.objects.all().order_by('-create_time')[:5]
+    # 任务统计
+    pending_tasks = ScheduleTask.objects.filter(status='pending').count()
+    in_progress_tasks = ScheduleTask.objects.filter(status='in_progress').count()
+    completed_tasks = ScheduleTask.objects.filter(status='completed').count()
     
-    # 最近车辆状态
-    recent_vehicles = Vehicle.objects.all().order_by('-update_time')[:10]
+    # 最近任务
+    recent_tasks = ScheduleTask.objects.order_by('-create_time')[:5]
     
     context = {
-        'stats': stats,
-        'tasks': tasks,
-        'recent_vehicles': recent_vehicles,
+        'total_vehicles': total_vehicles,
+        'available_vehicles': available_vehicles,
+        'ridden_vehicles': ridden_vehicles,
+        'faulty_vehicles': faulty_vehicles,
+        'pending_tasks': pending_tasks,
+        'in_progress_tasks': in_progress_tasks,
+        'completed_tasks': completed_tasks,
+        'recent_tasks': recent_tasks,
+        'current_time': timezone.now(),
     }
+    
     return render(request, 'operation_management/dashboard.html', context)
 
-
-@login_required
-def vehicle_monitor(request):
-    """车辆状态实时监控（任务书核心功能）"""
-    # 支持筛选
-    status_filter = request.GET.get('status', '')
-    region_filter = request.GET.get('region', '')
-    
-    vehicles = Vehicle.objects.all()
-    
-    if status_filter:
-        vehicles = vehicles.filter(status=status_filter)
-    if region_filter:
-        vehicles = vehicles.filter(current_region=region_filter)
-    
-    # 分页
-    paginator = Paginator(vehicles, 20)
-    page = request.GET.get('page', 1)
-    vehicles_page = paginator.get_page(page)
-    
-    # 统计各状态车辆数
-    status_stats = Vehicle.objects.values('status').annotate(count=Count('id'))
-    
-    context = {
-        'vehicles': vehicles_page,
-        'status_filter': status_filter,
-        'region_filter': region_filter,
-        'status_stats': status_stats,
-        'regions': REGION_CHOICES,
-    }
-    return render(request, 'operation_management/vehicle_monitor.html', context)
-
-
-@login_required
-@role_required('admin')
-def vehicle_create(request):
-    """创建车辆（仅管理员）"""
-    if request.method == 'POST':
-        bike_id = request.POST.get('bike_id')
-        status = request.POST.get('status', 'normal')
-        region = request.POST.get('region')
-        latitude = request.POST.get('latitude')
-        longitude = request.POST.get('longitude')
-        
-        if Vehicle.objects.filter(bike_id=bike_id).exists():
-            messages.error(request, f'单车编号{bike_id}已存在')
-            return redirect('operation_management:vehicle_monitor')
-        
-        Vehicle.objects.create(
-            bike_id=bike_id,
-            status=status,
-            current_region=region,
-            latitude=float(latitude) if latitude else None,
-            longitude=float(longitude) if longitude else None,
-        )
-        
-        messages.success(request, f'车辆{bike_id}创建成功')
-        return redirect('operation_management:vehicle_monitor')
-    
-    return render(request, 'operation_management/vehicle_create.html', {
-        'regions': REGION_CHOICES,
-    })
-
-
-@login_required
+# 供需热力图
 def supply_demand_heatmap(request):
-    """供需热力图动态展示（任务书核心功能）"""
-    from data_process.models import BikeRideData
-    import os
-    import json
-    from django.conf import settings
+    # 获取停车点数据
+    parking_spots = ParkingSpot.objects.all()
     
-    # 获取日期范围（默认最近7天）
-    days = int(request.GET.get('days', 7))
-    end_date = timezone.now().date()
-    start_date = end_date - timezone.timedelta(days=days)
-    
-    # 统计各区域-时段的骑行需求
-    ride_data = BikeRideData.objects.filter(
-        ride_datetime__date__gte=start_date,
-        ride_datetime__date__lte=end_date,
-        status='cleaned'
-    ).extra(
-        select={'hour': "strftime('%%H', ride_datetime)"}
-    ).values('start_point', 'hour').annotate(
-        demand=Count('id')
+    # 获取预测数据（默认显示当前小时的预测）
+    current_time = timezone.now()
+    predictions = PredictionResult.objects.filter(
+        predict_date=current_time.date(),
+        predict_hour=current_time.hour
     )
     
-    # 构建热力图数据
-    regions = list(set([item['start_point'] for item in ride_data]))
-    hours = [str(i).zfill(2) for i in range(24)]
-    
-    heatmap_data = []
-    for item in ride_data:
-        region_idx = regions.index(item['start_point']) if item['start_point'] in regions else 0
-        hour_idx = int(item['hour'])
-        heatmap_data.append([hour_idx, region_idx, item['demand']])
-    
-    # 查询需求预测数据
-    from demand_prediction.models import PredictionResult
-    prediction_data = []
-    predictions = PredictionResult.objects.filter(
-        predict_date=end_date
-    ).order_by('predict_hour', 'region')
-    
-    for pred in predictions:
-        prediction_data.append({
-            'region': pred.get_region_display(),
-            'hour': pred.predict_hour,
-            'demand': pred.demand_count,
-            'supply': pred.supply_count,
-            'model': pred.model_used
-        })
-    
-    # 如果没有数据，从Vehicle模型获取实际车辆数据
-    if not heatmap_data:
-        # 从Vehicle模型获取车辆数据
-        vehicles = Vehicle.objects.all()
+    # 转换为前端需要的格式
+    parking_spots_data = []
+    for spot in parking_spots:
+        # 查找预测数据（使用region字段）
+        spot_prediction = predictions.first()
         
-        # 如果有车辆数据，使用实际车辆数据
-        if vehicles.exists():
-            for vehicle in vehicles:
-                if vehicle.latitude and vehicle.longitude:
-                    # 根据车辆状态调整需求值
-                    if vehicle.status == 'normal':
-                        demand = 100
-                    elif vehicle.status == 'fault':
-                        demand = 50
-                    else:
-                        demand = 20
-                    heatmap_data.append([0, 0, demand, vehicle.latitude, vehicle.longitude, vehicle.bike_id, vehicle.status])
-        else:
-            # 如果没有车辆数据，生成燕山大学附近的示例车辆数据
-            vehicle_locations = [
-                [119.5285, 39.9487, 'YS001', 'normal'],  # 燕山大学西校区南门
-                [119.5280, 39.9520, 'YS002', 'normal'],  # 燕山大学西校区北门
-                [119.5380, 39.9460, 'YS003', 'normal'],  # 燕山大学东校区南门
-                [119.5375, 39.9490, 'YS004', 'fault'],   # 燕山大学东校区北门
-                [119.5320, 39.9495, 'YS005', 'normal'],  # 燕山大学科技楼
-                [119.5300, 39.9480, 'YS006', 'normal'],  # 燕山大学图书馆
-                [119.5340, 39.9470, 'YS007', 'normal'],  # 燕山大学体育馆
-                [119.5260, 39.9475, 'YS008', 'normal'],  # 燕山大学学生宿舍区
-                [119.5250, 39.9465, 'YS009', 'normal'],  # 燕山大学商业区
-                [119.5350, 39.9500, 'YS010', 'normal'],  # 燕山大学教职工区
-            ]
-            
-            for loc in vehicle_locations:
-                heatmap_data.append([0, 0, 100, loc[0], loc[1], loc[2], loc[3]])
-    
-    # 燕山大学测试区域坐标
-    city_coords = {
-        'center': [119.5320, 39.9495],  # 燕山大学中心坐标
-        'zoom': 15,  # 放大级别，更清晰显示校园细节
-        'bounds': {
-            'north': 39.9550,  # 北边界
-            'south': 39.9450,  # 南边界
-            'east': 119.5400,  # 东边界
-            'west': 119.5250   # 西边界
-        }
-    }
-    
-    # 燕山大学测试区域停靠点信息（精确经纬度）
-    stations = [
-        {'name': '燕山大学西校区南门', 'coords': [119.5285, 39.9487], 'demand': 150},
-        {'name': '燕山大学西校区北门', 'coords': [119.5280, 39.9520], 'demand': 120},
-        {'name': '燕山大学东校区南门', 'coords': [119.5380, 39.9460], 'demand': 100},
-        {'name': '燕山大学东校区北门', 'coords': [119.5375, 39.9490], 'demand': 90},
-        {'name': '燕山大学科技楼', 'coords': [119.5320, 39.9495], 'demand': 130},
-        {'name': '燕山大学图书馆', 'coords': [119.5300, 39.9480], 'demand': 110},
-        {'name': '燕山大学体育馆', 'coords': [119.5340, 39.9470], 'demand': 80},
-        {'name': '燕山大学学生宿舍区', 'coords': [119.5260, 39.9475], 'demand': 70},
-        {'name': '燕山大学商业区', 'coords': [119.5250, 39.9465], 'demand': 60},
-        {'name': '燕山大学教职工区', 'coords': [119.5350, 39.9500], 'demand': 50}
-    ]
+        spot_data = {
+                    'id': spot.id,
+                    'name': spot.name,
+                    'latitude': spot.latitude,
+                    'longitude': spot.longitude,
+                    'service_radius': spot.service_radius,
+                    'demand': spot_prediction.demand_count if spot_prediction else 0,
+                    'supply': spot_prediction.supply_count if spot_prediction else 0,
+                    'difference': (spot_prediction.supply_count - spot_prediction.demand_count) if spot_prediction else 0
+                }
+        parking_spots_data.append(spot_data)
     
     context = {
-        'regions': json.dumps(regions),
-        'hours': json.dumps(hours),
-        'heatmap_data': json.dumps(heatmap_data),
-        'prediction_data': json.dumps(prediction_data),
-        'days': days,
-        'city_coords': json.dumps(city_coords),
-        'stations': json.dumps(stations)
+        'parking_spots': json.dumps(parking_spots_data),
+        'current_time': current_time.strftime('%Y-%m-%d %H:00:00'),
     }
+    
     return render(request, 'operation_management/heatmap.html', context)
 
-
-@login_required
-def task_list(request):
-    """调度任务列表"""
-    user = request.user
+# 车辆监控
+def vehicle_monitor(request):
+    # 获取所有车辆
+    vehicles = Vehicle.objects.all()
     
-    # 根据角色过滤
-    if user.is_operator():
-        tasks = ScheduleTask.objects.filter(assign_to=user)
-    elif user.is_admin():
-        tasks = ScheduleTask.objects.all()
-    else:
-        tasks = ScheduleTask.objects.none()
+    # 统计数据
+    total_vehicles = vehicles.count()
+    available_vehicles = vehicles.filter(status='available').count()
+    ridden_vehicles = vehicles.filter(status='ridden').count()
+    faulty_vehicles = vehicles.filter(status='faulty').count()
+    locked_vehicles = vehicles.filter(status='locked').count()
     
-    # 状态筛选
-    status_filter = request.GET.get('status', '')
-    if status_filter:
-        tasks = tasks.filter(status=status_filter)
-    
-    tasks = tasks.order_by('-create_time')
-    
-    # 分页
-    paginator = Paginator(tasks, 15)
-    page = request.GET.get('page', 1)
-    tasks_page = paginator.get_page(page)
+    # 转换为前端需要的格式
+    vehicles_data = []
+    for vehicle in vehicles:
+        vehicles_data.append({
+            'id': vehicle.id,
+            'status': vehicle.status,
+            'latitude': vehicle.latitude,
+            'longitude': vehicle.longitude,
+            'update_time': vehicle.update_time.strftime('%Y-%m-%d %H:%M:%S') if vehicle.update_time else '',
+        })
     
     context = {
-        'tasks': tasks_page,
-        'status_filter': status_filter,
+        'vehicles': json.dumps(vehicles_data),
+        'total_vehicles': total_vehicles,
+        'available_vehicles': available_vehicles,
+        'ridden_vehicles': ridden_vehicles,
+        'faulty_vehicles': faulty_vehicles,
+        'locked_vehicles': locked_vehicles,
+        'current_time': timezone.now(),
     }
+    
+    return render(request, 'operation_management/vehicle_monitor.html', context)
+
+# 调度任务列表
+def task_list(request):
+    # 获取所有任务
+    tasks = ScheduleTask.objects.order_by('-create_time')
+    
+    # 计算各个状态的任务数量
+    pending_tasks = tasks.filter(status='pending').count()
+    in_progress_tasks = tasks.filter(status='in_progress').count()
+    completed_tasks = tasks.filter(status='completed').count()
+    cancelled_tasks = tasks.filter(status='cancelled').count()
+    
+    context = {
+        'tasks': tasks,
+        'pending_tasks': pending_tasks,
+        'in_progress_tasks': in_progress_tasks,
+        'completed_tasks': completed_tasks,
+        'cancelled_tasks': cancelled_tasks,
+        'current_time': timezone.now(),
+    }
+    
     return render(request, 'operation_management/task_list.html', context)
 
-
-@login_required
-@role_required('admin')
-def task_create(request):
-    """调度任务生成与分配（基于预测结果，仅管理员）"""
-    if request.method == 'POST':
-        target_region = request.POST.get('target_region')
-        source_region = request.POST.get('source_region') or None
-        demand_count = int(request.POST.get('demand_count', 0))
-        assign_to_id = request.POST.get('assign_to')
-        prediction_id = request.POST.get('prediction_id') or None
-        
-        # 生成唯一任务编号
-        task_id = f"SCHED_{timezone.now().strftime('%Y%m%d%H%M%S')}"
-        
-        task = ScheduleTask.objects.create(
-            task_id=task_id,
-            target_region=target_region,
-            source_region=source_region,
-            demand_count=demand_count,
-            assign_to_id=assign_to_id if assign_to_id else None,
-            prediction_result_id=prediction_id,
-            created_by=request.user,
-            status='assigned' if assign_to_id else 'pending',
-        )
-        
-        # 记录操作日志
-        SystemLog.objects.create(
-            user=request.user,
-            action='schedule',
-            description=f'创建调度任务：{task_id}，目标区域：{task.get_target_region_display()}，需求：{demand_count}辆',
-            ip_address=get_client_ip(request)
-        )
-        
-        messages.success(request, f'调度任务{task_id}创建成功')
-        return redirect('operation_management:task_list')
-    
-    # 获取可用的预测结果
-    predictions = PredictionResult.objects.filter(
-        predict_date__gte=timezone.now().date()
-    ).order_by('-create_time')[:20]
-    
-    # 获取运维人员
-    operators = User.objects.filter(role='operator')
-    
-    context = {
-        'predictions': predictions,
-        'operators': operators,
-        'regions': REGION_CHOICES,
-    }
-    return render(request, 'operation_management/task_create.html', context)
-
-
-@login_required
+# 调度任务详情
 def task_detail(request, task_id):
-    """调度任务详情"""
-    task = get_object_or_404(ScheduleTask, task_id=task_id)
-    
-    # 权限检查：运维人员只能查看分配给自己的任务
-    if request.user.is_operator() and task.assign_to != request.user:
-        messages.error(request, '您没有权限查看此任务')
-        return redirect('operation_management:task_list')
-    
-    # 获取关联的轨迹
-    tracks = OperatorTrack.objects.filter(task=task).order_by('-track_time')
-    
-    # 获取评估结果
-    evaluation = None
-    try:
-        evaluation = ScheduleEvaluation.objects.get(task=task)
-    except ScheduleEvaluation.DoesNotExist:
-        pass
+    task = get_object_or_404(ScheduleTask, id=task_id)
     
     context = {
         'task': task,
-        'tracks': tracks,
-        'evaluation': evaluation,
+        'current_time': timezone.now(),
     }
+    
     return render(request, 'operation_management/task_detail.html', context)
 
-
-@login_required
-def task_update_status(request, task_id):
-    """更新任务状态（运维人员）"""
-    task = get_object_or_404(ScheduleTask, task_id=task_id)
+# 生成测试数据
+def generate_test_data(request):
+    # 燕大校园边界
+    yanshan_bounds = {
+        'north': 39.9550,
+        'south': 39.9450,
+        'east': 119.5400,
+        'west': 119.5250
+    }
     
-    # 权限检查
-    if request.user.is_operator() and task.assign_to != request.user:
-        return JsonResponse({'success': False, 'message': '无权限'})
-    
-    if request.method == 'POST':
-        new_status = request.POST.get('status')
-        actual_count = request.POST.get('actual_count', 0)
+    # 生成停车点
+    if ParkingSpot.objects.count() == 0:
+        # 燕大校园内的主要区域
+        areas = [
+            {'name': '燕山大学南门', 'lat': 39.9450, 'lon': 119.5300},
+            {'name': '燕山大学北门', 'lat': 39.9550, 'lon': 119.5300},
+            {'name': '燕山大学东门', 'lat': 39.9500, 'lon': 119.5400},
+            {'name': '燕山大学西门', 'lat': 39.9500, 'lon': 119.5250},
+            {'name': '燕山大学图书馆', 'lat': 39.9490, 'lon': 119.5320},
+            {'name': '燕山大学教学楼', 'lat': 39.9480, 'lon': 119.5330},
+            {'name': '燕山大学食堂', 'lat': 39.9470, 'lon': 119.5310},
+            {'name': '燕山大学宿舍区', 'lat': 39.9460, 'lon': 119.5320},
+            {'name': '燕山大学体育馆', 'lat': 39.9510, 'lon': 119.5330},
+            {'name': '燕山大学行政楼', 'lat': 39.9500, 'lon': 119.5310},
+        ]
         
-        if new_status in dict(ScheduleTask.STATUS_CHOICES).keys():
+        for i, area in enumerate(areas, 1):
+            # 在每个区域周围生成多个停车点
+            for j in range(1, 4):
+                spot_id = f'P{i:03d}{j:02d}'
+                # 在区域周围随机偏移
+                lat_offset = random.uniform(-0.001, 0.001)
+                lon_offset = random.uniform(-0.001, 0.001)
+                lat = max(yanshan_bounds['south'], min(yanshan_bounds['north'], area['lat'] + lat_offset))
+                lon = max(yanshan_bounds['west'], min(yanshan_bounds['east'], area['lon'] + lon_offset))
+                
+                ParkingSpot.objects.create(
+                    id=spot_id,
+                    name=f'{area["name"]}停车点{j}',
+                    latitude=round(lat, 6),
+                    longitude=round(lon, 6),
+                    service_radius=random.randint(50, 150)
+                )
+    
+    # 生成车辆数据
+    if Vehicle.objects.count() < 1400:
+        parking_spots = ParkingSpot.objects.all()
+        status_options = ['available', 'ridden', 'faulty', 'locked']
+        
+        for i in range(1, 1401):
+            # 随机选择一个停车点，在其附近生成车辆位置
+            spot = random.choice(parking_spots)
+            lat_offset = random.uniform(-0.0005, 0.0005)
+            lon_offset = random.uniform(-0.0005, 0.0005)
+            lat = max(yanshan_bounds['south'], min(yanshan_bounds['north'], spot.latitude + lat_offset))
+            lon = max(yanshan_bounds['west'], min(yanshan_bounds['east'], spot.longitude + lon_offset))
+            
+            # 随机生成更新时间（过去24小时内）
+            update_time = timezone.now() - timedelta(hours=random.randint(0, 24), minutes=random.randint(0, 59))
+            
+            Vehicle.objects.create(
+                id=f'B{i:04d}',
+                status=random.choice(status_options),
+                latitude=round(lat, 6),
+                longitude=round(lon, 6),
+                update_time=update_time,
+                parking_spot_id=spot.id
+            )
+    
+    # 生成预测数据
+    current_time = timezone.now()
+    parking_spots = ParkingSpot.objects.all()
+    
+    for hour in range(24):
+        predict_time = current_time + timedelta(hours=hour)
+        
+        for spot in parking_spots:
+            # 基于时间和位置生成合理的需求预测
+            base_demand = random.randint(5, 20)
+            
+            # 考虑时间因素：上课时间需求高
+            hour_of_day = predict_time.hour
+            if 8 <= hour_of_day <= 12 or 14 <= hour_of_day <= 18:
+                demand_multiplier = random.uniform(1.5, 2.5)
+            else:
+                demand_multiplier = random.uniform(0.5, 1.0)
+            
+            demand = int(base_demand * demand_multiplier)
+            supply = random.randint(demand - 5, demand + 5)
+            supply = max(0, supply)  # 确保供给不为负数
+            
+            # 检查是否已存在该时间的预测数据
+            existing_prediction = PredictionResult.objects.filter(
+                region='region1',
+                predict_date=predict_time.date(),
+                predict_hour=predict_time.hour
+            ).first()
+            
+            if existing_prediction:
+                # 更新现有预测数据
+                existing_prediction.demand_count = demand
+                existing_prediction.supply_count = supply
+                existing_prediction.save()
+            else:
+                # 创建新的预测数据
+                PredictionResult.objects.create(
+                    region='region1',
+                    predict_date=predict_time.date(),
+                    predict_hour=predict_time.hour,
+                    demand_count=demand,
+                    supply_count=supply,
+                    model_used='LSTM',
+                    accuracy=90.0,
+                    user_id=1
+                )
+    
+    return JsonResponse({'success': True, 'message': '测试数据生成完成'})
+
+# API接口：获取实时车辆数据
+@csrf_exempt
+def get_realtime_vehicle_data(request):
+    if request.method == 'GET':
+        # 获取所有车辆
+        vehicles = Vehicle.objects.all()
+        
+        # 转换为JSON格式
+        vehicles_data = []
+        for vehicle in vehicles:
+            vehicles_data.append({
+                'id': vehicle.id,
+                'status': vehicle.status,
+                'latitude': vehicle.latitude,
+                'longitude': vehicle.longitude,
+                'update_time': vehicle.update_time.strftime('%Y-%m-%d %H:%M:%S') if vehicle.update_time else '',
+            })
+        
+        return JsonResponse({'success': True, 'data': vehicles_data, 'current_time': timezone.now().strftime('%Y-%m-%d %H:%M:%S')})
+    
+    return JsonResponse({'success': False, 'message': '方法不允许'})
+
+# API接口：获取实时停车点数据
+@csrf_exempt
+def get_realtime_parking_data(request):
+    if request.method == 'GET':
+        # 获取停车点数据
+        parking_spots = ParkingSpot.objects.all()
+        
+        # 获取预测数据（默认显示当前小时的预测）
+        current_time = timezone.now()
+        predictions = PredictionResult.objects.filter(
+            predict_date=current_time.date(),
+            predict_hour=current_time.hour
+        )
+        
+        # 转换为JSON格式
+        parking_spots_data = []
+        for spot in parking_spots:
+            # 查找预测数据（使用region字段）
+            spot_prediction = predictions.first()
+            
+            spot_data = {
+                'id': spot.id,
+                'name': spot.name,
+                'latitude': spot.latitude,
+                'longitude': spot.longitude,
+                'service_radius': spot.service_radius,
+                'demand': spot_prediction.demand if spot_prediction else 0,
+                'supply': spot_prediction.supply if spot_prediction else 0,
+                'difference': (spot_prediction.supply - spot_prediction.demand) if spot_prediction else 0
+            }
+            parking_spots_data.append(spot_data)
+        
+        return JsonResponse({'success': True, 'data': parking_spots_data, 'current_time': timezone.now().strftime('%Y-%m-%d %H:%M:%S')})
+    
+    return JsonResponse({'success': False, 'message': '方法不允许'})
+
+# API接口：获取实时任务数据
+@csrf_exempt
+def get_realtime_task_data(request):
+    if request.method == 'GET':
+        # 获取所有任务
+        tasks = ScheduleTask.objects.order_by('-create_time')
+        
+        # 转换为JSON格式
+        tasks_data = []
+        for task in tasks:
+            tasks_data.append({
+                'id': task.id,
+                'task_type': task.task_type,
+                'status': task.status,
+                'start_location': task.start_location,
+                'end_location': task.end_location,
+                'dispatch_count': task.dispatch_count,
+                'priority': task.priority,
+                'create_time': task.create_time.strftime('%Y-%m-%d %H:%M:%S'),
+                'predicted_time': task.predicted_time.strftime('%Y-%m-%d %H:%M:%S') if task.predicted_time else '',
+            })
+        
+        return JsonResponse({'success': True, 'data': tasks_data, 'current_time': timezone.now().strftime('%Y-%m-%d %H:%M:%S')})
+    
+    return JsonResponse({'success': False, 'message': '方法不允许'})
+
+# API接口：更新车辆状态
+@csrf_exempt
+def update_vehicle_status(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            vehicle_id = data.get('vehicle_id')
+            new_status = data.get('status')
+            
+            if not vehicle_id or not new_status:
+                return JsonResponse({'success': False, 'message': '缺少必要参数'})
+            
+            # 验证状态值
+            valid_statuses = ['available', 'ridden', 'faulty', 'locked']
+            if new_status not in valid_statuses:
+                return JsonResponse({'success': False, 'message': '无效的状态值'})
+            
+            # 更新车辆状态
+            vehicle = get_object_or_404(Vehicle, id=vehicle_id)
+            vehicle.status = new_status
+            vehicle.update_time = timezone.now()
+            vehicle.save()
+            
+            return JsonResponse({'success': True, 'message': '车辆状态更新成功'})
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': '无效的JSON格式'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)})
+    
+    return JsonResponse({'success': False, 'message': '方法不允许'})
+
+# API接口：更新任务状态
+@csrf_exempt
+def update_task_status(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            task_id = data.get('task_id')
+            new_status = data.get('status')
+            
+            if not task_id or not new_status:
+                return JsonResponse({'success': False, 'message': '缺少必要参数'})
+            
+            # 验证状态值
+            valid_statuses = ['pending', 'in_progress', 'completed', 'cancelled']
+            if new_status not in valid_statuses:
+                return JsonResponse({'success': False, 'message': '无效的状态值'})
+            
+            # 更新任务状态
+            task = get_object_or_404(ScheduleTask, id=task_id)
             task.status = new_status
-            if actual_count:
-                task.actual_count = int(actual_count)
-            if new_status == 'completed':
-                task.complete_time = timezone.now()
             task.save()
             
-            return JsonResponse({'success': True, 'message': '状态更新成功'})
+            return JsonResponse({'success': True, 'message': '任务状态更新成功'})
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': '无效的JSON格式'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)})
     
-    return JsonResponse({'success': False, 'message': '请求错误'})
+    return JsonResponse({'success': False, 'message': '方法不允许'})
 
-
-@login_required
-@role_required('operator')
-def operator_track(request):
-    """运维人员轨迹追踪（任务书要求）"""
-    if request.method == 'POST':
-        latitude = request.POST.get('latitude')
-        longitude = request.POST.get('longitude')
-        task_id = request.POST.get('task_id')
-        description = request.POST.get('description', '')
-        
-        task = None
-        if task_id:
-            try:
-                task = ScheduleTask.objects.get(task_id=task_id, assign_to=request.user)
-            except ScheduleTask.DoesNotExist:
-                pass
-        
-        OperatorTrack.objects.create(
-            operator=request.user,
-            latitude=float(latitude),
-            longitude=float(longitude),
-            task=task,
-            description=description,
-        )
-        
-        return JsonResponse({'success': True, 'message': '位置记录成功'})
+# 计算停车点车辆数
+def calculate_parking_spot_vehicles():
+    """计算每个停车点的车辆数量"""
+    parking_spots = ParkingSpot.objects.all()
+    vehicles = Vehicle.objects.filter(status='available')
     
-    # GET请求：显示轨迹列表
-    tracks = OperatorTrack.objects.filter(operator=request.user).order_by('-track_time')[:50]
+    parking_vehicle_counts = {}
     
-    context = {
-        'tracks': tracks,
-    }
-    return render(request, 'operation_management/operator_track.html', context)
-
-
-@login_required
-@role_required('admin')
-def schedule_evaluation(request, task_id):
-    """调度效果评估（任务书要求，仅管理员）"""
-    task = get_object_or_404(ScheduleTask, task_id=task_id)
+    for spot in parking_spots:
+        count = 0
+        for vehicle in vehicles:
+            # 使用Haversine公式计算距离
+            distance = DataSyncService.calculate_distance(
+                spot.latitude, spot.longitude,
+                vehicle.latitude, vehicle.longitude
+            )
+            if distance <= spot.service_radius:
+                count += 1
+        parking_vehicle_counts[spot.id] = count
     
-    if request.method == 'POST':
-        completion_rate = float(request.POST.get('completion_rate', 0))
-        time_efficiency = float(request.POST.get('time_efficiency', 0))
-        cost_efficiency = request.POST.get('cost_efficiency')
-        satisfaction_score = request.POST.get('satisfaction_score')
-        notes = request.POST.get('notes', '')
-        
-        evaluation, created = ScheduleEvaluation.objects.get_or_create(
-            task=task,
-            defaults={
-                'completion_rate': completion_rate,
-                'time_efficiency': time_efficiency,
-                'cost_efficiency': float(cost_efficiency) if cost_efficiency else None,
-                'satisfaction_score': float(satisfaction_score) if satisfaction_score else None,
-                'notes': notes,
-                'evaluator': request.user,
-            }
-        )
-        
-        if not created:
-            evaluation.completion_rate = completion_rate
-            evaluation.time_efficiency = time_efficiency
-            evaluation.cost_efficiency = float(cost_efficiency) if cost_efficiency else None
-            evaluation.satisfaction_score = float(satisfaction_score) if satisfaction_score else None
-            evaluation.notes = notes
-            evaluation.save()
-        
-        messages.success(request, '评估完成')
-        return redirect('operation_management:task_detail', task_id=task_id)
-    
-    # GET请求：显示评估表单
-    evaluation = None
-    try:
-        evaluation = ScheduleEvaluation.objects.get(task=task)
-    except ScheduleEvaluation.DoesNotExist:
-        pass
-    
-    context = {
-        'task': task,
-        'evaluation': evaluation,
-    }
-    return render(request, 'operation_management/schedule_evaluation.html', context)
+    return parking_vehicle_counts

@@ -1,26 +1,38 @@
 from django.db import models
 from django.utils import timezone
-from demand_prediction.models import PredictionResult, REGION_CHOICES
 from system_support.models import User
+
+
+class ParkingSpot(models.Model):
+    """停车点模型"""
+    id = models.CharField(max_length=30, primary_key=True, verbose_name="停车点编号")
+    name = models.CharField(max_length=100, verbose_name="停车点名称")
+    latitude = models.FloatField(verbose_name="纬度")
+    longitude = models.FloatField(verbose_name="经度")
+    service_radius = models.IntegerField(default=100, verbose_name="服务半径(米)")
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
+
+    class Meta:
+        verbose_name = "停车点"
+        verbose_name_plural = "停车点"
+
+    def __str__(self):
+        return self.name
 
 
 class Vehicle(models.Model):
     """运维车辆/单车模型（任务书"运维管理模块"核心）"""
-    bike_id = models.CharField(max_length=30, unique=True, verbose_name="单车编号")
+    id = models.CharField(max_length=30, primary_key=True, verbose_name="车辆编号")
     status = models.CharField(
         max_length=20, 
-        choices=[('normal', '正常'), ('fault', '故障'), ('maintain', '维护中'), ('offline', '离线')], 
-        default='normal',
+        choices=[('available', '可用'), ('ridden', '已骑行'), ('faulty', '故障'), ('locked', '锁定')], 
+        default='available',
         verbose_name="车辆状态"
     )
-    current_region = models.CharField(
-        max_length=20, 
-        choices=REGION_CHOICES, 
-        verbose_name="当前区域"
-    )
-    latitude = models.FloatField(null=True, blank=True, verbose_name="纬度")
-    longitude = models.FloatField(null=True, blank=True, verbose_name="经度")
+    latitude = models.FloatField(verbose_name="纬度")
+    longitude = models.FloatField(verbose_name="经度")
     update_time = models.DateTimeField(auto_now=True, verbose_name="更新时间")
+    parking_spot_id = models.CharField(max_length=30, verbose_name="所属停车点ID")
 
     class Meta:
         verbose_name = "运维车辆"
@@ -28,51 +40,34 @@ class Vehicle(models.Model):
         ordering = ['-update_time']
         
     def __str__(self):
-        return f"单车{self.bike_id} - {self.get_status_display()} - {self.get_current_region_display()}"
+        return f"车辆{self.id} - {self.get_status_display()}"
 
 
 class ScheduleTask(models.Model):
     """调度任务模型（任务书"调度任务生成与分配"要求）"""
-    task_id = models.CharField(max_length=50, unique=True, verbose_name="任务编号")
-    target_region = models.CharField(max_length=20, choices=REGION_CHOICES, verbose_name="目标区域")
-    source_region = models.CharField(max_length=20, choices=REGION_CHOICES, null=True, blank=True, verbose_name="源区域")
-    demand_count = models.IntegerField(verbose_name="需求车辆数")
-    actual_count = models.IntegerField(default=0, verbose_name="实际调度数")
+    id = models.AutoField(primary_key=True, verbose_name="任务编号")
+    task_type = models.CharField(max_length=50, default='vehicle_dispatch', verbose_name="任务类型")
+    start_location = models.CharField(max_length=100, verbose_name="起始位置")
+    end_location = models.CharField(max_length=100, verbose_name="目标位置")
+    dispatch_count = models.IntegerField(default=0, verbose_name="调度数量")
+    
+    PRIORITY_CHOICES = [
+        ('high', '高'),
+        ('medium', '中'),
+        ('low', '低'),
+    ]
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium', verbose_name="优先级")
     
     STATUS_CHOICES = [
-        ('pending', '待分配'),
-        ('assigned', '已分配'),
+        ('pending', '待处理'),
         ('in_progress', '进行中'),
         ('completed', '已完成'),
         ('cancelled', '已取消'),
     ]
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="任务状态")
     
-    assign_to = models.ForeignKey(
-        User, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True,
-        related_name='assigned_tasks',
-        verbose_name="分配给"
-    )
-    created_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name='created_tasks',
-        verbose_name="创建人"
-    )
-    prediction_result = models.ForeignKey(
-        PredictionResult,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        verbose_name="关联预测结果"
-    )
     create_time = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
-    complete_time = models.DateTimeField(null=True, blank=True, verbose_name="完成时间")
-    description = models.TextField(blank=True, verbose_name="任务描述")
+    predicted_time = models.DateTimeField(null=True, blank=True, verbose_name="预测时间")
 
     class Meta:
         verbose_name = "调度任务"
@@ -80,7 +75,7 @@ class ScheduleTask(models.Model):
         ordering = ['-create_time']
     
     def __str__(self):
-        return f"{self.task_id} - {self.get_target_region_display()} - {self.get_status_display()}"
+        return f"任务{self.id} - {self.start_location} → {self.end_location} - {self.get_status_display()}"
 
 
 class ScheduleEvaluation(models.Model):

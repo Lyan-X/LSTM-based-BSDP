@@ -1,681 +1,364 @@
-{% extends 'base.html' %}
-{% load static %}
+{% extends "base.html" %}
 
-{% block title %}供需热力图 - 共享单车调度需求预测与运维管理平台{% endblock %}
+{% block title %}供需热力图{% endblock %}
 
 {% block content %}
-<style>
-    /* 自定义动画效果 */
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    @keyframes pulse {
-        0% {
-            transform: scale(1);
-        }
-        50% {
-            transform: scale(1.05);
-        }
-        100% {
-            transform: scale(1);
-        }
-    }
-    
-    .animate-fade-in-up {
-        animation: fadeInUp 0.6s ease-out forwards;
-    }
-    
-    .animate-pulse {
-        animation: pulse 2s infinite;
-    }
-    
-    /* 自定义按钮样式 */
-    .btn-map-toggle {
-        position: relative;
-        overflow: hidden;
-        transition: all 0.3s ease;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    
-    .btn-map-toggle:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-    }
-    
-    .btn-map-toggle.active {
-        transform: translateY(2px);
-        box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
-    }
-    
-    /* 卡片样式优化 */
-    .card-custom {
-        border: none;
-        border-radius: 12px;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-        overflow: hidden;
-        transition: all 0.3s ease;
-    }
-    
-    .card-custom:hover {
-        box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-    }
-    
-    .card-header-custom {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 1rem 1.5rem;
-        border-bottom: none;
-    }
-    
-    .card-header-custom h5 {
-        margin: 0;
-        font-weight: 600;
-    }
-    
-    /* 地图容器样式 */
-    .map-container {
-        width: 100%;
-        height: 600px;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
-        position: relative;
-    }
-    
-    /* 信息提示样式 */
-    .info-alert {
-        border-radius: 8px;
-        border-left: 4px solid #667eea;
-        background: linear-gradient(135deg, #f5f7ff 0%, #eef2ff 100%);
-        border-top: none;
-        border-right: none;
-        border-bottom: none;
-    }
-    
-    /* 数据状态提示样式 */
-    .status-alert {
-        border-radius: 8px;
-        transition: all 0.3s ease;
-    }
-    
-    /* 数据集信息卡片样式 */
-    .dataset-info-card {
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        transition: all 0.3s ease;
-    }
-    
-    .dataset-info-card:hover {
-        border-color: #667eea;
-        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
-    }
-    
-    .dataset-info-card .card-header {
-        background-color: #f8fafc;
-        border-bottom: 1px solid #e2e8f0;
-    }
-    
-    /* 响应式调整 */
-    @media (max-width: 768px) {
-        .map-container {
-            height: 400px;
-        }
-        
-        .btn-group {
-            flex-wrap: wrap;
-        }
-        
-        .btn-group .btn {
-            margin-bottom: 0.5rem;
-        }
-    }
-</style>
-
-<div class="card-custom animate-fade-in-up">
-    <div class="card-header-custom">
-        <div class="d-flex justify-content-between align-items-center">
-            <h5><i class="bi bi-map"></i> 供需热力图动态展示</h5>
-            <div class="d-flex gap-2 flex-wrap">
-                <form method="get" class="d-inline">
-                    <select name="days" class="form-select form-select-sm d-inline-block" style="width: auto; border-radius: 8px;" onchange="this.form.submit()">
-                        <option value="7" {% if days == 7 %}selected{% endif %}>最近7天</option>
-                        <option value="14" {% if days == 14 %}selected{% endif %}>最近14天</option>
-                        <option value="30" {% if days == 30 %}selected{% endif %}>最近30天</option>
-                    </select>
-                </form>
-                <button id="showRealMap" class="btn btn-sm btn-primary active btn-map-toggle">显示城市地图</button>
-                <button id="showHeatmap" class="btn btn-sm btn-secondary btn-map-toggle">显示热力图</button>
-                <button id="refreshData" class="btn btn-sm btn-success btn-map-toggle">
-                    <i class="bi bi-arrow-clockwise"></i> 刷新数据
-                </button>
-            </div>
-        </div>
-    </div>
-    <div class="card-body">
-        <div id="mapContainer" class="map-container"></div>
-        <div class="info-alert fade-in mt-3" role="alert">
-            <i class="bi bi-info-circle text-primary"></i> 提示：请先在<span class="fw-bold text-primary">数据导入</span>模块导入骑行数据，然后在<span class="fw-bold text-primary">数据处理</span>模块进行数据清洗，才能在热力图中查看供需分布。
-        </div>
-        
-        <!-- 数据集信息 -->
-        <div class="mt-4" id="datasetInfo" style="display: none;">
-            <div class="dataset-info-card">
-                <div class="card-header">
-                    <h6 class="mb-0"><i class="bi bi-database text-primary"></i> 数据集信息</h6>
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- 左侧控制面板 -->
+        <div class="col-md-3">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">控制面板</h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p><strong>当前数据集：</strong><span id="currentDatasetName" class="text-primary">默认数据集</span></p>
-                            <p><strong>数据条数：</strong><span id="currentDatasetCount" class="text-primary">0</span> 条</p>
-                            <p><strong>时间范围：</strong><span id="currentDatasetTimeRange" class="text-primary">最近7天</span></p>
-                        </div>
-                        <div class="col-md-6 text-end">
-                            <button id="viewDatasetDetails" class="btn btn-sm btn-primary btn-map-toggle">
-                                <i class="bi bi-eye"></i> 查看详细信息
-                            </button>
+                    <!-- 地图切换按钮 -->
+                    <div class="d-grid gap-2 mb-4">
+                        <button id="cityMapBtn" class="btn btn-primary btn-lg active" onclick="showCityMap()">
+                            显示城市地图
+                        </button>
+                        <button id="heatmapBtn" class="btn btn-outline-primary btn-lg" onclick="showHeatmap()">
+                            显示热力图
+                        </button>
+                    </div>
+                    
+                    <!-- 数据统计 -->
+                    <div class="mb-4">
+                        <h6 class="text-muted">数据统计</h6>
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <p class="text-muted mb-0">停车点数量</p>
+                                <p id="parkingSpotCount" class="h5 font-weight-bold">0</p>
+                            </div>
+                            <div class="col-6">
+                                <p class="text-muted mb-0">预测时段</p>
+                                <p id="predictTime" class="h5 font-weight-bold">{{ current_time }}</p>
+                            </div>
                         </div>
                     </div>
+                    
+                    <!-- 状态说明 -->
+                    <div class="mb-4">
+                        <h6 class="text-muted">状态说明</h6>
+                        <ul class="list-unstyled text-sm">
+                            <li class="mb-1">
+                                <span class="inline-block w-3 h-3 bg-red-500 rounded-full mr-2"></span>
+                                高需求（红色）
+                            </li>
+                            <li class="mb-1">
+                                <span class="inline-block w-3 h-3 bg-yellow-500 rounded-full mr-2"></span>
+                                中等需求（黄色）
+                            </li>
+                            <li class="mb-1">
+                                <span class="inline-block w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                                低需求（绿色）
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <!-- 刷新按钮 -->
+                    <button id="refreshBtn" class="btn btn-secondary w-100" onclick="refreshData()">
+                        手动刷新数据
+                    </button>
                 </div>
             </div>
         </div>
         
-        <!-- 数据状态提示 -->
-        <div id="dataStatus" class="mt-3 status-alert fade-in" role="alert" style="display: none;">
-            <i class="bi bi-exclamation-triangle"></i> <span id="statusMessage"></span>
+        <!-- 右侧地图展示 -->
+        <div class="col-md-9">
+            <div class="card mb-4">
+                <div class="card-body p-0">
+                    <!-- 地图容器 -->
+                    <div id="map" style="height: 800px; width: 100%;"></div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Leaflet 核心CSS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
-<!-- Leaflet 核心JS -->
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-<!-- 热力图插件 -->
-<script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.min.js"></script>
-<script>console.log('Leaflet地图API加载完成，初始化中...');</script>
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<!-- Leaflet Heat Plugin -->
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
 <script>
-// 从后端获取数据
-var heatmap_data = {{ heatmap_data|safe }};
-var stations = {{ stations|safe }};
-
-// 全局变量
-var map;
-var markers = [];
-var heatLayer;
-var mapMode = 'real';
-
-// 燕山大学核心坐标
-const YANSHAN_COORDS = [39.9397, 119.5387];
-
-// 燕大实际建筑精准坐标
-const CAMPUS_STOPS = [
-    // 西校区教学楼
-    { name: "西校区一教", coord: [39.9412, 119.5361], type: "教学楼", demand: 35 },
-    { name: "西校区二教", coord: [39.9408, 119.5372], type: "教学楼", demand: 30 },
-    { name: "西校区三教", coord: [39.9403, 119.5383], type: "教学楼", demand: 28 },
-    { name: "西校区四教", coord: [39.9398, 119.5394], type: "教学楼", demand: 25 },
-    { name: "西校区五教", coord: [39.9393, 119.5405], type: "教学楼", demand: 22 },
+    // 全局变量
+    let map;
+    let parkingMarkers = [];
+    let heatLayer = null;
+    let currentMode = 'city'; // 'city' 或 'heatmap'
+    let yanshanBounds;
+    let parkingSpotsData = {{ parking_spots|safe }};
     
-    // 食堂
-    { name: "燕园食堂", coord: [39.9381, 119.5392], type: "食堂", demand: 28 },
-    { name: "学一食堂", coord: [39.9415, 119.5350], type: "食堂", demand: 25 },
-    { name: "东校区食堂", coord: [39.9375, 119.5420], type: "食堂", demand: 20 },
-    
-    // 西区宿舍
-    { name: "西区1组团", coord: [39.9421, 119.5350], type: "宿舍", demand: 42 },
-    { name: "西区2组团", coord: [39.9425, 119.5358], type: "宿舍", demand: 40 },
-    { name: "西区3组团", coord: [39.9430, 119.5366], type: "宿舍", demand: 38 },
-    { name: "西区4组团", coord: [39.9435, 119.5374], type: "宿舍", demand: 36 },
-    { name: "西区5组团", coord: [39.9440, 119.5382], type: "宿舍", demand: 34 },
-    { name: "西区6组团", coord: [39.9445, 119.5390], type: "宿舍", demand: 32 },
-    { name: "西区7组团", coord: [39.9450, 119.5398], type: "宿舍", demand: 30 },
-    { name: "西区8组团", coord: [39.9455, 119.5406], type: "宿舍", demand: 28 },
-    { name: "西区9组团", coord: [39.9460, 119.5414], type: "宿舍", demand: 26 },
-    { name: "西区10组团", coord: [39.9465, 119.5422], type: "宿舍", demand: 24 },
-    { name: "西区11组团", coord: [39.9470, 119.5430], type: "宿舍", demand: 22 },
-    
-    // 东区宿舍
-    { name: "东区1舍", coord: [39.9370, 119.5430], type: "宿舍", demand: 38 },
-    { name: "东区2舍", coord: [39.9365, 119.5438], type: "宿舍", demand: 36 },
-    { name: "东区3舍", coord: [39.9360, 119.5446], type: "宿舍", demand: 34 },
-    { name: "东区4舍", coord: [39.9355, 119.5454], type: "宿舍", demand: 32 },
-    { name: "东区5舍", coord: [39.9350, 119.5462], type: "宿舍", demand: 30 },
-    
-    // 其他重要建筑
-    { name: "图书馆", coord: [39.9400, 119.5385], type: "图书馆", demand: 45 },
-    { name: "体育馆", coord: [39.9390, 119.5375], type: "体育馆", demand: 25 },
-    { name: "科技楼", coord: [39.9385, 119.5395], type: "科技楼", demand: 20 },
-    { name: "行政楼", coord: [39.9390, 119.5405], type: "行政楼", demand: 15 }
-];
-
-// 显示状态消息
-function showStatusMessage(message, type = 'warning') {
-    var statusDiv = document.getElementById('dataStatus');
-    var messageSpan = document.getElementById('statusMessage');
-    
-    statusDiv.className = `mt-2 alert alert-${type} fade-in`;
-    messageSpan.textContent = message;
-    statusDiv.style.display = 'block';
-    
-    setTimeout(() => {
-        statusDiv.style.display = 'none';
-    }, 3000);
-}
-
-// 检查是否有数据
-function checkDataAvailability() {
-    if (typeof heatmap_data !== 'undefined' && heatmap_data && heatmap_data.length > 0) {
-        showStatusMessage('数据加载完成', 'success');
-        document.getElementById('datasetInfo').style.display = 'block';
-        document.getElementById('currentDatasetName').textContent = '实际数据集';
-        document.getElementById('currentDatasetCount').textContent = heatmap_data.length;
-        document.getElementById('currentDatasetTimeRange').textContent = '最近7天';
-        return true;
-    } else {
-        showStatusMessage('未检测到导入的数据，请先导入并清洗数据', 'info');
-        document.getElementById('datasetInfo').style.display = 'none';
-        return false;
-    }
-}
-
-// 燕山大学东西校区边界（精确经纬度，锁定地图范围）
-const YANSHAN_BOUNDS = L.latLngBounds(
-    L.latLng(39.932, 119.530),  // 西南角
-    L.latLng(39.948, 119.545)   // 东北角
-);
-
-// 初始化地图
-function initMap() {
-    if (map) {
-        map.remove();
-    }
-    
-    map = L.map('mapContainer', {
-        center: [39.9397, 119.5387],  // 燕大中心坐标
-        zoom: 17,                      // 初始缩放（精细级别）
-        minZoom: 16,                   // 最小缩放（避免缩小出校园）
-        maxZoom: 18,                   // 最大缩放
-        maxBounds: YANSHAN_BOUNDS,     // 禁止拖出校园边界
-        maxBoundsViscosity: 1.0        // 拖拽到边界时的阻力（完全锁定）
-    });
-    
-    // 替换原高德底图URL为WGS84坐标系版本（避免偏移）
-    L.tileLayer('https://wprd04.is.autonavi.com/appmaptile?lang=zh_cn&size=1&style=7&x={x}&y={y}&z={z}', {
-        attribution: '高德地图 &copy; 燕山大学共享单车系统'
-    }).addTo(map);
-    
-    L.control.scale({ imperial: false }).addTo(map);
-    
-    // 添加校园边界多边形（与右图蓝色框一致）
-    const yanshanPolygon = L.polygon([
-        [39.935, 119.532],
-        [39.945, 119.532],
-        [39.945, 119.544],
-        [39.935, 119.544]
-    ], {
-        color: "#2196F3",    // 蓝色边框（和右图一致）
-        fillColor: "#BBDEFB",
-        fillOpacity: 0.2,
-        weight: 2
-    }).addTo(map);
-    
-    // 给边界添加提示
-    yanshanPolygon.bindPopup("燕山大学校园范围");
-    
-    return true;
-}
-
-// 清除标记
-function clearMarkers() {
-    markers.forEach(marker => map.removeLayer(marker));
-    markers = [];
-}
-
-// 清除热力图
-function clearHeatmap() {
-    if (heatLayer) {
-        map.removeLayer(heatLayer);
-        heatLayer = null;
-    }
-}
-
-// 显示城市地图模式
-function showCityMap() {
-    mapMode = 'real';
-    checkDataAvailability();
-    
-    // 更新按钮状态
-    document.getElementById('showRealMap').classList.add('active');
-    document.getElementById('showRealMap').classList.remove('btn-secondary');
-    document.getElementById('showRealMap').classList.add('btn-primary');
-    document.getElementById('showHeatmap').classList.remove('active');
-    document.getElementById('showHeatmap').classList.remove('btn-primary');
-    document.getElementById('showHeatmap').classList.add('btn-secondary');
-    
-    if (!initMap()) return;
-    
-    clearMarkers();
-    clearHeatmap();
-    
-    // 添加校园固定点位
-    CAMPUS_STOPS.forEach(stop => {
-        const marker = L.marker(stop.coord)
-            .addTo(map)
-            .bindPopup(`<div style="padding: 12px;"><strong>${stop.name}</strong><br>类型：${stop.type}<br>需求：${stop.demand}辆</div>`);
-        markers.push(marker);
-    });
-    
-    // 添加车辆标记
-    if (heatmap_data && heatmap_data.length > 0) {
-        heatmap_data.forEach(item => {
-            if (item.length >= 7) {
-                const marker = L.marker([item[4], item[3]])
-                    .addTo(map)
-                    .bindPopup(`
-                        <div style="padding: 12px;">
-                            <strong>${item[5]}</strong><br>
-                            状态: ${item[6]}<br>
-                            需求: ${item[2]} 辆
-                        </div>
-                    `);
-                markers.push(marker);
-            }
+    // 初始化地图
+    function initMap() {
+        // 燕山大学校园中心点
+        const yanshanCenter = [39.9500, 119.5325];
+        
+        // 燕大校园边界
+        yanshanBounds = [
+            [39.9450, 119.5250], // 西南角
+            [39.9550, 119.5400]  // 东北角
+        ];
+        
+        // 创建地图实例
+        map = L.map('map', {
+            center: yanshanCenter,
+            zoom: 17,
+            minZoom: 15,
+            maxZoom: 19, // 调整为高德底图支持的最大级别
+            maxBounds: yanshanBounds,
+            maxBoundsViscosity: 1.0
         });
-    }
-}
-
-// 显示热力图模式
-function showHeatmapChart() {
-    mapMode = 'heatmap';
-    checkDataAvailability();
-    
-    // 更新按钮状态
-    document.getElementById('showHeatmap').classList.add('active');
-    document.getElementById('showHeatmap').classList.remove('btn-secondary');
-    document.getElementById('showHeatmap').classList.add('btn-primary');
-    document.getElementById('showRealMap').classList.remove('active');
-    document.getElementById('showRealMap').classList.remove('btn-primary');
-    document.getElementById('showRealMap').classList.add('btn-secondary');
-    
-    if (!initMap()) return;
-    
-    clearMarkers();
-    clearHeatmap();
-    
-    // 处理热力图数据
-    var heatData = [];
-    if (heatmap_data && heatmap_data.length > 0) {
-        heatmap_data.forEach(item => {
-            if (item.length >= 7) {
-                heatData.push([item[4], item[3], item[2] / 10]);
-            }
-        });
-    }
-    
-    // 创建热力图
-    if (heatData.length > 0) {
-        heatLayer = L.heatLayer(heatData, {
-            radius: 25,
-            blur: 15,
-            maxZoom: 18,
-            max: 15
+        
+        // 添加高德地图底图
+        L.tileLayer('https://webrd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+            attribution: '高德地图 © 共享单车系统',
+            maxZoom: 19
         }).addTo(map);
-    }
-    
-    // 添加图例
-    const legend = L.control({ position: 'bottomright' });
-    legend.onAdd = function(map) {
-        const div = L.DomUtil.create('div', 'info legend');
-        div.innerHTML = '<h6>需求强度</h6>';
-        const grades = [0, 5, 10, 15, 20, 25];
-        for (let i = 0; i < grades.length; i++) {
-            div.innerHTML += `
-                <div style="display: flex; align-items: center; margin-bottom: 4px;">
-                    <div style="width: 20px; height: 10px; background: ${getColor(grades[i] + 1)};"></div>
-                    <span style="margin-left: 8px; font-size: 12px;">${grades[i]}${grades[i + 1] ? '&ndash;' + grades[i + 1] : '+'}</span>
-                </div>
-            `;
-        }
-        return div;
-    };
-    
-    function getColor(d) {
-        return d > 20 ? '#d73027' :
-               d > 15 ? '#f46d43' :
-               d > 10 ? '#fdae61' :
-               d > 5 ? '#fee090' :
-               '#e0f3f8';
-    }
-    
-    legend.addTo(map);
-}
-
-// 刷新数据
-function refreshData() {
-    const refreshBtn = document.getElementById('refreshData');
-    refreshBtn.classList.add('animate-pulse');
-    
-    showStatusMessage('正在刷新数据...');
-    setTimeout(() => {
-        if (mapMode === 'real') {
-            showCityMap();
-        } else {
-            showHeatmapChart();
-        }
-        showStatusMessage('数据刷新完成', 'success');
-        refreshBtn.classList.remove('animate-pulse');
-    }, 1500);
-}
-
-// 初始显示
-showCityMap();
-
-// 按钮事件
-document.getElementById('showRealMap').addEventListener('click', function() {
-    this.classList.add('animate-pulse');
-    setTimeout(() => {
-        this.classList.remove('animate-pulse');
+        
+        // 添加校园边界
+        const campusBoundary = L.polygon([
+            [39.9450, 119.5250], // 西南角
+            [39.9450, 119.5400], // 东南角
+            [39.9550, 119.5400], // 东北角
+            [39.9550, 119.5250], // 西北角
+            [39.9450, 119.5250]  // 西南角
+        ], {
+            color: '#1E90FF',
+            weight: 2,
+            fillColor: '#E6F3FF',
+            fillOpacity: 0.1
+        }).addTo(map);
+        
+        // 初始化显示城市地图
         showCityMap();
-    }, 300);
-});
-
-document.getElementById('showHeatmap').addEventListener('click', function() {
-    this.classList.add('animate-pulse');
-    setTimeout(() => {
-        this.classList.remove('animate-pulse');
-        showHeatmapChart();
-    }, 300);
-});
-
-document.getElementById('refreshData').addEventListener('click', refreshData);
-
-// 响应式调整
-window.addEventListener('resize', function() {
-    if (map) {
-        map.invalidateSize();
-    }
-});
-
-// 显示数据集详情
-function showDatasetDetailsModal() {
-    const modalHtml = `
-        <div class="modal fade show" id="datasetDetailsModal" tabindex="-1" aria-labelledby="datasetDetailsModalLabel" aria-hidden="false" style="display: block; animation: fadeInUp 0.4s ease-out;">
-            <div class="modal-dialog modal-lg modal-dialog-centered">
-                <div class="modal-content" style="border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.15);">
-                    <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-                        <h5 class="modal-title" id="datasetDetailsModalLabel" style="font-weight: 600;">
-                            <i class="bi bi-database"></i> 数据集详细信息
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                <p><strong>数据集名称：</strong><span id="modalDatasetName" class="text-primary">实际数据集</span></p>
-                                <p><strong>数据条数：</strong><span id="modalDatasetCount" class="text-primary">${heatmap_data ? heatmap_data.length : 0}</span> 条</p>
-                                <p><strong>时间范围：</strong><span id="modalDatasetTimeRange" class="text-primary">最近7天</span></p>
-                            </div>
-                            <div class="col-md-6">
-                                <p><strong>数据类型：</strong>骑行数据</p>
-                                <p><strong>数据来源：</strong>系统上传</p>
-                                <p><strong>更新时间：</strong>${new Date().toLocaleString()}</p>
-                            </div>
-                        </div>
-                        <div class="mb-4">
-                            <h6 class="text-primary" style="font-weight: 600; margin-bottom: 12px;">数据分布概览</h6>
-                            <div id="datasetDistribution" style="height: 300px; border-radius: 8px; border: 1px solid #e2e8f0;"></div>
-                        </div>
-                        <div>
-                            <h6 class="text-primary" style="font-weight: 600; margin-bottom: 12px;">数据示例</h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm table-striped" style="border-radius: 8px; overflow: hidden;">
-                                    <thead style="background-color: #f8fafc; border-bottom: 2px solid #667eea;">
-                                        <tr>
-                                            <th>时段</th>
-                                            <th>区域</th>
-                                            <th>需求（辆）</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="datasetSampleTable">
-                                        ${heatmap_data ? heatmap_data.slice(0, 5).map(item => `
-                                            <tr style="transition: all 0.2s ease;">
-                                                <td>${item[0]}:00</td>
-                                                <td>区域${item[1]}</td>
-                                                <td>${item[2]}</td>
-                                            </tr>
-                                        `).join('') : '<tr><td colspan="3" class="text-center py-4 text-muted">暂无数据</td></tr>'}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer" style="background-color: #f8fafc; border-top: 1px solid #e2e8f0;">
-                        <button type="button" class="btn btn-secondary btn-map-toggle" data-bs-dismiss="modal">
-                            <i class="bi bi-x"></i> 关闭
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="modal-backdrop fade show" style="animation: fadeIn 0.3s ease-out;"></div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-    
-    document.querySelector('#datasetDetailsModal .btn-close').addEventListener('click', function() {
-        closeModal('datasetDetailsModal');
-    });
-    
-    document.querySelector('#datasetDetailsModal .btn-secondary').addEventListener('click', function() {
-        closeModal('datasetDetailsModal');
-    });
-    
-    if (heatmap_data && heatmap_data.length > 0) {
-        initDatasetDistributionChart();
-    }
-}
-
-// 初始化数据分布图表
-function initDatasetDistributionChart() {
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js';
-    script.onload = function() {
-        const chartDom = document.getElementById('datasetDistribution');
-        const distributionChart = echarts.init(chartDom);
         
-        const hourCounts = {};
-        heatmap_data.forEach(item => {
-            const hour = item[0];
-            if (!hourCounts[hour]) {
-                hourCounts[hour] = 0;
+        // 初始化数据统计
+        updateDataStats();
+        
+        // 启动定时刷新
+        startAutoRefresh();
+    }
+    
+    // 显示城市地图
+    function showCityMap() {
+        // 更新按钮状态
+        document.getElementById('cityMapBtn').classList.add('active', 'btn-primary');
+        document.getElementById('cityMapBtn').classList.remove('btn-outline-primary');
+        document.getElementById('heatmapBtn').classList.remove('active', 'btn-primary');
+        document.getElementById('heatmapBtn').classList.add('btn-outline-primary');
+        
+        // 清除现有标记和热力图
+        clearMapLayers();
+        
+        // 添加停车点标记（无热力颜色）
+        addParkingMarkers(false);
+        
+        // 更新模式
+        currentMode = 'city';
+    }
+    
+    // 显示热力图
+    function showHeatmap() {
+        // 更新按钮状态
+        document.getElementById('heatmapBtn').classList.add('active', 'btn-primary');
+        document.getElementById('heatmapBtn').classList.remove('btn-outline-primary');
+        document.getElementById('cityMapBtn').classList.remove('active', 'btn-primary');
+        document.getElementById('cityMapBtn').classList.add('btn-outline-primary');
+        
+        // 清除现有标记
+        clearMapLayers();
+        
+        // 添加停车点标记（带热力颜色）
+        addParkingMarkers(true);
+        
+        // 更新模式
+        currentMode = 'heatmap';
+    }
+    
+    // 添加停车点标记
+    function addParkingMarkers(showHeatColor) {
+        // 清除现有标记
+        parkingMarkers.forEach(marker => map.removeLayer(marker));
+        parkingMarkers = [];
+        
+        // 添加新标记
+        parkingSpotsData.forEach(spot => {
+            // 计算标记颜色
+            let markerColor;
+            if (showHeatColor) {
+                const difference = spot.difference;
+                if (difference > 5) {
+                    // 供给过剩，绿色
+                    markerColor = '#28a745';
+                } else if (difference < -5) {
+                    // 供给不足，红色
+                    markerColor = '#dc3545';
+                } else {
+                    // 供需平衡，黄色
+                    markerColor = '#ffc107';
+                }
+            } else {
+                // 城市地图模式，默认蓝色
+                markerColor = '#007bff';
             }
-            hourCounts[hour] += item[2];
+            
+            // 创建停车点图标
+            const parkingIcon = L.divIcon({
+                className: 'custom-parking-icon',
+                html: `<div style="background-color: ${markerColor}; color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">P</div>`,
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+            
+            // 创建标记
+            const marker = L.marker([spot.latitude, spot.longitude], {
+                icon: parkingIcon
+            }).addTo(map);
+            
+            // 添加弹出信息
+            marker.bindPopup(`
+                <div class="p-2">
+                    <h6 class="font-weight-bold">${spot.name}</h6>
+                    <p class="text-sm mb-1">ID: ${spot.id}</p>
+                    <p class="text-sm mb-1">坐标: ${spot.latitude.toFixed(6)}, ${spot.longitude.toFixed(6)}</p>
+                    <p class="text-sm mb-1">服务半径: ${spot.service_radius}米</p>
+                    ${showHeatColor ? `
+                        <p class="text-sm mb-1">预测需求: ${spot.demand}辆</p>
+                        <p class="text-sm mb-1">预测供给: ${spot.supply}辆</p>
+                        <p class="text-sm mb-1">差值: ${spot.difference > 0 ? '+' : ''}${spot.difference}辆</p>
+                    ` : ''}
+                </div>
+            `);
+            
+            parkingMarkers.push(marker);
         });
+    }
+    
+    // 清除地图图层
+    function clearMapLayers() {
+        // 清除停车点标记
+        parkingMarkers.forEach(marker => map.removeLayer(marker));
+        parkingMarkers = [];
         
-        const hours = Object.keys(hourCounts).map(h => parseInt(h)).sort((a, b) => a - b);
-        const demands = hours.map(h => hourCounts[h]);
+        // 清除热力图层
+        if (heatLayer) {
+            map.removeLayer(heatLayer);
+            heatLayer = null;
+        }
+    }
+    
+    // 更新数据统计
+    function updateDataStats() {
+        document.getElementById('parkingSpotCount').textContent = parkingSpotsData.length;
+        document.getElementById('predictTime').textContent = '{{ current_time }}';
+    }
+    
+    // 刷新数据
+    function refreshData() {
+        // 显示加载状态
+        document.getElementById('refreshBtn').innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 刷新中...';
         
-        const option = {
-            tooltip: {
-                trigger: 'axis',
-                formatter: '{b}:00<br/>需求：{c} 辆'
-            },
-            xAxis: {
-                type: 'category',
-                data: hours.map(h => h.toString())
-            },
-            yAxis: {
-                type: 'value'
-            },
-            series: [{
-                data: demands,
-                type: 'line',
-                smooth: true
-            }]
-        };
-        
-        distributionChart.setOption(option);
-        
-        window.addEventListener('resize', function() {
-            distributionChart.resize();
-        });
+        // 从API获取最新数据
+        fetch('/operation/api/parking-data/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 更新数据
+                    parkingSpotsData = data.data;
+                    
+                    // 更新地图
+                    if (currentMode === 'city') {
+                        showCityMap();
+                    } else {
+                        showHeatmap();
+                    }
+                    
+                    // 更新数据统计
+                    updateDataStats();
+                    
+                    // 更新当前时间
+                    document.getElementById('predictTime').textContent = data.current_time;
+                    
+                    // 显示成功消息
+                    alert('数据刷新成功！');
+                } else {
+                    alert('数据刷新失败：' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('刷新数据失败:', error);
+                alert('数据刷新失败，请稍后重试');
+            })
+            .finally(() => {
+                // 恢复按钮状态
+                document.getElementById('refreshBtn').textContent = '手动刷新数据';
+            });
+    }
+    
+    // 启动自动刷新
+    function startAutoRefresh() {
+        // 每30秒自动刷新一次
+        setInterval(() => {
+            fetch('/operation/api/parking-data/')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // 更新数据
+                        parkingSpotsData = data.data;
+                        
+                        // 更新地图
+                        if (currentMode === 'city') {
+                            showCityMap();
+                        } else {
+                            showHeatmap();
+                        }
+                        
+                        // 更新数据统计
+                        updateDataStats();
+                        
+                        // 更新当前时间
+                        document.getElementById('predictTime').textContent = data.current_time;
+                    }
+                })
+                .catch(error => {
+                    console.error('自动刷新数据失败:', error);
+                });
+        }, 30000); // 30秒
+    }
+    
+    // 页面加载完成后初始化
+    window.onload = function() {
+        initMap();
     };
-    document.head.appendChild(script);
-}
-
-// 关闭弹窗
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    const backdrop = document.querySelector('.modal-backdrop');
-    if (modal) {
-        modal.style.animation = 'fadeInUp 0.4s ease-out reverse';
-        setTimeout(() => {
-            modal.remove();
-        }, 400);
-    }
-    if (backdrop) {
-        backdrop.style.animation = 'fadeIn 0.3s ease-out reverse';
-        setTimeout(() => {
-            backdrop.remove();
-        }, 300);
-    }
-}
-
-// 绑定按钮事件
-document.addEventListener('DOMContentLoaded', function() {
-    const viewDetailsBtn = document.getElementById('viewDatasetDetails');
-    if (viewDetailsBtn) {
-        viewDetailsBtn.addEventListener('click', function() {
-            this.classList.add('animate-pulse');
-            setTimeout(() => {
-                this.classList.remove('animate-pulse');
-                showDatasetDetailsModal();
-            }, 300);
-        });
-    }
-});
-
-// 添加样式
-const style = document.createElement('style');
-style.textContent = `
-    .info.legend {
-        background: white;
-        padding: 10px;
-        border-radius: 8px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        border: 1px solid #e2e8f0;
-    }
-`;
-document.head.appendChild(style);
 </script>
+
+<style>
+    /* 自定义停车点图标样式 */
+    .custom-parking-icon {
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        transition: transform 0.2s;
+    }
+    
+    .custom-parking-icon:hover {
+        transform: scale(1.1);
+    }
+    
+    /* 按钮状态样式 */
+    .btn.active {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+        box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+    }
+</style>
 {% endblock %}

@@ -1,118 +1,461 @@
-{% extends 'base.html' %}
-{% load static %}
+{% extends "base.html" %}
 
-{% block title %}车辆监控 - 共享单车调度需求预测与运维管理平台{% endblock %}
+{% block title %}车辆监控{% endblock %}
 
 {% block content %}
-<div class="card mb-3">
-    <div class="card-header">
-        <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="bi bi-bicycle"></i> 车辆状态实时监控</h5>
-            {% if user.is_admin %}
-            <a href="{% url 'operation_management:vehicle_create' %}" class="btn btn-primary btn-sm">
-                <i class="bi bi-plus-circle"></i> 添加车辆
-            </a>
-            {% endif %}
-        </div>
-    </div>
-    <div class="card-body">
-        <!-- 筛选 -->
-        <form method="get" class="mb-3">
-            <div class="row">
-                <div class="col-md-4">
-                    <select name="status" class="form-select" onchange="this.form.submit()">
-                        <option value="">全部状态</option>
-                        <option value="normal" {% if status_filter == 'normal' %}selected{% endif %}>正常</option>
-                        <option value="fault" {% if status_filter == 'fault' %}selected{% endif %}>故障</option>
-                        <option value="maintain" {% if status_filter == 'maintain' %}selected{% endif %}>维护中</option>
-                        <option value="offline" {% if status_filter == 'offline' %}selected{% endif %}>离线</option>
-                    </select>
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- 左侧控制面板 -->
+        <div class="col-md-3">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">控制面板</h5>
                 </div>
-                <div class="col-md-4">
-                    <select name="region" class="form-select" onchange="this.form.submit()">
-                        <option value="">全部区域</option>
-                        {% for value, label in regions %}
-                        <option value="{{ value }}" {% if region_filter == value %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
+                <div class="card-body">
+                    <!-- 车辆搜索 -->
+                    <div class="mb-4">
+                        <h6 class="text-muted">车辆搜索</h6>
+                        <div class="input-group">
+                            <input type="text" id="vehicleSearchInput" class="form-control" placeholder="输入车辆编号">
+                            <button class="btn btn-primary" onclick="searchVehicle()">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 数据统计 -->
+                    <div class="mb-4">
+                        <h6 class="text-muted">车辆统计</h6>
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <p class="text-muted mb-0">总车辆数</p>
+                                <p id="totalVehicles" class="h5 font-weight-bold">{{ total_vehicles }}</p>
+                            </div>
+                            <div class="col-6">
+                                <p class="text-muted mb-0">可用车辆</p>
+                                <p id="availableVehicles" class="h5 font-weight-bold text-success">{{ available_vehicles }}</p>
+                            </div>
+                            <div class="col-6">
+                                <p class="text-muted mb-0">已骑行</p>
+                                <p id="riddenVehicles" class="h5 font-weight-bold text-primary">{{ ridden_vehicles }}</p>
+                            </div>
+                            <div class="col-6">
+                                <p class="text-muted mb-0">故障车辆</p>
+                                <p id="faultyVehicles" class="h5 font-weight-bold text-danger">{{ faulty_vehicles }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 状态说明 -->
+                    <div class="mb-4">
+                        <h6 class="text-muted">状态说明</h6>
+                        <ul class="list-unstyled text-sm">
+                            <li class="mb-1">
+                                <span class="inline-block w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                                可用（绿色）
+                            </li>
+                            <li class="mb-1">
+                                <span class="inline-block w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+                                已骑行（蓝色）
+                            </li>
+                            <li class="mb-1">
+                                <span class="inline-block w-3 h-3 bg-red-500 rounded-full mr-2"></span>
+                                故障（红色）
+                            </li>
+                            <li class="mb-1">
+                                <span class="inline-block w-3 h-3 bg-yellow-500 rounded-full mr-2"></span>
+                                锁定（黄色）
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <!-- 刷新按钮 -->
+                    <button id="refreshBtn" class="btn btn-secondary w-100" onclick="refreshData()">
+                        手动刷新数据
+                    </button>
                 </div>
             </div>
-        </form>
-        
-        <!-- 车辆列表 -->
-        {% if vehicles %}
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>单车编号</th>
-                        <th>状态</th>
-                        <th>当前区域</th>
-                        <th>位置</th>
-                        <th>更新时间</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for vehicle in vehicles %}
-                    <tr>
-                        <td><strong>{{ vehicle.bike_id }}</strong></td>
-                        <td>
-                            <span class="badge bg-{% if vehicle.status == 'normal' %}success{% elif vehicle.status == 'fault' %}danger{% elif vehicle.status == 'maintain' %}warning{% else %}secondary{% endif %}">
-                                {{ vehicle.get_status_display }}
-                            </span>
-                        </td>
-                        <td>{{ vehicle.get_current_region_display }}</td>
-                        <td>
-                            {% if vehicle.latitude and vehicle.longitude %}
-                            {{ vehicle.latitude|floatformat:4 }}, {{ vehicle.longitude|floatformat:4 }}
-                            {% else %}
-                            <span class="text-muted">未定位</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ vehicle.update_time|date:"Y-m-d H:i:s" }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
         </div>
         
-        <!-- 分页 -->
-        {% if vehicles.has_other_pages %}
-        <nav>
-            <ul class="pagination justify-content-center">
-                {% if vehicles.has_previous %}
-                <li class="page-item"><a class="page-link" href="?page={{ vehicles.previous_page_number }}">上一页</a></li>
-                {% endif %}
-                <li class="page-item active"><span class="page-link">第 {{ vehicles.number }} 页 / 共 {{ vehicles.paginator.num_pages }} 页</span></li>
-                {% if vehicles.has_next %}
-                <li class="page-item"><a class="page-link" href="?page={{ vehicles.next_page_number }}">下一页</a></li>
-                {% endif %}
-            </ul>
-        </nav>
-        {% endif %}
-        {% else %}
-        <p class="text-muted text-center">暂无车辆数据</p>
-        {% endif %}
+        <!-- 右侧地图展示 -->
+        <div class="col-md-9">
+            <div class="card mb-4">
+                <div class="card-body p-0">
+                    <!-- 地图容器 -->
+                    <div id="map" style="height: 800px; width: 100%;"></div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- 状态统计 -->
-{% if status_stats %}
-<div class="card">
-    <div class="card-header">
-        <h5 class="mb-0"><i class="bi bi-bar-chart"></i> 状态统计</h5>
-    </div>
-    <div class="card-body">
-        <div class="row">
-            {% for stat in status_stats %}
-            <div class="col-md-3">
-                <div class="alert alert-info">
-                    <strong>{{ stat.status }}:</strong> {{ stat.count }} 辆
+<!-- 车辆操作模态框 -->
+<div class="modal fade" id="vehicleOperationModal" tabindex="-1" aria-labelledby="vehicleOperationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="vehicleOperationModalLabel">车辆操作</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="vehicleInfo" class="mb-4">
+                    <!-- 车辆信息将通过JavaScript动态填充 -->
+                </div>
+                <div class="mb-4">
+                    <label for="vehicleStatusSelect" class="form-label">车辆状态</label>
+                    <select id="vehicleStatusSelect" class="form-select">
+                        <option value="available">可用</option>
+                        <option value="ridden">已骑行</option>
+                        <option value="faulty">故障</option>
+                        <option value="locked">锁定</option>
+                    </select>
                 </div>
             </div>
-            {% endfor %}
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary" onclick="updateVehicleStatus()">保存更改</button>
+            </div>
         </div>
     </div>
 </div>
-{% endif %}
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<script>
+    // 全局变量
+    let map;
+    let vehicleMarkers = [];
+    let yanshanBounds;
+    let vehiclesData = {{ vehicles|safe }};
+    let currentVehicleId = null;
+    
+    // 初始化地图
+    function initMap() {
+        // 燕山大学校园中心点
+        const yanshanCenter = [39.9500, 119.5325];
+        
+        // 燕大校园边界
+        yanshanBounds = [
+            [39.9450, 119.5250], // 西南角
+            [39.9550, 119.5400]  // 东北角
+        ];
+        
+        // 创建地图实例
+        map = L.map('map', {
+            center: yanshanCenter,
+            zoom: 17,
+            minZoom: 15,
+            maxZoom: 19,
+            maxBounds: yanshanBounds,
+            maxBoundsViscosity: 1.0
+        });
+        
+        // 添加高德地图底图
+        L.tileLayer('https://webrd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+            attribution: '高德地图 © 共享单车系统',
+            maxZoom: 19
+        }).addTo(map);
+        
+        // 添加校园边界
+        const campusBoundary = L.polygon([
+            [39.9450, 119.5250], // 西南角
+            [39.9450, 119.5400], // 东南角
+            [39.9550, 119.5400], // 东北角
+            [39.9550, 119.5250], // 西北角
+            [39.9450, 119.5250]  // 西南角
+        ], {
+            color: '#1E90FF',
+            weight: 2,
+            fillColor: '#E6F3FF',
+            fillOpacity: 0.1
+        }).addTo(map);
+        
+        // 添加车辆标记
+        addVehicleMarkers();
+        
+        // 启动定时刷新
+        startAutoRefresh();
+    }
+    
+    // 添加车辆标记
+    function addVehicleMarkers() {
+        // 清除现有标记
+        vehicleMarkers.forEach(marker => map.removeLayer(marker));
+        vehicleMarkers = [];
+        
+        // 添加新标记
+        vehiclesData.forEach(vehicle => {
+            // 根据状态设置图标颜色
+            let markerColor;
+            switch (vehicle.status) {
+                case 'available':
+                    markerColor = '#28a745'; // 绿色
+                    break;
+                case 'ridden':
+                    markerColor = '#007bff'; // 蓝色
+                    break;
+                case 'faulty':
+                    markerColor = '#dc3545'; // 红色
+                    break;
+                case 'locked':
+                    markerColor = '#ffc107'; // 黄色
+                    break;
+                default:
+                    markerColor = '#6c757d'; // 灰色
+            }
+            
+            // 创建车辆图标
+            const vehicleIcon = L.divIcon({
+                className: 'custom-vehicle-icon',
+                html: `<div style="background-color: ${markerColor}; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">${vehicle.id.substring(1)}</div>`,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+            });
+            
+            // 创建标记
+            const marker = L.marker([vehicle.latitude, vehicle.longitude], {
+                icon: vehicleIcon
+            }).addTo(map);
+            
+            // 添加弹出信息
+            marker.bindPopup(`
+                <div class="p-2">
+                    <h6 class="font-weight-bold">车辆 ${vehicle.id}</h6>
+                    <p class="text-sm mb-1">状态: ${getStatusText(vehicle.status)}</p>
+                    <p class="text-sm mb-1">坐标: ${vehicle.latitude.toFixed(6)}, ${vehicle.longitude.toFixed(6)}</p>
+                    <p class="text-sm mb-1">更新时间: ${vehicle.update_time}</p>
+                    <button class="btn btn-sm btn-primary mt-2" onclick="openVehicleOperationModal('${vehicle.id}')">
+                        操作
+                    </button>
+                </div>
+            `);
+            
+            vehicleMarkers.push(marker);
+        });
+    }
+    
+    // 获取状态文本
+    function getStatusText(status) {
+        switch (status) {
+            case 'available': return '可用';
+            case 'ridden': return '已骑行';
+            case 'faulty': return '故障';
+            case 'locked': return '锁定';
+            default: return '未知';
+        }
+    }
+    
+    // 搜索车辆
+    function searchVehicle() {
+        const searchInput = document.getElementById('vehicleSearchInput').value.trim();
+        if (!searchInput) {
+            alert('请输入车辆编号');
+            return;
+        }
+        
+        // 查找车辆
+        const vehicle = vehiclesData.find(v => v.id === searchInput || v.id.includes(searchInput));
+        if (vehicle) {
+            // 定位到车辆
+            map.setView([vehicle.latitude, vehicle.longitude], 18);
+            
+            // 打开车辆操作模态框
+            openVehicleOperationModal(vehicle.id);
+        } else {
+            alert('未找到车辆');
+        }
+    }
+    
+    // 打开车辆操作模态框
+    function openVehicleOperationModal(vehicleId) {
+        currentVehicleId = vehicleId;
+        
+        // 查找车辆
+        const vehicle = vehiclesData.find(v => v.id === vehicleId);
+        if (vehicle) {
+            // 填充车辆信息
+            document.getElementById('vehicleInfo').innerHTML = `
+                <h6 class="font-weight-bold">车辆 ${vehicle.id}</h6>
+                <p class="text-sm mb-1">当前状态: ${getStatusText(vehicle.status)}</p>
+                <p class="text-sm mb-1">坐标: ${vehicle.latitude.toFixed(6)}, ${vehicle.longitude.toFixed(6)}</p>
+                <p class="text-sm mb-1">更新时间: ${vehicle.update_time}</p>
+            `;
+            
+            // 设置状态选择器
+            document.getElementById('vehicleStatusSelect').value = vehicle.status;
+            
+            // 显示模态框
+            const modal = new bootstrap.Modal(document.getElementById('vehicleOperationModal'));
+            modal.show();
+        }
+    }
+    
+    // 更新车辆状态
+    function updateVehicleStatus() {
+        if (!currentVehicleId) return;
+        
+        const newStatus = document.getElementById('vehicleStatusSelect').value;
+        
+        // 显示加载状态
+        const saveButton = document.querySelector('#vehicleOperationModal .btn-primary');
+        saveButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 保存中...';
+        saveButton.disabled = true;
+        
+        // 发送请求更新状态
+        fetch('/operation/api/update-vehicle-status/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                vehicle_id: currentVehicleId,
+                status: newStatus
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // 更新本地数据
+                const vehicleIndex = vehiclesData.findIndex(v => v.id === currentVehicleId);
+                if (vehicleIndex !== -1) {
+                    vehiclesData[vehicleIndex].status = newStatus;
+                    vehiclesData[vehicleIndex].update_time = new Date().toLocaleString();
+                }
+                
+                // 更新地图标记
+                addVehicleMarkers();
+                
+                // 更新统计数据
+                updateVehicleStats();
+                
+                // 显示成功消息
+                alert('车辆状态更新成功！');
+                
+                // 关闭模态框
+                const modal = bootstrap.Modal.getInstance(document.getElementById('vehicleOperationModal'));
+                modal.hide();
+            } else {
+                alert('车辆状态更新失败：' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('更新车辆状态失败:', error);
+            alert('车辆状态更新失败，请稍后重试');
+        })
+        .finally(() => {
+            // 恢复按钮状态
+            saveButton.innerHTML = '保存更改';
+            saveButton.disabled = false;
+        });
+    }
+    
+    // 更新车辆统计
+    function updateVehicleStats() {
+        const total = vehiclesData.length;
+        const available = vehiclesData.filter(v => v.status === 'available').length;
+        const ridden = vehiclesData.filter(v => v.status === 'ridden').length;
+        const faulty = vehiclesData.filter(v => v.status === 'faulty').length;
+        const locked = vehiclesData.filter(v => v.status === 'locked').length;
+        
+        document.getElementById('totalVehicles').textContent = total;
+        document.getElementById('availableVehicles').textContent = available;
+        document.getElementById('riddenVehicles').textContent = ridden;
+        document.getElementById('faultyVehicles').textContent = faulty;
+    }
+    
+    // 刷新数据
+    function refreshData() {
+        // 显示加载状态
+        document.getElementById('refreshBtn').innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 刷新中...';
+        
+        // 从API获取最新数据
+        fetch('/operation/api/vehicle-data/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 更新数据
+                    vehiclesData = data.data;
+                    
+                    // 更新地图
+                    addVehicleMarkers();
+                    
+                    // 更新统计数据
+                    updateVehicleStats();
+                    
+                    // 显示成功消息
+                    alert('数据刷新成功！');
+                } else {
+                    alert('数据刷新失败：' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('刷新数据失败:', error);
+                alert('数据刷新失败，请稍后重试');
+            })
+            .finally(() => {
+                // 恢复按钮状态
+                document.getElementById('refreshBtn').textContent = '手动刷新数据';
+            });
+    }
+    
+    // 启动自动刷新
+    function startAutoRefresh() {
+        // 每30秒自动刷新一次
+        setInterval(() => {
+            fetch('/operation/api/vehicle-data/')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // 更新数据
+                        vehiclesData = data.data;
+                        
+                        // 更新地图
+                        addVehicleMarkers();
+                        
+                        // 更新统计数据
+                        updateVehicleStats();
+                    }
+                })
+                .catch(error => {
+                    console.error('自动刷新数据失败:', error);
+                });
+        }, 30000); // 30秒
+    }
+    
+    // 获取CSRF令牌
+    function getCsrfToken() {
+        const cookieValue = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('csrftoken='))
+            ?.split('=')[1];
+        return cookieValue;
+    }
+    
+    // 页面加载完成后初始化
+    window.onload = function() {
+        initMap();
+    };
+</script>
+
+<style>
+    /* 自定义车辆图标样式 */
+    .custom-vehicle-icon {
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        transition: transform 0.2s;
+    }
+    
+    .custom-vehicle-icon:hover {
+        transform: scale(1.1);
+    }
+</style>
 {% endblock %}
