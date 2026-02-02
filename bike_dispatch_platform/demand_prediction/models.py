@@ -24,7 +24,9 @@ class PredictionResult(models.Model):
     time_period = models.CharField(max_length=20, choices=TIME_PERIOD_CHOICES, verbose_name="预测时段")
 
     predict_date = models.DateField(verbose_name="预测日期")
+    predict_hour = models.IntegerField(verbose_name="预测小时", choices=[(i, f'{i}:00') for i in range(24)], default=0)
     demand_count = models.IntegerField(verbose_name="调度需求车辆数")
+    supply_count = models.IntegerField(default=0, verbose_name="当前供给车辆数")
     
     # 使用模型选择项
     MODEL_CHOICES = [
@@ -40,7 +42,8 @@ class PredictionResult(models.Model):
     class Meta:
         verbose_name = "预测结果"
         verbose_name_plural = "预测结果"
+        unique_together = ['region', 'predict_date', 'predict_hour']  # 确保每个小时只能有一份预测数据
         
     def __str__(self):
         """自定义对象展示名称，便于后台管理查看"""
-        return f"{self.predict_date} {self.get_region_display()} {self.get_time_period_display()} 需求数：{self.demand_count}"
+        return f"{self.predict_date} {self.predict_hour}:00 {self.get_region_display()} 需求数：{self.demand_count}"

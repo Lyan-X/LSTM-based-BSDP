@@ -141,41 +141,88 @@ def supply_demand_heatmap(request):
         hour_idx = int(item['hour'])
         heatmap_data.append([hour_idx, region_idx, item['demand']])
     
-    # 如果没有数据，生成示例数据
-    if not heatmap_data:
-        regions = ['城市中心商业区', '科技园区', '居民小区A', '居民小区B', '交通枢纽', '教育区', '医疗区', '文化区']
-        for h in range(24):
-            for r in range(len(regions)):
-                heatmap_data.append([h, r, (h % 12) * 10 + r * 5])
+    # 查询需求预测数据
+    from demand_prediction.models import PredictionResult
+    prediction_data = []
+    predictions = PredictionResult.objects.filter(
+        predict_date=end_date
+    ).order_by('predict_hour', 'region')
     
-    # 城市区域坐标（默认以秦皇岛市中心为例）
+    for pred in predictions:
+        prediction_data.append({
+            'region': pred.get_region_display(),
+            'hour': pred.predict_hour,
+            'demand': pred.demand_count,
+            'supply': pred.supply_count,
+            'model': pred.model_used
+        })
+    
+    # 如果没有数据，从Vehicle模型获取实际车辆数据
+    if not heatmap_data:
+        # 从Vehicle模型获取车辆数据
+        vehicles = Vehicle.objects.all()
+        
+        # 如果有车辆数据，使用实际车辆数据
+        if vehicles.exists():
+            for vehicle in vehicles:
+                if vehicle.latitude and vehicle.longitude:
+                    # 根据车辆状态调整需求值
+                    if vehicle.status == 'normal':
+                        demand = 100
+                    elif vehicle.status == 'fault':
+                        demand = 50
+                    else:
+                        demand = 20
+                    heatmap_data.append([0, 0, demand, vehicle.latitude, vehicle.longitude, vehicle.bike_id, vehicle.status])
+        else:
+            # 如果没有车辆数据，生成燕山大学附近的示例车辆数据
+            vehicle_locations = [
+                [119.5285, 39.9487, 'YS001', 'normal'],  # 燕山大学西校区南门
+                [119.5280, 39.9520, 'YS002', 'normal'],  # 燕山大学西校区北门
+                [119.5380, 39.9460, 'YS003', 'normal'],  # 燕山大学东校区南门
+                [119.5375, 39.9490, 'YS004', 'fault'],   # 燕山大学东校区北门
+                [119.5320, 39.9495, 'YS005', 'normal'],  # 燕山大学科技楼
+                [119.5300, 39.9480, 'YS006', 'normal'],  # 燕山大学图书馆
+                [119.5340, 39.9470, 'YS007', 'normal'],  # 燕山大学体育馆
+                [119.5260, 39.9475, 'YS008', 'normal'],  # 燕山大学学生宿舍区
+                [119.5250, 39.9465, 'YS009', 'normal'],  # 燕山大学商业区
+                [119.5350, 39.9500, 'YS010', 'normal'],  # 燕山大学教职工区
+            ]
+            
+            for loc in vehicle_locations:
+                heatmap_data.append([0, 0, 100, loc[0], loc[1], loc[2], loc[3]])
+    
+    # 燕山大学测试区域坐标
     city_coords = {
-        'center': [119.5313, 39.9519],  # 秦皇岛市中心坐标
-        'zoom': 12,  # 放大级别
+        'center': [119.5320, 39.9495],  # 燕山大学中心坐标
+        'zoom': 15,  # 放大级别，更清晰显示校园细节
         'bounds': {
-            'north': 39.980,  # 北边界
-            'south': 39.920,  # 南边界
-            'east': 119.560,  # 东边界
-            'west': 119.500   # 西边界
+            'north': 39.9550,  # 北边界
+            'south': 39.9450,  # 南边界
+            'east': 119.5400,  # 东边界
+            'west': 119.5250   # 西边界
         }
     }
     
-    # 城市停靠点信息
+    # 燕山大学测试区域停靠点信息（精确经纬度）
     stations = [
-        {'name': '城市中心商业区', 'coords': [119.5313, 39.9519], 'demand': 150},
-        {'name': '科技园区', 'coords': [119.5500, 39.9600], 'demand': 120},
-        {'name': '居民小区A', 'coords': [119.5100, 39.9400], 'demand': 100},
-        {'name': '居民小区B', 'coords': [119.5400, 39.9300], 'demand': 90},
-        {'name': '交通枢纽', 'coords': [119.5200, 39.9500], 'demand': 130},
-        {'name': '教育区', 'coords': [119.5600, 39.9450], 'demand': 110},
-        {'name': '医疗区', 'coords': [119.5000, 39.9550], 'demand': 80},
-        {'name': '文化区', 'coords': [119.5350, 39.9650], 'demand': 70}
+        {'name': '燕山大学西校区南门', 'coords': [119.5285, 39.9487], 'demand': 150},
+        {'name': '燕山大学西校区北门', 'coords': [119.5280, 39.9520], 'demand': 120},
+        {'name': '燕山大学东校区南门', 'coords': [119.5380, 39.9460], 'demand': 100},
+        {'name': '燕山大学东校区北门', 'coords': [119.5375, 39.9490], 'demand': 90},
+        {'name': '燕山大学科技楼', 'coords': [119.5320, 39.9495], 'demand': 130},
+        {'name': '燕山大学图书馆', 'coords': [119.5300, 39.9480], 'demand': 110},
+        {'name': '燕山大学体育馆', 'coords': [119.5340, 39.9470], 'demand': 80},
+        {'name': '燕山大学学生宿舍区', 'coords': [119.5260, 39.9475], 'demand': 70},
+        {'name': '燕山大学商业区', 'coords': [119.5250, 39.9465], 'demand': 60},
+        {'name': '燕山大学教职工区', 'coords': [119.5350, 39.9500], 'demand': 50}
     ]
     
     context = {
         'regions': json.dumps(regions),
         'hours': json.dumps(hours),
         'heatmap_data': json.dumps(heatmap_data),
+        'prediction_data': json.dumps(prediction_data),
         'days': days,
         'city_coords': json.dumps(city_coords),
         'stations': json.dumps(stations)

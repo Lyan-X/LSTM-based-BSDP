@@ -27,6 +27,7 @@ def demand_predict(request):
             region = request.POST.get('region')
             time_period = request.POST.get('time_period')
             predict_date = request.POST.get('predict_date')
+            predict_hour = int(request.POST.get('predict_hour', timezone.now().hour))
             
             if not all([region, time_period, predict_date]):
                 raise ValueError('请填写完整的预测参数')
@@ -132,16 +133,38 @@ def demand_predict(request):
             # 计算响应时间
             response_time = time.time() - start_time
             
-            # 保存预测结果
-            prediction = PredictionResult.objects.create(
+            # 检查是否已存在同一小时的预测数据
+            existing_prediction = PredictionResult.objects.filter(
                 region=region,
-                time_period=time_period,
                 predict_date=predict_date_obj,
-                demand_count=final_demand,
-                model_used=final_model,
-                accuracy=final_accuracy,
-                user=request.user
-            )
+                predict_hour=predict_hour
+            ).first()
+            
+            if existing_prediction:
+                # 更新现有预测数据
+                existing_prediction.time_period = time_period
+                existing_prediction.demand_count = final_demand
+                existing_prediction.model_used = final_model
+                existing_prediction.accuracy = final_accuracy
+                existing_prediction.user = request.user
+                existing_prediction.save()
+                prediction = existing_prediction
+                # 记录更新日志
+                messages.warning(request, f'已更新{predict_date_obj} {predict_hour}:00 {dict(REGION_CHOICES)[region]}的预测数据')
+            else:
+                # 创建新预测数据
+                prediction = PredictionResult.objects.create(
+                    region=region,
+                    time_period=time_period,
+                    predict_date=predict_date_obj,
+                    predict_hour=predict_hour,
+                    demand_count=final_demand,
+                    supply_count=0,  # 默认供给为0，后续可通过其他接口更新
+                    model_used=final_model,
+                    accuracy=final_accuracy,
+                    user=request.user
+                )
+                messages.success(request, f'预测完成！预计需求：{final_demand}辆，准确率：{final_accuracy}%，响应时间：{response_time:.2f}秒')
             
             # 记录操作日志
             SystemLog.objects.create(
@@ -155,6 +178,7 @@ def demand_predict(request):
                 'region': dict(REGION_CHOICES)[region],
                 'time_period': dict(PredictionResult.TIME_PERIOD_CHOICES)[time_period],
                 'date': predict_date,
+                'hour': predict_hour,
                 'demand': final_demand,
                 'model': f'{final_model}模型',
                 'accuracy': final_accuracy,
