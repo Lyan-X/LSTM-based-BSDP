@@ -23,6 +23,18 @@
                         </div>
                     </div>
                     
+                    <!-- 状态筛选 -->
+                    <div class="mb-4">
+                        <h6 class="text-muted">车辆状态</h6>
+                        <div class="input-group">
+                            <select id="vehicle-status-filter" class="form-select">
+                                <option value="all">全部车辆</option>
+                                <option value="riding">正在骑行</option>
+                                <option value="parked">已停放</option>
+                            </select>
+                        </div>
+                    </div>
+                    
                     <!-- 数据统计 -->
                     <div class="mb-4">
                         <h6 class="text-muted">车辆统计</h6>
@@ -126,113 +138,402 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
 <script>
+    // 强制清空浏览器本地存储，清除所有配置缓存
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // 全局标记：系统数据为空，控制前端渲染空状态
+    window.SYSTEM_DATA_EMPTY = true;
+    
+    // ===================== 全局固化配置 =====================
+    // 地图中心点
+    const YSU_CENTER = [39.909689, 119.528179];
+    // 最大缩放（防灰屏）
+    const MAX_ZOOM = 19;
+    // 燕山大学多边形边界（lat,lng格式，适配Leaflet）
+    const YSU_POLYGON = [
+        [39.920629,119.521485], [39.913288,119.512037], [39.904006,119.52075],
+        [39.903988,119.531455], [39.903443,119.533285], [39.908277,119.536368],
+        [39.908118,119.536776], [39.903018,119.533517], [39.900294,119.536559],
+        [39.904718,119.543316], [39.905225,119.542436], [39.904929,119.542311],
+        [39.906239,119.541106], [39.907806,119.538698], [39.908501,119.539165],
+        [39.908276,119.540099], [39.909035,119.540612], [39.909597,119.5403],
+        [39.910539,119.54211], [39.910971,119.541805], [39.911088,119.542946],
+        [39.911532,119.54393], [39.911932,119.543499], [39.911774,119.542036],
+        [39.912606,119.541808], [39.912437,119.539552], [39.908497,119.537055],
+        [39.90861,119.536559], [39.91046,119.537806], [39.913813,119.52945]
+    ];
+    
+    // 全量停车点数据
+    const PARKING_POINTS = [
+        { name: "第四体育场", lat: 39.913239, lng: 119.517816 },
+        { name: "西北门", lat: 39.916532, lng: 119.517939 },
+        { name: "信息科学与工程学院", lat: 39.917036, lng: 119.521364 },
+        { name: "理学院", lat: 39.917012, lng: 119.521864 },
+        { name: "理学院北侧", lat: 39.918136, lng: 119.522728 },
+        { name: "西里西亚学院", lat: 39.916512, lng: 119.522482 },
+        { name: "西区第五教学楼", lat: 39.914483, lng: 119.520487 },
+        { name: "艺术学院", lat: 39.913924, lng: 119.51965 },
+        { name: "继续教育学院", lat: 39.913824, lng: 119.520105 },
+        { name: "西区第一教学楼北侧", lat: 39.911633, lng: 119.522175 },
+        { name: "西区第一教学楼", lat: 39.911128, lng: 119.522085 },
+        { name: "西区第二教学楼", lat: 39.910663, lng: 119.522642 },
+        { name: "西区第三教学楼", lat: 39.910163, lng: 119.523274 },
+        { name: "电气工程学院东", lat: 39.910029, lng: 119.522709 },
+        { name: "电气工程学院西", lat: 39.909753, lng: 119.521177 },
+        { name: "材料学院C楼", lat: 39.909221, lng: 119.522369 },
+        { name: "材料学院A楼", lat: 39.908501, lng: 119.52317 },
+        { name: "1组图", lat: 39.904547, lng: 119.523088 },
+        { name: "2组图", lat: 39.905732, lng: 119.523105 },
+        { name: "3组图", lat: 39.906529, lng: 119.523138 },
+        { name: "4组图", lat: 39.905351, lng: 119.521776 },
+        { name: "西区大食堂东侧", lat: 39.907251, lng: 119.521967 },
+        { name: "西区大食堂西侧", lat: 39.907417, lng: 119.520043 },
+        { name: "西区浴池", lat: 39.908508, lng: 119.519858 },
+        { name: "西区超市", lat: 39.908269, lng: 119.518344 },
+        { name: "10组图", lat: 39.909318, lng: 119.518084 },
+        { name: "11组图", lat: 39.910224, lng: 119.517912 },
+        { name: "燕园餐厅", lat: 39.911057, lng: 119.517918 },
+        { name: "12组图", lat: 39.910156, lng: 119.516213 },
+        { name: "里仁教学楼西侧", lat: 39.906156, lng: 119.525995 },
+        { name: "里仁教学楼东南侧", lat: 39.905674, lng: 119.527913 },
+        { name: "西区大学生活动中心", lat: 39.9052, lng: 119.526448 },
+        { name: "新图书馆西侧", lat: 39.910473, lng: 119.531126 },
+        { name: "新图书馆东侧", lat: 39.910557, lng: 119.534127 },
+        { name: "5号门", lat: 39.909579, lng: 119.53553 },
+        { name: "第二体育场", lat: 39.911033, lng: 119.54074 },
+        { name: "体育学院东侧", lat: 39.911157, lng: 119.540493 },
+        { name: "体育学院西侧", lat: 39.911104, lng: 119.539163 },
+        { name: "体育学院南侧", lat: 39.910715, lng: 119.53974 },
+        { name: "建筑系", lat: 39.910202, lng: 119.539941 },
+        { name: "文法学院", lat: 39.909795, lng: 119.538739 },
+        { name: "东区第四教学楼北侧", lat: 39.909071, lng: 119.540025 },
+        { name: "东区第四教学楼南侧", lat: 39.908658, lng: 119.53977 },
+        { name: "车辆与能源学院", lat: 39.908447, lng: 119.537491 },
+        { name: "后勤管理处", lat: 39.907428, lng: 119.538573 },
+        { name: "建筑工程与力学学院东侧", lat: 39.905247, lng: 119.540408 },
+        { name: "东区第二教学楼", lat: 39.905594, lng: 119.540397 },
+        { name: "建筑工程与力学学院西侧", lat: 39.905178, lng: 119.539722 },
+        { name: "东区第一教学楼", lat: 39.904948, lng: 119.539069 },
+        { name: "东区图书馆", lat: 39.904936, lng: 119.537932 },
+        { name: "东区第三教学楼", lat: 39.903952, lng: 119.537474 },
+        { name: "至明楼", lat: 39.901284, lng: 119.536636 },
+        { name: "东区学生生活服务楼西侧", lat: 39.901898, lng: 119.536302 },
+        { name: "东区学生生活服务楼东侧", lat: 39.901877, lng: 119.536619 },
+        { name: "东区学生生活服务楼东北侧", lat: 39.902048, lng: 119.536717 },
+        { name: "至博楼", lat: 39.901958, lng: 119.535911 },
+        { name: "中快餐厅2食堂", lat: 39.902724, lng: 119.535492 },
+        { name: "至雅楼南侧", lat: 39.903012, lng: 119.534896 },
+        { name: "至雅楼北侧", lat: 39.903248, lng: 119.534947 },
+        { name: "燕鸣湖餐厅西南侧", lat: 39.903546, lng: 119.535349 },
+        { name: "燕鸣湖餐厅西北侧", lat: 39.903957, lng: 119.535433 },
+        { name: "学生公寓8号楼", lat: 39.905494, lng: 119.535337 }
+    ];
+    
     // 全局变量
-    let map;
+    let monitorMap;
     let vehicleMarkers = [];
-    let yanshanBounds;
-    let vehiclesData = {{ vehicles|safe }};
+    let parkingMarkers = [];
+    // 测试车辆数据
+    let vehiclesData = [
+        {
+            id: "bike_001",
+            lat: 39.913239,
+            lng: 119.517816,
+            status: "riding",
+            riding_start_time: "2026-02-05 14:30:00",
+            current_speed: 12.5,
+            parking_point: null,
+            update_time: new Date().toLocaleString()
+        },
+        {
+            id: "bike_002",
+            lat: 39.910224,
+            lng: 119.517912,
+            status: "parked",
+            parking_point: "11组图",
+            update_time: new Date().toLocaleString()
+        },
+        {
+            id: "bike_003",
+            lat: 39.908501,
+            lng: 119.52317,
+            status: "locked",
+            parking_point: "材料学院A楼",
+            update_time: new Date().toLocaleString()
+        },
+        {
+            id: "bike_004",
+            lat: 39.905732,
+            lng: 119.523105,
+            status: "faulty",
+            parking_point: "2组图",
+            update_time: new Date().toLocaleString()
+        },
+        {
+            id: "bike_005",
+            lat: 39.911057,
+            lng: 119.517918,
+            status: "riding",
+            riding_start_time: "2026-02-05 14:45:00",
+            current_speed: 8.3,
+            parking_point: null,
+            update_time: new Date().toLocaleString()
+        }
+    ];
     let currentVehicleId = null;
+    
+    /**
+     * 初始化地图（无平移限制，固定最大缩放）
+     * @param {string} domId 地图容器ID
+     * @returns 地图实例
+     */
+    function initYsuMap(domId) {
+        const map = L.map(domId, {
+            maxZoom: MAX_ZOOM,
+            // 关键：关闭所有边界限制，支持自由拖动
+            maxBounds: null,
+            zoomControl: true
+        }).setView(YSU_CENTER, 15);
+    
+        // 加载底图
+        L.tileLayer('https://webrd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+            attribution: '高德地图 © 共享单车系统',
+            maxZoom: MAX_ZOOM
+        }).addTo(map);
+    
+        // 绘制多边形边界（可视化标识）
+        L.polygon(YSU_POLYGON, {
+            color: '#1890FF',
+            weight: 2,
+            fillOpacity: 0.1
+        }).addTo(map);
+    
+        return map;
+    }
+    
+    // 坐标校验工具：判断车辆点位是否在燕大多边形内
+    function isInYsuPolygon(lat, lng) {
+        const point = L.latLng(lat, lng);
+        const polygon = L.polygon(YSU_POLYGON);
+        return polygon.getBounds().contains(point);
+    }
     
     // 初始化地图
     function initMap() {
-        // 燕山大学校园中心点
-        const yanshanCenter = [39.9500, 119.5325];
+        // 1. 初始化地图（复用通用函数，无矩形约束）
+        monitorMap = initYsuMap('map');
         
-        // 燕大校园边界
-        yanshanBounds = [
-            [39.9450, 119.5250], // 西南角
-            [39.9550, 119.5400]  // 东北角
-        ];
+        // 2. 定义停车场图标（常用停车场样式）
+        function createParkingIcon(isSelected) {
+            return L.divIcon({
+                className: 'parking-icon',
+                html: `<div style="width: 30px; height: 30px; border-radius: 50%; background-color: ${isSelected ? '#FF5722' : '#1890FF'}; color: white; display: flex; align-items: center; justify-content: center; border: ${isSelected ? '2px' : '1px'} solid white; font-weight: bold;">P</div>`,
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+        }
         
-        // 创建地图实例
-        map = L.map('map', {
-            center: yanshanCenter,
-            zoom: 17,
-            minZoom: 15,
-            maxZoom: 19,
-            maxBounds: yanshanBounds,
-            maxBoundsViscosity: 1.0
+        // 3. 添加停车点管辖范围（30米）
+        const PARKING_RADIUS = 30; // 停车点管辖范围，单位：米
+        
+        // 4. 渲染所有停车点
+        PARKING_POINTS.forEach(point => {
+            // 创建停车点图标
+            const marker = L.marker([point.lat, point.lng], {
+                icon: createParkingIcon(false)
+            }).addTo(monitorMap);
+            
+            // 添加停车点管辖范围
+            const radiusCircle = L.circle([point.lat, point.lng], {
+                radius: PARKING_RADIUS,
+                color: '#1890FF',
+                fillColor: '#1890FF',
+                fillOpacity: 0.1,
+                weight: 1
+            }).addTo(monitorMap);
+            
+            // 绑定弹窗
+            marker.bindPopup(`
+                <div class="popup-card">
+                    <h5>${point.name}</h5>
+                    <p>经度：${point.lng.toFixed(6)}</p>
+                    <p>纬度：${point.lat.toFixed(6)}</p>
+                    <p>管辖范围：${PARKING_RADIUS}米</p>
+                </div>
+            `);
+            
+            // 点击事件：切换选中状态
+            marker.on('click', function() {
+                // 重置所有标记
+                parkingMarkers.forEach(m => {
+                    m.setIcon(createParkingIcon(false));
+                });
+                // 设置当前标记为选中状态
+                this.setIcon(createParkingIcon(true));
+            });
+            
+            parkingMarkers.push(marker);
         });
         
-        // 添加高德地图底图
-        L.tileLayer('https://webrd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
-            attribution: '高德地图 © 共享单车系统',
-            maxZoom: 19
-        }).addTo(map);
+        // 3. 定义车辆图标（区分不同状态）
+        // 骑行中车辆图标
+        const ridingIcon = L.divIcon({
+            className: 'vehicle-icon',
+            html: `<div style="width: 24px; height: 24px; border-radius: 50%; background-color: #FF5722; color: white; display: flex; align-items: center; justify-content: center; border: 2px solid white; font-weight: bold;">骑</div>`,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        });
         
-        // 添加校园边界
-        const campusBoundary = L.polygon([
-            [39.9450, 119.5250], // 西南角
-            [39.9450, 119.5400], // 东南角
-            [39.9550, 119.5400], // 东北角
-            [39.9550, 119.5250], // 西北角
-            [39.9450, 119.5250]  // 西南角
-        ], {
-            color: '#1E90FF',
-            weight: 2,
-            fillColor: '#E6F3FF',
-            fillOpacity: 0.1
-        }).addTo(map);
+        // 停放车辆图标
+        const parkedIcon = L.divIcon({
+            className: 'vehicle-icon',
+            html: `<div style="width: 20px; height: 20px; border-radius: 50%; background-color: #4CAF50; color: white; display: flex; align-items: center; justify-content: center; border: 1px solid white; font-weight: bold;">停</div>`,
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+        });
         
-        // 添加车辆标记
-        addVehicleMarkers();
+        // 锁定车辆图标
+        const lockedIcon = L.divIcon({
+            className: 'vehicle-icon',
+            html: `<div style="width: 20px; height: 20px; border-radius: 50%; background-color: #FFC107; color: white; display: flex; align-items: center; justify-content: center; border: 1px solid white; font-weight: bold;">锁</div>`,
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+        });
+        
+        // 故障车辆图标
+        const faultyIcon = L.divIcon({
+            className: 'vehicle-icon',
+            html: `<div style="width: 20px; height: 20px; border-radius: 50%; background-color: #F44336; color: white; display: flex; align-items: center; justify-content: center; border: 1px solid white; font-weight: bold;">故</div>`,
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+        });
+        
+        // 5. 再渲染车辆信息（叠加在停车点上）
+        addVehicleMarkers(ridingIcon, parkedIcon, lockedIcon, faultyIcon);
         
         // 启动定时刷新
         startAutoRefresh();
     }
     
     // 添加车辆标记
-    function addVehicleMarkers() {
+    function addVehicleMarkers(ridingIcon, parkedIcon, lockedIcon, faultyIcon) {
         // 清除现有标记
-        vehicleMarkers.forEach(marker => map.removeLayer(marker));
+        vehicleMarkers.forEach(marker => monitorMap.removeLayer(marker));
         vehicleMarkers = [];
         
         // 添加新标记
         vehiclesData.forEach(vehicle => {
-            // 根据状态设置图标颜色
-            let markerColor;
-            switch (vehicle.status) {
-                case 'available':
-                    markerColor = '#28a745'; // 绿色
-                    break;
-                case 'ridden':
-                    markerColor = '#007bff'; // 蓝色
-                    break;
-                case 'faulty':
-                    markerColor = '#dc3545'; // 红色
-                    break;
-                case 'locked':
-                    markerColor = '#ffc107'; // 黄色
-                    break;
-                default:
-                    markerColor = '#6c757d'; // 灰色
+            // 2. 过滤校外数据：仅加载多边形内的车辆数据
+            if (!isInYsuPolygon(vehicle.lat, vehicle.lng)) {
+                return; // 跳过校外车辆
             }
             
-            // 创建车辆图标
-            const vehicleIcon = L.divIcon({
-                className: 'custom-vehicle-icon',
-                html: `<div style="background-color: ${markerColor}; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">${vehicle.id.substring(1)}</div>`,
-                iconSize: [24, 24],
-                iconAnchor: [12, 12]
-            });
+            // 根据状态选择图标
+            let icon;
+            let popupContent;
+            let statusText;
+            let statusColor;
+            
+            switch (vehicle.status) {
+                case 'riding':
+                    icon = ridingIcon;
+                    statusText = '正在骑行';
+                    statusColor = '#FF5722';
+                    popupContent = `
+                        <div class="popup-card">
+                            <h5>车辆ID：${vehicle.id}</h5>
+                            <p>状态：<span style="color:${statusColor}">${statusText}</span></p>
+                            <p>骑行开始：${vehicle.riding_start_time || '未知'}</p>
+                            <p>当前位置：${vehicle.lat.toFixed(6)}, ${vehicle.lng.toFixed(6)}</p>
+                            <p>实时速度：${vehicle.current_speed || '--'} km/h</p>
+                            <button class="btn btn-sm btn-primary mt-2" onclick="openVehicleOperationModal('${vehicle.id}')">
+                                操作
+                            </button>
+                        </div>
+                    `;
+                    break;
+                case 'parked':
+                    icon = parkedIcon;
+                    statusText = '已停放';
+                    statusColor = '#4CAF50';
+                    popupContent = `
+                        <div class="popup-card">
+                            <h5>车辆ID：${vehicle.id}</h5>
+                            <p>状态：<span style="color:${statusColor}">${statusText}</span></p>
+                            <p>所属停车点：${vehicle.parking_point || '未知'}</p>
+                            <p>坐标：${vehicle.lat.toFixed(6)}, ${vehicle.lng.toFixed(6)}</p>
+                            <p>更新时间：${vehicle.update_time}</p>
+                            <button class="btn btn-sm btn-primary mt-2" onclick="openVehicleOperationModal('${vehicle.id}')">
+                                操作
+                            </button>
+                        </div>
+                    `;
+                    break;
+                case 'locked':
+                    icon = lockedIcon;
+                    statusText = '已锁定';
+                    statusColor = '#FFC107';
+                    popupContent = `
+                        <div class="popup-card">
+                            <h5>车辆ID：${vehicle.id}</h5>
+                            <p>状态：<span style="color:${statusColor}">${statusText}</span></p>
+                            <p>所属停车点：${vehicle.parking_point || '未知'}</p>
+                            <p>坐标：${vehicle.lat.toFixed(6)}, ${vehicle.lng.toFixed(6)}</p>
+                            <p>更新时间：${vehicle.update_time}</p>
+                            <button class="btn btn-sm btn-primary mt-2" onclick="openVehicleOperationModal('${vehicle.id}')">
+                                操作
+                            </button>
+                        </div>
+                    `;
+                    break;
+                case 'faulty':
+                    icon = faultyIcon;
+                    statusText = '故障';
+                    statusColor = '#F44336';
+                    popupContent = `
+                        <div class="popup-card">
+                            <h5>车辆ID：${vehicle.id}</h5>
+                            <p>状态：<span style="color:${statusColor}">${statusText}</span></p>
+                            <p>所属停车点：${vehicle.parking_point || '未知'}</p>
+                            <p>坐标：${vehicle.lat.toFixed(6)}, ${vehicle.lng.toFixed(6)}</p>
+                            <p>更新时间：${vehicle.update_time}</p>
+                            <button class="btn btn-sm btn-primary mt-2" onclick="openVehicleOperationModal('${vehicle.id}')">
+                                操作
+                            </button>
+                        </div>
+                    `;
+                    break;
+                default:
+                    icon = parkedIcon;
+                    statusText = '未知';
+                    statusColor = '#9E9E9E';
+                    popupContent = `
+                        <div class="popup-card">
+                            <h5>车辆ID：${vehicle.id}</h5>
+                            <p>状态：<span style="color:${statusColor}">${statusText}</span></p>
+                            <p>坐标：${vehicle.lat.toFixed(6)}, ${vehicle.lng.toFixed(6)}</p>
+                            <p>更新时间：${vehicle.update_time}</p>
+                            <button class="btn btn-sm btn-primary mt-2" onclick="openVehicleOperationModal('${vehicle.id}')">
+                                操作
+                            </button>
+                        </div>
+                    `;
+            }
             
             // 创建标记
-            const marker = L.marker([vehicle.latitude, vehicle.longitude], {
-                icon: vehicleIcon
-            }).addTo(map);
+            const marker = L.marker([vehicle.lat, vehicle.lng], {
+                icon: icon
+            }).addTo(monitorMap);
             
             // 添加弹出信息
-            marker.bindPopup(`
-                <div class="p-2">
-                    <h6 class="font-weight-bold">车辆 ${vehicle.id}</h6>
-                    <p class="text-sm mb-1">状态: ${getStatusText(vehicle.status)}</p>
-                    <p class="text-sm mb-1">坐标: ${vehicle.latitude.toFixed(6)}, ${vehicle.longitude.toFixed(6)}</p>
-                    <p class="text-sm mb-1">更新时间: ${vehicle.update_time}</p>
-                    <button class="btn btn-sm btn-primary mt-2" onclick="openVehicleOperationModal('${vehicle.id}')">
-                        操作
-                    </button>
-                </div>
-            `);
+            marker.bindPopup(popupContent);
+            
+            // 添加点击事件，增强交互效果
+            marker.on('click', function() {
+                // 可以添加额外的交互效果，例如放大地图到车辆位置
+                monitorMap.setView([vehicle.lat, vehicle.lng], 18);
+            });
             
             vehicleMarkers.push(marker);
         });
@@ -241,6 +542,8 @@
     // 获取状态文本
     function getStatusText(status) {
         switch (status) {
+            case 'riding': return '正在骑行';
+            case 'parked': return '已停放';
             case 'available': return '可用';
             case 'ridden': return '已骑行';
             case 'faulty': return '故障';
@@ -261,7 +564,7 @@
         const vehicle = vehiclesData.find(v => v.id === searchInput || v.id.includes(searchInput));
         if (vehicle) {
             // 定位到车辆
-            map.setView([vehicle.latitude, vehicle.longitude], 18);
+            monitorMap.setView([vehicle.lat, vehicle.lng], 18);
             
             // 打开车辆操作模态框
             openVehicleOperationModal(vehicle.id);
@@ -281,7 +584,7 @@
             document.getElementById('vehicleInfo').innerHTML = `
                 <h6 class="font-weight-bold">车辆 ${vehicle.id}</h6>
                 <p class="text-sm mb-1">当前状态: ${getStatusText(vehicle.status)}</p>
-                <p class="text-sm mb-1">坐标: ${vehicle.latitude.toFixed(6)}, ${vehicle.longitude.toFixed(6)}</p>
+                <p class="text-sm mb-1">坐标: ${vehicle.lat.toFixed(6)}, ${vehicle.lng.toFixed(6)}</p>
                 <p class="text-sm mb-1">更新时间: ${vehicle.update_time}</p>
             `;
             
@@ -328,7 +631,37 @@
                 }
                 
                 // 更新地图标记
-                addVehicleMarkers();
+                // 重新定义图标
+                const ridingIcon = L.divIcon({
+                    className: 'vehicle-icon',
+                    html: `<div style="width: 24px; height: 24px; border-radius: 50%; background-color: #FF5722; color: white; display: flex; align-items: center; justify-content: center; border: 2px solid white; font-weight: bold;">骑</div>`,
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+                
+                const parkedIcon = L.divIcon({
+                    className: 'vehicle-icon',
+                    html: `<div style="width: 20px; height: 20px; border-radius: 50%; background-color: #4CAF50; color: white; display: flex; align-items: center; justify-content: center; border: 1px solid white; font-weight: bold;">停</div>`,
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                });
+                
+                const lockedIcon = L.divIcon({
+                    className: 'vehicle-icon',
+                    html: `<div style="width: 20px; height: 20px; border-radius: 50%; background-color: #FFC107; color: white; display: flex; align-items: center; justify-content: center; border: 1px solid white; font-weight: bold;">锁</div>`,
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                });
+                
+                const faultyIcon = L.divIcon({
+                    className: 'vehicle-icon',
+                    html: `<div style="width: 20px; height: 20px; border-radius: 50%; background-color: #F44336; color: white; display: flex; align-items: center; justify-content: center; border: 1px solid white; font-weight: bold;">故</div>`,
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                });
+                
+                // 重新渲染符合条件的车辆
+                addVehicleMarkers(ridingIcon, parkedIcon, lockedIcon, faultyIcon);
                 
                 // 更新统计数据
                 updateVehicleStats();
@@ -357,8 +690,8 @@
     // 更新车辆统计
     function updateVehicleStats() {
         const total = vehiclesData.length;
-        const available = vehiclesData.filter(v => v.status === 'available').length;
-        const ridden = vehiclesData.filter(v => v.status === 'ridden').length;
+        const available = vehiclesData.filter(v => v.status === 'parked').length;
+        const ridden = vehiclesData.filter(v => v.status === 'riding').length;
         const faulty = vehiclesData.filter(v => v.status === 'faulty').length;
         const locked = vehiclesData.filter(v => v.status === 'locked').length;
         
@@ -381,8 +714,22 @@
                     // 更新数据
                     vehiclesData = data.data;
                     
+                    // 重新定义图标
+                    const ridingIcon = L.icon({
+                        iconUrl: 'https://cdn-icons-png.flaticon.com/512/892/892653.png', // 骑行者+车辆图标
+                        iconSize: [28, 28],
+                        iconAnchor: [14, 28],
+                        popupAnchor: [0, -28]
+                    });
+                    
+                    const parkedIcon = L.icon({
+                        iconUrl: 'https://cdn-icons-png.flaticon.com/512/2588/2588690.png',
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 24]
+                    });
+                    
                     // 更新地图
-                    addVehicleMarkers();
+                    addVehicleMarkers(ridingIcon, parkedIcon);
                     
                     // 更新统计数据
                     updateVehicleStats();
@@ -415,7 +762,36 @@
                         vehiclesData = data.data;
                         
                         // 更新地图
-                        addVehicleMarkers();
+                        // 重新定义图标
+                        const ridingIcon = L.divIcon({
+                            className: 'vehicle-icon',
+                            html: `<div style="width: 24px; height: 24px; border-radius: 50%; background-color: #FF5722; color: white; display: flex; align-items: center; justify-content: center; border: 2px solid white; font-weight: bold;">骑</div>`,
+                            iconSize: [24, 24],
+                            iconAnchor: [12, 12]
+                        });
+                        
+                        const parkedIcon = L.divIcon({
+                            className: 'vehicle-icon',
+                            html: `<div style="width: 20px; height: 20px; border-radius: 50%; background-color: #4CAF50; color: white; display: flex; align-items: center; justify-content: center; border: 1px solid white; font-weight: bold;">停</div>`,
+                            iconSize: [20, 20],
+                            iconAnchor: [10, 10]
+                        });
+                        
+                        const lockedIcon = L.divIcon({
+                            className: 'vehicle-icon',
+                            html: `<div style="width: 20px; height: 20px; border-radius: 50%; background-color: #FFC107; color: white; display: flex; align-items: center; justify-content: center; border: 1px solid white; font-weight: bold;">锁</div>`,
+                            iconSize: [20, 20],
+                            iconAnchor: [10, 10]
+                        });
+                        
+                        const faultyIcon = L.divIcon({
+                            className: 'vehicle-icon',
+                            html: `<div style="width: 20px; height: 20px; border-radius: 50%; background-color: #F44336; color: white; display: flex; align-items: center; justify-content: center; border: 1px solid white; font-weight: bold;">故</div>`,
+                            iconSize: [20, 20],
+                            iconAnchor: [10, 10]
+                        });
+                        
+                        addVehicleMarkers(ridingIcon, parkedIcon, lockedIcon, faultyIcon);
                         
                         // 更新统计数据
                         updateVehicleStats();
@@ -436,9 +812,176 @@
         return cookieValue;
     }
     
+    // 状态筛选功能
+    function initStatusFilter() {
+        const statusFilter = document.getElementById('vehicle-status-filter');
+        if (statusFilter) {
+            statusFilter.addEventListener('change', function(e) {
+                const selectedStatus = e.target.value;
+                
+                // 清除现有车辆标记（保留停车点）
+                vehicleMarkers.forEach(marker => {
+                    if (marker instanceof L.Marker) {
+                        monitorMap.removeLayer(marker);
+                    }
+                });
+                vehicleMarkers = [];
+                
+                // 重新定义图标
+                const ridingIcon = L.divIcon({
+                    className: 'vehicle-icon',
+                    html: `<div style="width: 24px; height: 24px; border-radius: 50%; background-color: #FF5722; color: white; display: flex; align-items: center; justify-content: center; border: 2px solid white; font-weight: bold;">骑</div>`,
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+                
+                const parkedIcon = L.divIcon({
+                    className: 'vehicle-icon',
+                    html: `<div style="width: 20px; height: 20px; border-radius: 50%; background-color: #4CAF50; color: white; display: flex; align-items: center; justify-content: center; border: 1px solid white; font-weight: bold;">停</div>`,
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                });
+                
+                const lockedIcon = L.divIcon({
+                    className: 'vehicle-icon',
+                    html: `<div style="width: 20px; height: 20px; border-radius: 50%; background-color: #FFC107; color: white; display: flex; align-items: center; justify-content: center; border: 1px solid white; font-weight: bold;">锁</div>`,
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                });
+                
+                const faultyIcon = L.divIcon({
+                    className: 'vehicle-icon',
+                    html: `<div style="width: 20px; height: 20px; border-radius: 50%; background-color: #F44336; color: white; display: flex; align-items: center; justify-content: center; border: 1px solid white; font-weight: bold;">故</div>`,
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                });
+                
+                // 重新渲染符合条件的车辆
+                vehiclesData.forEach(vehicle => {
+                    // 过滤校外数据
+                    if (!isInYsuPolygon(vehicle.lat, vehicle.lng)) {
+                        return;
+                    }
+                    
+                    // 根据筛选条件过滤
+                    if (selectedStatus === 'all' || vehicle.status === selectedStatus) {
+                        // 根据状态选择图标
+                        let icon;
+                        let popupContent;
+                        let statusText;
+                        let statusColor;
+                        
+                        switch (vehicle.status) {
+                            case 'riding':
+                                icon = ridingIcon;
+                                statusText = '正在骑行';
+                                statusColor = '#FF5722';
+                                popupContent = `
+                                    <div class="popup-card">
+                                        <h5>车辆ID：${vehicle.id}</h5>
+                                        <p>状态：<span style="color:${statusColor}">${statusText}</span></p>
+                                        <p>骑行开始：${vehicle.riding_start_time || '未知'}</p>
+                                        <p>当前位置：${vehicle.lat.toFixed(6)}, ${vehicle.lng.toFixed(6)}</p>
+                                        <p>实时速度：${vehicle.current_speed || '--'} km/h</p>
+                                        <button class="btn btn-sm btn-primary mt-2" onclick="openVehicleOperationModal('${vehicle.id}')">
+                                            操作
+                                        </button>
+                                    </div>
+                                `;
+                                break;
+                            case 'parked':
+                                icon = parkedIcon;
+                                statusText = '已停放';
+                                statusColor = '#4CAF50';
+                                popupContent = `
+                                    <div class="popup-card">
+                                        <h5>车辆ID：${vehicle.id}</h5>
+                                        <p>状态：<span style="color:${statusColor}">${statusText}</span></p>
+                                        <p>所属停车点：${vehicle.parking_point || '未知'}</p>
+                                        <p>坐标：${vehicle.lat.toFixed(6)}, ${vehicle.lng.toFixed(6)}</p>
+                                        <p>更新时间：${vehicle.update_time}</p>
+                                        <button class="btn btn-sm btn-primary mt-2" onclick="openVehicleOperationModal('${vehicle.id}')">
+                                            操作
+                                        </button>
+                                    </div>
+                                `;
+                                break;
+                            case 'locked':
+                                icon = lockedIcon;
+                                statusText = '已锁定';
+                                statusColor = '#FFC107';
+                                popupContent = `
+                                    <div class="popup-card">
+                                        <h5>车辆ID：${vehicle.id}</h5>
+                                        <p>状态：<span style="color:${statusColor}">${statusText}</span></p>
+                                        <p>所属停车点：${vehicle.parking_point || '未知'}</p>
+                                        <p>坐标：${vehicle.lat.toFixed(6)}, ${vehicle.lng.toFixed(6)}</p>
+                                        <p>更新时间：${vehicle.update_time}</p>
+                                        <button class="btn btn-sm btn-primary mt-2" onclick="openVehicleOperationModal('${vehicle.id}')">
+                                            操作
+                                        </button>
+                                    </div>
+                                `;
+                                break;
+                            case 'faulty':
+                                icon = faultyIcon;
+                                statusText = '故障';
+                                statusColor = '#F44336';
+                                popupContent = `
+                                    <div class="popup-card">
+                                        <h5>车辆ID：${vehicle.id}</h5>
+                                        <p>状态：<span style="color:${statusColor}">${statusText}</span></p>
+                                        <p>所属停车点：${vehicle.parking_point || '未知'}</p>
+                                        <p>坐标：${vehicle.lat.toFixed(6)}, ${vehicle.lng.toFixed(6)}</p>
+                                        <p>更新时间：${vehicle.update_time}</p>
+                                        <button class="btn btn-sm btn-primary mt-2" onclick="openVehicleOperationModal('${vehicle.id}')">
+                                            操作
+                                        </button>
+                                    </div>
+                                `;
+                                break;
+                            default:
+                                icon = parkedIcon;
+                                statusText = '未知';
+                                statusColor = '#9E9E9E';
+                                popupContent = `
+                                    <div class="popup-card">
+                                        <h5>车辆ID：${vehicle.id}</h5>
+                                        <p>状态：<span style="color:${statusColor}">${statusText}</span></p>
+                                        <p>坐标：${vehicle.lat.toFixed(6)}, ${vehicle.lng.toFixed(6)}</p>
+                                        <p>更新时间：${vehicle.update_time}</p>
+                                        <button class="btn btn-sm btn-primary mt-2" onclick="openVehicleOperationModal('${vehicle.id}')">
+                                            操作
+                                        </button>
+                                    </div>
+                                `;
+                        }
+                        
+                        // 创建标记
+                        const marker = L.marker([vehicle.lat, vehicle.lng], {
+                            icon: icon
+                        }).addTo(monitorMap);
+                        
+                        // 添加弹出信息
+                        marker.bindPopup(popupContent);
+                        
+                        // 添加点击事件，增强交互效果
+                        marker.on('click', function() {
+                            // 可以添加额外的交互效果，例如放大地图到车辆位置
+                            monitorMap.setView([vehicle.lat, vehicle.lng], 18);
+                        });
+                        
+                        vehicleMarkers.push(marker);
+                    }
+                });
+            });
+        }
+    }
+    
     // 页面加载完成后初始化
     window.onload = function() {
         initMap();
+        initStatusFilter();
     };
 </script>
 
@@ -456,6 +999,27 @@
     
     .custom-vehicle-icon:hover {
         transform: scale(1.1);
+    }
+    
+    /* 弹窗卡片样式 */
+    .popup-card {
+        padding: 12px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        background-color: white;
+        color: #1e293b;
+    }
+    
+    .popup-card h5 {
+        margin-top: 0;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #667eea;
+    }
+    
+    .popup-card p {
+        margin: 4px 0;
+        font-size: 14px;
     }
 </style>
 {% endblock %}

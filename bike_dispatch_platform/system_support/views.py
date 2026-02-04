@@ -77,36 +77,13 @@ def dashboard(request):
     """系统总览首页（任务书要求）"""
     user = request.user
     
-    # 统计数据
+    # 固定返回空数据，确保前端显示空状态
     stats = {
         'total_rides': 0,
         'today_predictions': 0,
         'pending_tasks': 0,
         'total_vehicles': 0,
     }
-    
-    # 根据角色显示不同数据
-    try:
-        from data_process.models import BikeRideData
-        # 所有角色都能看到骑行数据统计
-        stats['total_rides'] = BikeRideData.objects.count()
-        
-        if user.is_admin():
-            from operation_management.models import Vehicle, ScheduleTask
-            stats['today_predictions'] = PredictionResult.objects.filter(
-                predict_date=timezone.now().date()
-            ).count()
-            stats['pending_tasks'] = ScheduleTask.objects.filter(status='pending').count()
-            stats['total_vehicles'] = Vehicle.objects.count()
-        elif user.is_operator():
-            from operation_management.models import ScheduleTask
-            stats['pending_tasks'] = ScheduleTask.objects.filter(
-                assign_to=user,
-                status='pending'
-            ).count()
-    except Exception as e:
-        # 如果模型未迁移，使用默认值
-        pass
     
     context = {
         'user': user,
