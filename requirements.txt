@@ -1,0 +1,30 @@
+# Web框架
+Django==4.2.10
+
+# 深度学习
+TensorFlow==2.15.0
+Keras==2.15.0
+
+# 数据处理
+Pandas
+NumPy
+
+# 可视化
+Matplotlib
+
+# 地图
+# Leaflet.js (前端库，通过CDN引入)
+
+# 其他
+scikit-learn
+
+# 开发工具
+# 仅在开发环境使用
+# pip install -r requirements-dev.txt
+
+# requirements-dev.txt
+# pytest
+# pytest-django
+# flake8
+# black
+# isort

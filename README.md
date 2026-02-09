@@ -37,13 +37,14 @@
 ### 后端
 - **Web框架**：Django 4.2.10
 - **深度学习**：TensorFlow 2.15.0
-- **数据处理**：Pandas 2.1.4, NumPy 1.26.4
-- **可视化**：ECharts 5.4.3, Matplotlib 3.8.2
+- **数据处理**：Pandas, NumPy
+- **可视化**：ECharts 5.4.3, Matplotlib
 
 ### 前端
 - **UI框架**：Bootstrap 5.3.0
 - **图标库**：Bootstrap Icons 1.11.0
 - **图表库**：ECharts 5.4.3
+- **地图库**：Leaflet.js 1.9.4
 
 ### 数据库
 - **开发环境**：SQLite 3
@@ -131,12 +132,21 @@ BSDP/
 │   ├── data_process/               # 数据处理模块
 │   │   ├── models.py              # 数据模型
 │   │   ├── views.py               # 视图函数
-│   │   └── urls.py                # URL配置
+│   │   ├── urls.py                # URL配置
+│   │   ├── services/              # 数据服务
+│   │   └── templates/             # 数据管理模板
+│   │       └── data_process/
+│   │           └── data_manage.html  # 数据管理页面
 │   │
 │   ├── demand_prediction/          # 需求预测模块
 │   │   ├── models.py              # 预测结果模型
-│   │   ├── views.py               # 预测视图（已优化）
-│   │   └── urls.py                # URL配置
+│   │   ├── views.py               # 预测视图
+│   │   ├── urls.py                # URL配置
+│   │   ├── model_urls.py          # 模型预测URL配置
+│   │   └── templates/             # 预测管理模板
+│   │       └── demand_prediction/
+│   │           ├── model_predict.html    # 模型预测页面
+│   │           └── predict_result.html   # 预测结果页面
 │   │
 │   ├── operation_management/       # 运维管理模块
 │   │   ├── models.py              # 车辆、任务模型
@@ -147,7 +157,10 @@ BSDP/
 │   │   ├── models.py              # 用户、日志、备份模型
 │   │   ├── views.py               # 系统视图
 │   │   ├── middleware.py          # 日志中间件
-│   │   └── urls.py                # URL配置
+│   │   ├── urls.py                # URL配置
+│   │   └── templates/             # 系统支撑模板
+│   │       └── system_support/
+│   │           └── dashboard.html  # 系统总览页面
 │   │
 │   ├── templates/                 # 模板文件
 │   │   ├── base.html              # 基础模板
@@ -158,24 +171,32 @@ BSDP/
 │   └── manage.py                   # Django管理脚本
 │
 ├── models/                         # 模型训练脚本
-│   ├── train_lstm.py              # LSTM模型训练
-│   └── train_bp.py                 # BP模型训练
-│
-├── utils/                          # 工具函数
-│   ├── data_preprocess.py         # 数据预处理
-│   ├── scaler_x.pkl               # 特征归一化器
-│   └── scaler_y.pkl               # 标签归一化器
+│   ├── train.py                    # 模型训练
+│   ├── model.py                    # 模型定义
+│   └── preprocess.py               # 数据预处理
 │
 ├── data/                           # 数据目录
-│   └── train.csv                   # 训练数据
+│   ├── processed/                  # 处理后的数据
+│   └── raw/                        # 原始数据
 │
 ├── results/                        # 结果目录
 │   └── *.png                       # 训练结果可视化
 │
-├── requirements.txt                # Python依赖
+├── predict_results/                # 预测结果目录
+├── station_info/                   # 站点信息目录
+├── utils/                          # 工具函数
+├── config.py                       # 配置文件
+├── ysu_bike_data.csv               # 训练数据
+├── generate_ysu_bike_data.py       # 数据生成脚本
+├── clear_all_data.py               # 清理数据脚本
+├── clear_database.py               # 清理数据库脚本
+├── data_loader.py                  # 数据加载脚本
+├── geo_visualization.py            # 地理可视化脚本
+├── visualize_results.py            # 结果可视化脚本
 ├── 集成文档.md                      # 详细集成文档
 ├── 测试用例文档.md                  # 测试用例
 ├── 项目完成总结.md                  # 项目总结
+├── 数据导入指南.md                  # 数据导入指南
 └── README.md                       # 本文件
 ```
 
@@ -184,24 +205,39 @@ BSDP/
 ### 1. 登录系统
 访问 `http://localhost:8000/system/login/`，选择角色并登录。
 
-### 2. 需求预测
-- 访问 `/predict/predict/`
-- 选择区域、时段、日期
-- 系统自动获取天气数据和区域特征
-- 点击"开始预测"，查看预测结果
+### 2. 系统总览
+- 登录后访问 `/system/dashboard/`
+- 查看系统状态、地图和数据概览
+- 地图支持缩放、平移和停车点弹窗
 
-### 3. 调度任务管理
+### 3. 数据管理
+- 访问 `/data/manage/`
+- **初始数据导入**：上传CSV/Excel数据文件
+- **数据闭环日志**：查看自动收集的停车点数据
+- **滚动窗口数据预览**：查看14天窗口的数据统计
+
+### 4. 模型与预测管理
+- 访问 `/model/predict/`
+- **模型训练日志**：查看模型训练历史和性能指标
+- **实时预测结果**：查看各停车点的未来30分钟需求量预测
+
+### 5. 预测结果对比
+- 访问 `/model/predict/result/`
+- 查看预测值与真实值的对比数据
+- 导出CSV格式的对比报告
+
+### 6. 调度任务管理
 - 管理员访问 `/operation/tasks/create/`
 - 基于预测结果创建调度任务
 - 分配给运维人员
 - 查看任务列表和详情
 
-### 4. 供需热力图
+### 7. 供需热力图
 - 访问 `/operation/heatmap/`
 - 查看各区域-时段的骑行需求热力图
 - 支持时间范围筛选
 
-### 5. 数据备份
+### 8. 数据备份
 - 管理员访问 `/system/backup/`
 - 创建数据备份
 - 查看备份列表和下载备份文件
@@ -290,5 +326,15 @@ User.objects.create_user(username='test', password='123456', role='operator')
 ---
 
 **项目状态：** ✅ 核心功能已完成  
-**最后更新：** 2026-01-29  
-**版本：** v1.0
+**最后更新：** 2026-02-10  
+**版本：** v1.1
+
+## 最近更新内容
+
+1. **地图功能优化**：限制最大放大级别为18，避免过度放大导致地图错位
+2. **UI修复**：修复模型预测/数据管理页面小菜单栏的白字白背景问题
+3. **新增页面**：
+   - `/data/manage/`：数据管理页面，包含初始数据导入、数据闭环日志、滚动窗口数据预览
+   - `/model/predict/`：模型与预测管理页面，包含模型训练日志、实时预测结果
+   - `/model/predict/result/`：预测结果对比页面，包含预测值vs真实值对比
+4. **GitHub上传规范**：配置.gitignore排除.trae目录，删除仓库中多余的.trae目录
