@@ -53,67 +53,82 @@ return_points = {
     "燕鸣湖餐厅西北侧": (119.535433,39.903957), "学生公寓8号楼": (119.535337,39.905494)
 }
 
-# 3. 生成1000条样本
-def generate_bike_data(n=1000):
-    # 生成时间序列（从2024-05-01 00:00开始，随机间隔）
+# 3. 生成连续的小时级数据
+def generate_bike_data(n_days=30):
+    """
+    生成连续的小时级共享单车数据
+    :param n_days: 生成多少天的数据
+    :return: 包含连续小时级数据的DataFrame
+    """
+    # 生成连续的时间序列
     start_time = datetime(2024, 5, 1, 0, 0)
     timestamps = []
-    for i in range(n):
-        delta = timedelta(hours=np.random.randint(0, 240), minutes=np.random.randint(0, 60))
-        timestamps.append((start_time + delta).strftime("%Y-%m-%d %H:%M:%S"))
+    for i in range(n_days * 24):
+        current_time = start_time + timedelta(hours=i)
+        timestamps.append(current_time.strftime("%Y-%m-%d %H:%M:%S"))
     
-    # 随机分配还车点
-    location_names = np.random.choice(list(return_points.keys()), size=n)
-    longitudes = [return_points[name][0] for name in location_names]
-    latitudes = [return_points[name][1] for name in location_names]
+    # 为每个停车点生成数据
+    all_data = []
+    location_names = list(return_points.keys())
     
-    # 生成车辆数（按高峰/平峰/夜间）
-    bike_counts = []
-    hours = [int(ts.split()[1].split(':')[0]) for ts in timestamps]
-    for h in hours:
-        if 8 <= h <=9 or 17 <= h <=18:  # 高峰
-            cnt = np.random.randint(5, 16)
-        elif 22 <= h or h <=6:  # 夜间
-            cnt = np.random.randint(30, 51)
-        else:  # 平峰
-            cnt = np.random.randint(15, 31)
-        bike_counts.append(cnt)
-    
-    # 校验坐标是否在边界内
-    is_in_boundary = [1 if Point(lon, lat).within(ysu_polygon) else 0 for lon, lat in zip(longitudes, latitudes)]
-    
-    # 补充时间特征
-    weekdays = [datetime.strptime(ts, "%Y-%m-%d %H:%M:%S").weekday()+1 for ts in timestamps]  # 1=周一
-    is_peak = [1 if (8<=h<=9 or 17<=h<=18) else 0 for h in hours]
+    for loc_name in location_names:
+        lon, lat = return_points[loc_name]
+        
+        # 生成该停车点的小时级数据
+        for ts in timestamps:
+            # 解析时间特征
+            dt = datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
+            hour = dt.hour
+            weekday = dt.weekday() + 1  # 1=周一
+            is_peak = 1 if (8 <= hour <= 9 or 17 <= hour <= 18) else 0
+            
+            # 生成车辆数（按高峰/平峰/夜间，考虑工作日vs周末）
+            if weekday <= 5:  # 工作日
+                if 8 <= hour <= 9 or 17 <= hour <= 18:  # 高峰
+                    cnt = np.random.randint(5, 16)
+                elif 22 <= hour or hour <= 6:  # 夜间
+                    cnt = np.random.randint(30, 51)
+                else:  # 平峰
+                    cnt = np.random.randint(15, 31)
+            else:  # 周末
+                if 10 <= hour <= 16:  # 周末高峰
+                    cnt = np.random.randint(10, 21)
+                elif 22 <= hour or hour <= 8:  # 夜间
+                    cnt = np.random.randint(25, 46)
+                else:  # 平峰
+                    cnt = np.random.randint(10, 26)
+            
+            # 校验坐标是否在边界内
+            is_in_boundary = 1 if Point(lon, lat).within(ysu_polygon) else 0
+            
+            # 添加到数据列表
+            all_data.append({
+                "timestamp": ts,
+                "longitude": lon,
+                "latitude": lat,
+                "bike_count": cnt,
+                "location_name": loc_name,
+                "is_in_boundary": is_in_boundary,
+                "weekday": weekday,
+                "hour": hour,
+                "is_peak": is_peak
+            })
     
     # 构建DataFrame
-    df = pd.DataFrame({
-        "id": range(1, n+1),
-        "timestamp": timestamps,
-        "longitude": longitudes,
-        "latitude": latitudes,
-        "bike_count": bike_counts,
-        "location_name": location_names,
-        "is_in_boundary": is_in_boundary,
-        "weekday": weekdays,
-        "hour": hours,
-        "is_peak": is_peak
-    })
+    df = pd.DataFrame(all_data)
+    df['id'] = range(1, len(df) + 1)
     
-    # 过滤边界外数据（若有），补充至1000条
+    # 过滤边界外数据（若有）
     df = df[df["is_in_boundary"] == 1]
-    if len(df) < n:
-        add_n = n - len(df)
-        add_df = generate_bike_data(add_n)
-        df = pd.concat([df, add_df], ignore_index=True)
     
-    return df.head(n)
+    return df
 
-# 生成1000条数据并保存为CSV
-bike_data = generate_bike_data(1000)
+# 生成30天的连续小时级数据并保存为CSV
+bike_data = generate_bike_data(n_days=30)
 bike_data.to_csv('ysu_bike_data.csv', index=False)
 print("数据生成完成，已保存为 ysu_bike_data.csv")
 print(f"生成的数据量: {len(bike_data)} 条")
 print(f"边界内数据量: {sum(bike_data['is_in_boundary'])} 条")
 print(f"数据时间范围: {bike_data['timestamp'].min()} 到 {bike_data['timestamp'].max()}")
 print(f"车辆数范围: {bike_data['bike_count'].min()} 到 {bike_data['bike_count'].max()}")
+print(f"停车点数量: {bike_data['location_name'].nunique()} 个")

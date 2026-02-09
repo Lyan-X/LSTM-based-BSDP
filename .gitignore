@@ -26,4 +26,4 @@ __pycache__/
 *.pyo
 # 灞忚斀绯荤粺涓存椂鏂囦欢
 .DS_Store
-*.tmp
+*.tmp\n# 排除TraeAI生成的.trae目录\n.trae/

@@ -17,4 +17,8 @@ urlpatterns = [
     path('predict/', include('demand_prediction.urls')),
     path('operation/', include('operation_management.urls')),
     path('system/', include('system_support.urls')),
+    
+    # 新增模型与预测管理路由
+    path('model/', include('demand_prediction.model_urls')),
+
 ]

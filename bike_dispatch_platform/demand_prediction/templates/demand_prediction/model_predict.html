@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}模型与预测管理 - 共享单车需求预测系统{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="bi bi-graph-up-arrow"></i> 模型与预测管理
+            <small class="text-muted">共享单车需求预测系统</small>
+        </h2>
+    </div>
+</div>
+
+<!-- 标签页导航 -->
+<ul class="nav nav-tabs sub-menu mb-4" id="modelPredictTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="training-logs-tab" data-bs-toggle="tab" data-bs-target="#training-logs" type="button" role="tab" aria-controls="training-logs" aria-selected="true">
+            <i class="bi bi-file-earmark-text"></i> 模型训练日志
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="real-time-predict-tab" data-bs-toggle="tab" data-bs-target="#real-time-predict" type="button" role="tab" aria-controls="real-time-predict" aria-selected="false">
+            <i class="bi bi-clock-fill"></i> 实时预测结果
+        </button>
+    </li>
+</ul>
+
+<!-- 标签页内容 -->
+<div class="tab-content" id="modelPredictTabsContent">
+    <!-- 模型训练日志标签页 -->
+    <div class="tab-pane fade show active" id="training-logs" role="tabpanel" aria-labelledby="training-logs-tab">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-file-earmark-text"></i> 模型训练日志</h5>
+            </div>
+            <div class="card-body">
+                <!-- 数据表格 -->
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>训练日期</th>
+                                <th>开始时间</th>
+                                <th>结束时间</th>
+                                <th>训练时长</th>
+                                <th>MAE</th>
+                                <th>RMSE</th>
+                                <th>模型文件名</th>
+                                <th>训练状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- 示例数据 -->
+                            <tr>
+                                <td>2026-02-10</td>
+                                <td>02:00:00</td>
+                                <td>02:15:30</td>
+                                <td>15分30秒</td>
+                                <td>88.80</td>
+                                <td>126.02</td>
+                                <td>bike_lstm_model_20260210.h5</td>
+                                <td><span class="badge bg-success">成功</span></td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#lossModal">
+                                        <i class="bi bi-eye"></i> 查看损失曲线
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary ml-1">
+                                        <i class="bi bi-download"></i> 下载模型
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>2026-02-09</td>
+                                <td>02:00:00</td>
+                                <td>02:14:15</td>
+                                <td>14分15秒</td>
+                                <td>89.20</td>
+                                <td>127.50</td>
+                                <td>bike_lstm_model_20260209.h5</td>
+                                <td><span class="badge bg-success">成功</span></td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#lossModal">
+                                        <i class="bi bi-eye"></i> 查看损失曲线
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary ml-1">
+                                        <i class="bi bi-download"></i> 下载模型
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 实时预测结果标签页 -->
+    <div class="tab-pane fade" id="real-time-predict" role="tabpanel" aria-labelledby="real-time-predict-tab">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-clock-fill"></i> 实时预测结果</h5>
+            </div>
+            <div class="card-body">
+                <!-- 数据表格 -->
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>停车点ID</th>
+                                <th>停车点名称</th>
+                                <th>经度</th>
+                                <th>纬度</th>
+                                <th>未来30分钟需求量</th>
+                                <th>预测更新时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- 示例数据 -->
+                            <tr>
+                                <td>P001</td>
+                                <td>第四体育场</td>
+                                <td>119.517816</td>
+                                <td>39.913239</td>
+                                <td>18</td>
+                                <td>2026-02-10 00:30:00</td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="gotoMap('P001', '第四体育场', 39.913239, 119.517816)">
+                                        <i class="bi bi-map-marker"></i> 查看地图
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>P002</td>
+                                <td>西北门</td>
+                                <td>119.517939</td>
+                                <td>39.916532</td>
+                                <td>12</td>
+                                <td>2026-02-10 00:30:00</td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="gotoMap('P002', '西北门', 39.916532, 119.517939)">
+                                        <i class="bi bi-map-marker"></i> 查看地图
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 损失曲线弹窗 -->
+<div class="modal fade" id="lossModal" tabindex="-1" aria-labelledby="lossModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="lossModalLabel">损失曲线</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div style="height: 400px; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center;">
+                    <p class="text-muted">模型训练损失曲线</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 跳转到首页地图并高亮停车点
+    function gotoMap(parkingId, parkingName, lat, lng) {
+        // 构造跳转URL，包含停车点信息
+        const url = `/system/dashboard/?parking_id=${parkingId}&parking_name=${encodeURIComponent(parkingName)}&lat=${lat}&lng=${lng}`;
+        // 跳转到首页
+        window.location.href = url;
+    }
+</script>
+{% endblock %}

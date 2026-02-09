@@ -4,14 +4,14 @@ from tensorflow.keras.layers import LSTM, Dense, Dropout
 
 def build_lstm_model(input_shape):
     """
-    构建LSTM模型
-    输入层：新增空间特征维度（经纬度 2 维 + 时间特征 3 维 + 历史车辆数 1 维）
-    输出层：保持回归任务（激活函数linear）
-    隐藏层：样本量小，减小 LSTM 单元数（从 128→64）
+    构建轻量级LSTM模型
+    输入层：单层LSTM（64-128神经元）
+    输出层：回归任务（激活函数linear）
+    隐藏层：单个全连接层
     """
     model = Sequential()
-    # 输入层：LSTM(64)，适配小样本（减少过拟合）
-    model.add(LSTM(64, return_sequences=False, input_shape=input_shape))
+    # 输入层：LSTM(128)，适配较长序列
+    model.add(LSTM(128, return_sequences=False, input_shape=input_shape))
     model.add(Dropout(0.2))  # 正则化，防止过拟合
     # 全连接层
     model.add(Dense(32, activation="relu"))
@@ -22,7 +22,8 @@ def build_lstm_model(input_shape):
     model.compile(optimizer="adam", loss="mse", metrics=["mae"])
     return model
 
-# 调用示例（input_shape=(seq_len, 特征数)= (6,6)）
+# 调用示例
 if __name__ == "__main__":
-    model = build_lstm_model((6, 6))
+    # 14天=336小时，4个特征
+    model = build_lstm_model((336, 4))
     model.summary()

@@ -72,10 +72,67 @@
     </div>
 </div>
 
-<!-- 城市地图 -->
+<!-- 自动化状态面板 -->
 <div class="row mb-4">
     <div class="col-12">
         <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-robot"></i> 自动化状态面板</h5>
+            </div>
+            <div class="card-body bg-light border">
+                <div class="row">
+                    <!-- 最近训练状态 -->
+                    <div class="col-md-4">
+                        <div class="text-center p-3 bg-white rounded shadow-sm">
+                            <h6 class="mb-2">最近训练状态</h6>
+                            <p class="text-muted mb-0" style="font-size: 14px;">
+                                <span class="mr-2">✅</span>
+                                最后训练：2026-02-10 02:00 成功
+                            </p>
+                            <p class="text-muted mb-0" style="font-size: 14px;">
+                                模型文件：bike_lstm_model_20260210.h5
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- 最近预测更新 -->
+                    <div class="col-md-4">
+                        <div class="text-center p-3 bg-white rounded shadow-sm mx-2">
+                            <h6 class="mb-2">最近预测更新</h6>
+                            <p class="text-muted mb-0" style="font-size: 14px;">
+                                <span class="mr-2">✅</span>
+                                最后预测：2026-02-10 00:30 已同步
+                            </p>
+                            <p class="text-muted mb-0" style="font-size: 14px;">
+                                覆盖停车点数量：62个
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- 数据收集状态 -->
+                    <div class="col-md-4">
+                        <div class="text-center p-3 bg-white rounded shadow-sm">
+                            <h6 class="mb-2">数据收集状态</h6>
+                            <p class="text-muted mb-0" style="font-size: 14px;">
+                                <span class="mr-2">✅</span>
+                                今日数据：已收集1次（30分钟/次）正常
+                            </p>
+                            <p class="text-muted mb-0" style="font-size: 14px;">
+                                未收集次数：0
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 地图和数据概览 -->
+<div class="row mb-4">
+    <!-- 左侧地图区域 -->
+    <div class="col-md-8">
+        <div class="card h-100">
             <div class="card-header">
                 <div class="d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="bi bi-map"></i> 城市地图</h5>
@@ -89,7 +146,50 @@
                 </div>
             </div>
             <div class="card-body p-0">
-                <div id="home-map" style="height: 500px; width: 100%;"></div>
+                <div id="home-map" style="height: 600px; width: 100%;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 右侧数据概览区域 -->
+    <div class="col-md-4">
+        <!-- 今日核心数据概览 -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-chart-line"></i> 今日核心数据概览</h5>
+            </div>
+            <div class="card-body">
+                <!-- 数据集信息 -->
+                <div class="mb-4">
+                    <h6 class="card-subtitle mb-2"><i class="bi bi-database"></i> 数据集信息</h6>
+                    <p><strong>当前数据集：</strong><span id="currentDatasetName">{% if stats.total_rides > 0 %}实际数据集{% else %}无数据{% endif %}</span></p>
+                    <p><strong>数据条数：</strong><span id="currentDatasetCount">{{ stats.total_rides }}</span> 条</p>
+                    <p><strong>时间范围：</strong><span id="currentDatasetTimeRange">最近7天</span></p>
+                    {% if stats.total_rides > 0 %}
+                    <div class="alert alert-info d-inline-block" role="alert">
+                        <i class="bi bi-info-circle"></i> 数据已应用于系统各模块
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning d-inline-block" role="alert">
+                        <i class="bi bi-exclamation-triangle"></i> 暂无数据，请先导入数据
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- 用户信息 -->
+                <div>
+                    <h6 class="card-subtitle mb-2"><i class="bi bi-person-badge"></i> 用户信息</h6>
+                    <p><strong>用户名：</strong>{{ user.get_full_name|default:user.username }}</p>
+                    <p><strong>角色：</strong>
+                        <span class="badge bg-{% if user.is_admin %}danger{% elif user.is_operator %}warning{% else %}primary{% endif %}">
+                            {{ user.get_role_display }}
+                        </span>
+                    </p>
+                    {% if user.email %}
+                    <p><strong>邮箱：</strong>{{ user.email }}</p>
+                    {% endif %}
+                    <p><strong>最后登录：</strong>{{ user.last_login|date:"Y-m-d H:i:s"|default:"首次登录" }}</p>
+                </div>
             </div>
         </div>
     </div>
@@ -104,10 +204,10 @@
     <div class="col-md-3 mb-3">
         <div class="card h-100 shadow-sm">
             <div class="card-body text-center">
-                <i class="bi bi-cloud-upload" style="font-size: 2.5rem; color: #667eea;"></i>
-                <h5 class="card-title mt-3">数据导入</h5>
-                <p class="card-text text-muted">上传骑行数据和天气数据</p>
-                <a href="{% url 'data_process:data_upload' %}" class="btn btn-primary">进入</a>
+                <i class="bi bi-database" style="font-size: 2.5rem; color: #667eea;"></i>
+                <h5 class="card-title mt-3">数据管理</h5>
+                <p class="card-text text-muted">管理骑行数据和查看数据闭环</p>
+                <a href="/data/manage/" class="btn btn-primary">进入</a>
             </div>
         </div>
     </div>
@@ -116,9 +216,20 @@
         <div class="card h-100 shadow-sm">
             <div class="card-body text-center">
                 <i class="bi bi-graph-up-arrow" style="font-size: 2.5rem; color: #28a745;"></i>
-                <h5 class="card-title mt-3">需求预测</h5>
+                <h5 class="card-title mt-3">模型与预测</h5>
                 <p class="card-text text-muted">基于LSTM模型预测调度需求</p>
-                <a href="{% url 'demand_prediction:predict' %}" class="btn btn-success">进入</a>
+                <a href="/model/predict/" class="btn btn-success">进入</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body text-center">
+                <i class="bi bi-bar-chart" style="font-size: 2.5rem; color: #17a2b8;"></i>
+                <h5 class="card-title mt-3">预测结果</h5>
+                <p class="card-text text-muted">查看各停车点需求量预测</p>
+                <a href="/model/predict/result/" class="btn btn-info">进入</a>
             </div>
         </div>
     </div>
@@ -148,77 +259,6 @@
     {% endif %}
 </div>
 
-<!-- 数据集信息 -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="bi bi-database"></i> 数据集信息</h5>
-                    <button id="viewDatasetDetails" class="btn btn-sm btn-primary">
-                        <i class="bi bi-eye"></i> 查看详细信息
-                    </button>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <p><strong>当前数据集：</strong><span id="currentDatasetName">{% if stats.total_rides > 0 %}实际数据集{% else %}无数据{% endif %}</span></p>
-                        <p><strong>数据条数：</strong><span id="currentDatasetCount">{{ stats.total_rides }}</span> 条</p>
-                        <p><strong>时间范围：</strong><span id="currentDatasetTimeRange">最近7天</span></p>
-                    </div>
-                    <div class="col-md-6 text-end">
-                        {% if stats.total_rides > 0 %}
-                        <div class="alert alert-info d-inline-block" role="alert">
-                            <i class="bi bi-info-circle"></i> 数据已应用于系统各模块
-                        </div>
-                        {% else %}
-                        <div class="alert alert-warning d-inline-block" role="alert">
-                            <i class="bi bi-exclamation-triangle"></i> 暂无数据，请先导入数据
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-
-
-<!-- 用户角色信息 -->
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-person-badge"></i> 用户信息</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <p><strong>用户名：</strong>{{ user.username }}</p>
-                        <p><strong>角色：</strong>
-                            <span class="badge bg-{% if user.is_admin %}danger{% elif user.is_operator %}warning{% else %}primary{% endif %}">
-                                {{ user.get_role_display }}
-                            </span>
-                        </p>
-                        {% if user.email %}
-                        <p><strong>邮箱：</strong>{{ user.email }}</p>
-                        {% endif %}
-                        {% if user.phone %}
-                        <p><strong>手机：</strong>{{ user.phone }}</p>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-6">
-                        <p><strong>最后登录：</strong>{{ user.last_login|date:"Y-m-d H:i:s"|default:"首次登录" }}</p>
-                        <p><strong>注册时间：</strong>{{ user.date_joined|date:"Y-m-d H:i:s" }}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- Leaflet CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 
@@ -232,7 +272,7 @@
         // 地图中心点
         const YSU_CENTER = [39.909689, 119.528179];
         // 最大缩放（防灰屏）
-        const MAX_ZOOM = 19;
+        const MAX_ZOOM = 18;
         // 燕山大学多边形边界（lat,lng格式，适配Leaflet）
         const YSU_POLYGON = [
             [39.920629,119.521485], [39.913288,119.512037], [39.904006,119.52075],

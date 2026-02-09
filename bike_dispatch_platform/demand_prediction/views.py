@@ -262,3 +262,29 @@ def model_compare(request):
         }
     }
     return render(request, 'demand_prediction/model_compare.html', {'compare_data': compare_data})
+
+
+@login_required
+def model_predict_view(request):
+    """
+    模型与预测主页面视图
+    包含模型训练日志、实时预测结果两个标签页
+    """
+    # 传递基础数据到模板
+    context = {
+        'page_title': '模型与预测管理 - 共享单车需求预测系统'
+    }
+    return render(request, 'demand_prediction/model_predict.html', context)
+
+
+@login_required
+def predict_result_view(request):
+    """
+    预测结果子页面视图
+    包含预测历史对比功能
+    """
+    # 传递基础数据到模板
+    context = {
+        'page_title': '预测历史对比 - 共享单车需求预测系统'
+    }
+    return render(request, 'demand_prediction/predict_result.html', context)

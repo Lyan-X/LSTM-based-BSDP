@@ -760,6 +760,23 @@
             font-weight: 600;
         }
         
+        /* 模型预测/数据管理页面小菜单栏通用样式 */
+        .sub-menu {
+            background-color: #f5f5f5 !important; /* 浅灰色背景，替代纯白 */
+            color: #333333 !important; /* 深灰色字体，保证可读性 */
+            border: 1px solid #e0e0e0 !important; /* 新增边框，区分菜单栏 */
+        }
+        /* 菜单栏选项hover样式（匹配现有紫色主题） */
+        .sub-menu .nav-link:hover {
+            background-color: #6a5acd !important; /* 紫色主题色，与现有UI统一 */
+            color: #ffffff !important; /* 白色字体，hover时对比明显 */
+        }
+        /* 菜单栏激活选项样式 */
+        .sub-menu .nav-link.active {
+            background-color: #55489d !important; /* 深紫色，区分激活状态 */
+            color: #ffffff !important;
+        }
+        
         .tab-content {
             animation: tabSwitch 0.3s ease-out;
         }
@@ -1089,13 +1106,13 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if 'data_process' in request.path %}active{% endif %}" href="{% url 'data_process:data_upload' %}">
-                            <i class="bi bi-cloud-upload"></i> 数据处理
+                        <a class="nav-link {% if 'data_process' in request.path %}active{% endif %}" href="#">
+                            <i class="bi bi-database"></i> 数据管理
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if 'demand_prediction' in request.path %}active{% endif %}" href="{% url 'demand_prediction:predict' %}">
-                            <i class="bi bi-graph-up"></i> 需求预测
+                        <a class="nav-link {% if 'demand_prediction' in request.path %}active{% endif %}" href="#">
+                            <i class="bi bi-graph-up-arrow"></i> 模型与预测
                         </a>
                     </li>
                     {% if user.is_authenticated %}
@@ -1189,8 +1206,8 @@
                     <h3>快速链接</h3>
                     <ul class="list-unstyled">
                         <li><a href="{% url 'system_support:dashboard' %}">首页</a></li>
-                        <li><a href="{% url 'data_process:data_upload' %}">数据处理</a></li>
-                        <li><a href="{% url 'demand_prediction:predict' %}">需求预测</a></li>
+                        <li><a href="#">数据管理</a></li>
+                        <li><a href="#">模型与预测</a></li>
                         <li><a href="{% url 'operation_management:operation_dashboard' %}">运维管理</a></li>
                     </ul>
                 </div>

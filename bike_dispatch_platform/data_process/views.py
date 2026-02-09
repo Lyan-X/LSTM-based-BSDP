@@ -112,3 +112,16 @@ def weather_data_upload(request):
         "data_process/weather_upload.html",
         {"form": form, "weather_list": weather_list}
     )
+
+
+@login_required
+def data_manage_view(request):
+    """
+    数据管理页面视图
+    包含初始数据导入、数据闭环日志、滚动窗口数据预览三个标签页
+    """
+    # 传递基础数据到模板
+    context = {
+        'page_title': '数据管理 - 共享单车需求预测系统'
+    }
+    return render(request, 'data_process/data_manage.html', context)
