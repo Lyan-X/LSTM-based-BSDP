@@ -1,30 +1,36 @@
+# ========== 共享单车调度需求预测与运维管理平台 ==========
+# 毕业设计项目 - 燕山大学 刘妍 (202211040587)
+# 安装: pip install -r requirements.txt
+
 # Web框架
 Django==4.2.10
 
 # 深度学习
-TensorFlow==2.15.0
-Keras==2.15.0
+tensorflow==2.15.0
+keras==2.15.0
 
 # 数据处理
-Pandas
-NumPy
+pandas==2.2.1
+numpy==1.26.4
 
 # 可视化
-Matplotlib
+matplotlib==3.8.4
 
-# 地图
-# Leaflet.js (前端库，通过CDN引入)
+# 机器学习评估
+scikit-learn==1.4.1.post1
 
-# 其他
-scikit-learn
+# 模型序列化
+joblib>=1.2.0
 
-# 开发工具
-# 仅在开发环境使用
-# pip install -r requirements-dev.txt
+# Excel文件支持
+openpyxl>=3.0.0
 
-# requirements-dev.txt
-# pytest
-# pytest-django
-# flake8
-# black
-# isort
+# 定时任务
+schedule==1.2.0
+apscheduler==3.10.4
+
+# 前端库（通过CDN引入，无需pip安装）
+# Bootstrap 5.3.0
+# Bootstrap Icons 1.11.0
+# ECharts 5.4.3
+# Leaflet.js 1.9.4

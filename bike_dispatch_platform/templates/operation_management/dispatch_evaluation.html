@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block title %}调度效果评估 - 共享单车运维平台{% endblock %}
+{% block content %}
+<h2 class="mb-4"><i class="bi bi-clipboard-data"></i> 调度效果评估</h2>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon"><i class="bi bi-list-task"></i></div>
+            <div class="stat-value">{{ total_tasks }}</div>
+            <div class="stat-label">总任务数</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:linear-gradient(135deg,#10b981,#059669)"><i class="bi bi-check-circle"></i></div>
+            <div class="stat-value">{{ completed_tasks }}</div>
+            <div class="stat-label">已完成</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)"><i class="bi bi-percent"></i></div>
+            <div class="stat-value">{{ completion_rate }}%</div>
+            <div class="stat-label">完成率</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:linear-gradient(135deg,#3b82f6,#2563eb)"><i class="bi bi-hourglass-split"></i></div>
+            <div class="stat-value">{{ status_stats.pending }}</div>
+            <div class="stat-label">待处理</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-bar-chart-line"></i> 近7天完成率趋势</h5></div>
+            <div class="card-body"><div id="trendChart" style="height:300px;"></div></div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-pie-chart"></i> 任务状态分布</h5></div>
+            <div class="card-body"><div id="statusChart" style="height:300px;"></div></div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><h5 class="mb-0"><i class="bi bi-table"></i> 评估记录</h5></div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead><tr><th>任务ID</th><th>完成率</th><th>时间效率</th><th>满意度</th><th>评估时间</th></tr></thead>
+                <tbody>
+                    {% for e in evaluations %}
+                    <tr><td>#{{ e.task_id }}</td><td>{{ e.completion_rate }}%</td><td>{{ e.time_efficiency }}分钟</td><td>{{ e.satisfaction_score|default:"-" }}</td><td>{{ e.evaluation_time|date:"Y-m-d H:i" }}</td></tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center text-muted">暂无评估记录</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var trendData = {{ trend|safe }};
+    var trendChart = echarts.init(document.getElementById('trendChart'));
+    trendChart.setOption({
+        tooltip: {trigger:'axis'},
+        xAxis: {type:'category', data: trendData.map(function(d){return d.date})},
+        yAxis: {type:'value', name:'完成率(%)', max:100},
+        series: [{data: trendData.map(function(d){return d.rate}), type:'line', smooth:true,
+            lineStyle:{color:'#55489d'}, itemStyle:{color:'#55489d'},
+            areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(85,72,157,0.3)'},{offset:1,color:'rgba(85,72,157,0.05)'}])}
+        }]
+    });
+
+    var statusChart = echarts.init(document.getElementById('statusChart'));
+    statusChart.setOption({
+        tooltip: {trigger:'item'},
+        series: [{type:'pie', radius:['40%','70%'], data:[
+            {value: {{ status_stats.pending }}, name:'待处理', itemStyle:{color:'#f59e0b'}},
+            {value: {{ status_stats.in_progress }}, name:'进行中', itemStyle:{color:'#3b82f6'}},
+            {value: {{ status_stats.completed }}, name:'已完成', itemStyle:{color:'#10b981'}},
+            {value: {{ status_stats.cancelled }}, name:'已取消', itemStyle:{color:'#ef4444'}}
+        ]}]
+    });
+    window.addEventListener('resize', function(){trendChart.resize(); statusChart.resize();});
+});
+</script>
+{% endblock %}

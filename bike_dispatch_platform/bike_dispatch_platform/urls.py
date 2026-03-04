@@ -1,7 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
 from django.views.generic.base import RedirectView
-from system_support.views import custom_login
 
 urlpatterns = [
     # 根路径重定向到系统首页
@@ -20,5 +19,7 @@ urlpatterns = [
     
     # 新增模型与预测管理路由
     path('model/', include('demand_prediction.model_urls')),
+    
+
 
 ]

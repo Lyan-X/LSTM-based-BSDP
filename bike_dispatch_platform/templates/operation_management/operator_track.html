@@ -10,6 +10,28 @@
                 <i class="bi bi-geo-alt"></i> 运维人员轨迹追踪
             </h1>
             
+            <!-- 运维人员选择 -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">选择运维人员</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-6">
+                            <select name="operator_id" class="form-select">
+                                <option value="">-- 选择运维人员 --</option>
+                                {% for op in operators %}
+                                <option value="{{ op.id }}" {% if selected_operator == op.id|stringformat:'d' %}selected{% endif %}>{{ op.username }}（{{ op.get_role_display }}）</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> 查看轨迹</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <!-- 轨迹记录表单 -->
             <div class="card">
                 <div class="card-header">
@@ -31,9 +53,6 @@
                                     <label class="form-label">关联任务</label>
                                     <select class="form-select" id="taskId">
                                         <option value="">选择任务（可选）</option>
-                                        {% for task in request.user.scheduletask_set.filter(status__in=['assigned', 'in_progress']) %}
-                                        <option value="{{ task.task_id }}">{{ task.task_id }} - {{ task.get_target_region_display }}</option>
-                                        {% endfor %}
                                     </select>
                                 </div>
                             </div>
@@ -59,7 +78,7 @@
             </div>
 
             <!-- 轨迹记录列表 -->
-            {% if tracks.exists %}
+            {% if tracks %}
             <div class="card mt-4">
                 <div class="card-header">
                     <h5 class="mb-0">轨迹记录历史</h5>
@@ -82,7 +101,7 @@
                                     <td>{{ track.track_time }}</td>
                                     <td>{{ track.longitude }}</td>
                                     <td>{{ track.latitude }}</td>
-                                    <td>{{ track.task.task_id|default:"无" }}</td>
+                                    <td>{{ track.task_id|default:"无" }}</td>
                                     <td>{{ track.description|default:"无" }}</td>
                                 </tr>
                                 {% endfor %}

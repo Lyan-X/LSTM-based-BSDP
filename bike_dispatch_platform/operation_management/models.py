@@ -5,10 +5,12 @@ from system_support.models import User
 
 class ParkingSpot(models.Model):
     """停车点模型"""
-    id = models.CharField(max_length=30, primary_key=True, verbose_name="停车点编号")
-    name = models.CharField(max_length=100, verbose_name="停车点名称")
-    latitude = models.FloatField(verbose_name="纬度")
+    parking_spot_id = models.AutoField(primary_key=True, verbose_name="停车点ID")
+    spot_name = models.CharField(max_length=100, verbose_name="停车点名称", unique=True)
     longitude = models.FloatField(verbose_name="经度")
+    latitude = models.FloatField(verbose_name="纬度")
+    campus_area = models.CharField(max_length=20, verbose_name="所属校区", choices=[('西校区', '西校区'), ('东校区', '东校区')], default='西校区')
+    spot_type = models.CharField(max_length=20, verbose_name="停车点类型", choices=[('教学楼', '教学楼'), ('食堂', '食堂'), ('场馆', '场馆'), ('其他', '其他')], default='其他')
     service_radius = models.IntegerField(default=100, verbose_name="服务半径(米)")
     create_time = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
 
@@ -17,7 +19,7 @@ class ParkingSpot(models.Model):
         verbose_name_plural = "停车点"
 
     def __str__(self):
-        return self.name
+        return self.spot_name
 
 
 class Vehicle(models.Model):
@@ -32,7 +34,7 @@ class Vehicle(models.Model):
     latitude = models.FloatField(verbose_name="纬度")
     longitude = models.FloatField(verbose_name="经度")
     update_time = models.DateTimeField(auto_now=True, verbose_name="更新时间")
-    parking_spot_id = models.CharField(max_length=30, verbose_name="所属停车点ID")
+    parking_spot = models.ForeignKey(ParkingSpot, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="所属停车点")
 
     class Meta:
         verbose_name = "运维车辆"

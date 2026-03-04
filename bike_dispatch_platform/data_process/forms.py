@@ -1,11 +1,116 @@
 from django import forms
-from .models import WeatherData
+from .models import BikeRideData, WeatherData
 import pandas as pd
 from datetime import datetime
 import warnings
 
 # 忽略pandas无关警告
 warnings.filterwarnings('ignore')
+
+
+# ========== 燕山大学停车点选项（用于本地数据录入下拉框） ==========
+YSU_PARKING_SPOTS = [
+    ('第四体育场', '第四体育场'), ('西北门', '西北门'),
+    ('信息科学与工程学院', '信息科学与工程学院'), ('理学院', '理学院'),
+    ('西里西亚学院', '西里西亚学院'), ('西区第五教学楼', '西区第五教学楼'),
+    ('艺术学院', '艺术学院'), ('继续教育学院', '继续教育学院'),
+    ('西区第一教学楼', '西区第一教学楼'), ('西区第二教学楼', '西区第二教学楼'),
+    ('西区第三教学楼', '西区第三教学楼'), ('电气工程学院东', '电气工程学院东'),
+    ('材料学院A楼', '材料学院A楼'), ('西区大食堂东侧', '西区大食堂东侧'),
+    ('西区大食堂西侧', '西区大食堂西侧'), ('燕园餐厅', '燕园餐厅'),
+    ('里仁教学楼西侧', '里仁教学楼西侧'), ('新图书馆西侧', '新图书馆西侧'),
+    ('新图书馆东侧', '新图书馆东侧'), ('第二体育场', '第二体育场'),
+    ('体育学院东侧', '体育学院东侧'), ('建筑系', '建筑系'),
+    ('文法学院', '文法学院'), ('东区第四教学楼北侧', '东区第四教学楼北侧'),
+    ('车辆与能源学院', '车辆与能源学院'), ('东区第二教学楼', '东区第二教学楼'),
+    ('东区第一教学楼', '东区第一教学楼'), ('东区图书馆', '东区图书馆'),
+    ('东区第三教学楼', '东区第三教学楼'), ('至明楼', '至明楼'),
+    ('中快餐厅2食堂', '中快餐厅2食堂'), ('学生公寓8号楼', '学生公寓8号楼'),
+]
+
+
+class RideDataEntryForm(forms.ModelForm):
+    """骑行数据手动录入表单（任务书"本地数据录入"要求）"""
+    start_point = forms.ChoiceField(
+        choices=YSU_PARKING_SPOTS,
+        label="骑行起点",
+        widget=forms.Select(attrs={"class": "form-select"})
+    )
+    end_point = forms.ChoiceField(
+        choices=YSU_PARKING_SPOTS,
+        label="骑行终点",
+        widget=forms.Select(attrs={"class": "form-select"})
+    )
+    ride_datetime = forms.DateTimeField(
+        label="骑行时间",
+        widget=forms.DateTimeInput(attrs={"class": "form-control", "type": "datetime-local"}),
+        input_formats=['%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M']
+    )
+    duration = forms.FloatField(
+        label="骑行时长（分钟）",
+        min_value=0, max_value=180,
+        widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.1", "placeholder": "如：15.5"})
+    )
+    distance = forms.FloatField(
+        label="骑行距离（公里）",
+        min_value=0, max_value=20,
+        widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.1", "placeholder": "如：2.3"})
+    )
+    temperature = forms.FloatField(
+        label="温度（℃）",
+        required=False, initial=25.0,
+        widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.1"})
+    )
+    wind_speed = forms.FloatField(
+        label="风速（m/s）",
+        required=False, initial=0.0,
+        widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.1"})
+    )
+
+    class Meta:
+        model = BikeRideData
+        fields = ['start_point', 'end_point', 'ride_datetime', 'duration', 'distance', 'temperature', 'wind_speed']
+
+
+class WeatherDataEntryForm(forms.ModelForm):
+    """天气数据手动录入表单"""
+    area = forms.CharField(
+        label="区域",
+        max_length=100,
+        initial="燕山大学",
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "如：燕山大学"})
+    )
+    date = forms.DateField(
+        label="日期",
+        widget=forms.DateInput(attrs={"class": "form-control", "type": "date"})
+    )
+    temperature = forms.FloatField(
+        label="温度（℃）",
+        widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.1"})
+    )
+    humidity = forms.FloatField(
+        label="湿度（%）",
+        widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.1"})
+    )
+    wind_speed = forms.FloatField(
+        label="风速（m/s）",
+        widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.1"})
+    )
+    rainfall = forms.FloatField(
+        label="降雨量（mm）",
+        required=False, initial=0.0,
+        widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.1"})
+    )
+    weather_type = forms.ChoiceField(
+        label="天气类型",
+        choices=[("sunny", "晴"), ("cloudy", "阴"), ("rain", "雨")],
+        widget=forms.Select(attrs={"class": "form-select"})
+    )
+
+    class Meta:
+        model = WeatherData
+        fields = ['area', 'date', 'temperature', 'humidity', 'wind_speed', 'rainfall', 'weather_type']
+
 
 class WeatherDataUploadForm(forms.Form):
     """天气数据上传表单-终极版：纯Python原生处理，彻底解决所有pandas报错"""

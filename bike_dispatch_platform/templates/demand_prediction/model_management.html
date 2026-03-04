@@ -301,7 +301,7 @@ function viewLossCurve(date) {
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <div id="lossCurveChart" style="height: 400px;"></div>
+                        <img src="/demand_prediction/loss-curve/lstm/${date}/" alt="损失曲线" style="width: 100%; max-height: 400px; object-fit: contain;">
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" onclick="closeModal('lossCurveModal')">
@@ -321,61 +321,12 @@ function viewLossCurve(date) {
     document.querySelector('#lossCurveModal .btn-close').addEventListener('click', function() {
         closeModal('lossCurveModal');
     });
-    
-    // 初始化损失曲线图表
-    initLossCurveChart();
-}
-
-// 初始化损失曲线图表
-function initLossCurveChart() {
-    const chartDom = document.getElementById('lossCurveChart');
-    const lossChart = echarts.init(chartDom);
-    
-    // 模拟数据
-    const epochs = Array.from({length: 20}, (_, i) => i + 1);
-    const trainLoss = [0.15, 0.12, 0.10, 0.08, 0.07, 0.06, 0.05, 0.045, 0.04, 0.038, 0.035, 0.033, 0.031, 0.030, 0.029, 0.028, 0.027, 0.026, 0.025, 0.024];
-    const valLoss = [0.16, 0.13, 0.11, 0.09, 0.08, 0.075, 0.07, 0.065, 0.06, 0.058, 0.056, 0.055, 0.054, 0.053, 0.052, 0.051, 0.050, 0.049, 0.048, 0.047];
-    
-    const option = {
-        tooltip: {
-            trigger: 'axis',
-            formatter: 'Epoch {b}<br/>训练损失: {c1}<br/>验证损失: {c2}'
-        },
-        legend: {
-            data: ['训练损失', '验证损失']
-        },
-        xAxis: {
-            type: 'category',
-            data: epochs
-        },
-        yAxis: {
-            type: 'value',
-            name: 'MSE损失'
-        },
-        series: [
-            {
-                name: '训练损失',
-                type: 'line',
-                data: trainLoss,
-                smooth: true
-            },
-            {
-                name: '验证损失',
-                type: 'line',
-                data: valLoss,
-                smooth: true
-            }
-        ]
-    };
-    
-    lossChart.setOption(option);
 }
 
 // 下载模型
 function downloadModel(date) {
-    console.log('下载模型:', date);
-    // 这里可以添加下载逻辑
-    alert('下载功能开发中');
+    // 跳转到模型下载URL
+    window.location.href = `/demand_prediction/download/lstm/`;
 }
 
 // 跳转到地图

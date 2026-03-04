@@ -137,7 +137,7 @@
                                     <td>{{ task.predicted_time|date:"Y-m-d H:i" }}</td>
                                     <td>
                                         <div class="btn-group" role="group">
-                                            <a href="{% url 'task_detail' task.id %}" class="btn btn-sm btn-primary">详情</a>
+                                            <a href="{% url 'operation_management:task_detail' task.id %}" class="btn btn-sm btn-primary">详情</a>
                                             {% if task.status == 'pending' %}
                                             <button class="btn btn-sm btn-success" onclick="updateTaskStatus({{ task.id }}, 'in_progress')">接单</button>
                                             <button class="btn btn-sm btn-danger" onclick="updateTaskStatus({{ task.id }}, 'cancelled')">取消</button>

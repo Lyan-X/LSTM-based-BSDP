@@ -3,10 +3,12 @@ from system_support.models import User
 
 # ========== 全局常量（核心修改：移到类外，可被其他模块导入） ==========
 REGION_CHOICES = [
-    ('region1', '区域1'),
-    ('region2', '区域2'),
-    ('region3', '区域3'),
-    ('region4', '区域4')
+    ('west_campus', '西校区（教学区）'),
+    ('east_campus', '东校区（教学区）'),
+    ('dorm_area', '学生宿舍区'),
+    ('library_area', '图书馆周边'),
+    ('canteen_area', '食堂周边'),
+    ('gate_area', '校门出入口'),
 ]
 
 class PredictionResult(models.Model):
@@ -47,3 +49,38 @@ class PredictionResult(models.Model):
     def __str__(self):
         """自定义对象展示名称，便于后台管理查看"""
         return f"{self.predict_date} {self.predict_hour}:00 {self.get_region_display()} 需求数：{self.demand_count}"
+
+
+class ModelTrainLog(models.Model):
+    """模型训练日志模型"""
+    # 训练日期
+    train_date = models.DateField(verbose_name="训练日期")
+    # 训练时间
+    start_time = models.DateTimeField(verbose_name="开始时间")
+    end_time = models.DateTimeField(verbose_name="结束时间")
+    # 训练时长（秒）
+    duration = models.IntegerField(verbose_name="训练时长（秒）")
+    # 模型性能指标
+    mae = models.FloatField(verbose_name="平均绝对误差")
+    rmse = models.FloatField(verbose_name="均方根误差")
+    r2 = models.FloatField(verbose_name="R²准确率")
+    # 模型文件名
+    model_filename = models.CharField(max_length=255, verbose_name="模型文件名")
+    # 训练状态
+    status = models.CharField(
+        max_length=20,
+        choices=[("success", "成功"), ("failed", "失败")],
+        default="success",
+        verbose_name="训练状态"
+    )
+    # 错误信息
+    error_message = models.TextField(null=True, blank=True, verbose_name="错误信息")
+    # 自动记录创建时间
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
+
+    class Meta:
+        verbose_name = "模型训练日志"
+        verbose_name_plural = "模型训练日志"
+
+    def __str__(self):
+        return f"{self.train_date} - {self.model_filename} - {self.status}"

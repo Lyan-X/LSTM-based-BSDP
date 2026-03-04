@@ -77,43 +77,21 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- 示例数据 -->
+                    {% for prediction in predictions %}
                     <tr>
-                        <td>2026-02-10 00:00</td>
-                        <td>P001</td>
-                        <td>第四体育场</td>
-                        <td>15</td>
-                        <td>15</td>
-                        <td>0</td>
-                        <td>0%</td>
+                        <td>{{ prediction.predict_date }} {{ prediction.predict_hour }}:00</td>
+                        <td>{{ prediction.region }}</td>
+                        <td>{{ prediction.get_region_display }}</td>
+                        <td>{{ prediction.demand_count }}</td>
+                        <td>{{ prediction.supply_count }}</td>
+                        <td>{{ prediction.error_value }}</td>
+                        <td>{{ prediction.error_rate|floatformat:1 }}%</td>
                     </tr>
+                    {% empty %}
                     <tr>
-                        <td>2026-02-10 00:30</td>
-                        <td>P001</td>
-                        <td>第四体育场</td>
-                        <td>18</td>
-                        <td>12</td>
-                        <td>6</td>
-                        <td>50%</td>
+                        <td colspan="7" class="text-center">暂无数据</td>
                     </tr>
-                    <tr>
-                        <td>2026-02-10 00:00</td>
-                        <td>P002</td>
-                        <td>西北门</td>
-                        <td>12</td>
-                        <td>10</td>
-                        <td>2</td>
-                        <td>20%</td>
-                    </tr>
-                    <tr>
-                        <td>2026-02-10 00:30</td>
-                        <td>P002</td>
-                        <td>西北门</td>
-                        <td>10</td>
-                        <td>12</td>
-                        <td>-2</td>
-                        <td>-16.7%</td>
-                    </tr>
+                    {% endfor %}
                 </tbody>
             </table>
         </div>
@@ -126,9 +104,7 @@
         <h5 class="mb-0"><i class="bi bi-chart-line"></i> 预测值vs真实值对比图表</h5>
     </div>
     <div class="card-body">
-        <div style="height: 400px; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center;">
-            <p class="text-muted">预测值vs真实值对比折线图</p>
-        </div>
+        <div id="predictionChart" style="height: 400px;"></div>
     </div>
 </div>
 
@@ -170,6 +146,81 @@
     // 刷新数据
     document.getElementById('refresh-data').addEventListener('click', function() {
         alert('数据已刷新！');
+    });
+
+    // 初始化ECharts图表
+    document.addEventListener('DOMContentLoaded', function() {
+        const chart = echarts.init(document.getElementById('predictionChart'));
+        
+        // 准备图表数据
+        const dates = [];
+        const demandData = [];
+        const supplyData = [];
+        
+        {% for prediction in predictions %}
+        dates.push('{{ prediction.predict_date }} {{ prediction.predict_hour }}:00');
+        demandData.push({{ prediction.demand_count }});
+        supplyData.push({{ prediction.supply_count }});
+        {% endfor %}
+        
+        const option = {
+            title: {
+                text: '预测值vs真实值对比',
+                left: 'center'
+            },
+            tooltip: {
+                trigger: 'axis'
+            },
+            legend: {
+                data: ['预测值', '真实值'],
+                bottom: 10
+            },
+            xAxis: {
+                type: 'category',
+                data: dates,
+                axisLabel: {
+                    rotate: 45,
+                    interval: 0
+                }
+            },
+            yAxis: {
+                type: 'value',
+                name: '车辆数'
+            },
+            series: [
+                {
+                    name: '预测值',
+                    type: 'line',
+                    data: demandData,
+                    smooth: true,
+                    lineStyle: {
+                        color: '#4a6cf7'
+                    },
+                    itemStyle: {
+                        color: '#4a6cf7'
+                    }
+                },
+                {
+                    name: '真实值',
+                    type: 'line',
+                    data: supplyData,
+                    smooth: true,
+                    lineStyle: {
+                        color: '#f74a4a'
+                    },
+                    itemStyle: {
+                        color: '#f74a4a'
+                    }
+                }
+            ]
+        };
+        
+        chart.setOption(option);
+        
+        // 响应式调整
+        window.addEventListener('resize', function() {
+            chart.resize();
+        });
     });
 </script>
 {% endblock %}

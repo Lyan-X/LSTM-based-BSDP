@@ -26,4 +26,6 @@ __pycache__/
 *.pyo
 # 屏蔽系统临时文件
 .DS_Store
-*.tmp\n# �ų�TraeAI���ɵ�.traeĿ¼\n.trae/
+*.tmp
+# 排除TraeAI生成的.trae目录
+.trae/

@@ -13,6 +13,35 @@
     </div>
 </div>
 
+<!-- Quick actions -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <a href="{% url 'model_management:spot_forecast' %}" class="btn btn-primary w-100">
+            <i class="bi bi-geo-alt"></i> 停车点短期预测
+        </a>
+    </div>
+    <div class="col-md-3">
+        <form method="post" action="{% url 'model_management:batch_predict' %}" class="d-inline w-100">
+            {% csrf_token %}
+            <input type="hidden" name="predict_date" value="{{ today }}">
+            <button type="submit" class="btn btn-success w-100"><i class="bi bi-lightning"></i> 一键批量预测（今日）</button>
+        </form>
+    </div>
+    <div class="col-md-3">
+        <a href="{% url 'demand_prediction:model_compare' %}" class="btn btn-warning w-100">
+            <i class="bi bi-bar-chart-steps"></i> LSTM vs BP 对比
+        </a>
+    </div>
+    <div class="col-md-3">
+        <form method="post" action="{% url 'model_management:manual_train' %}" class="d-inline w-100">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger w-100" onclick="return confirm('确定启动模型训练？训练将在后台运行。')">
+                <i class="bi bi-cpu"></i> 手动触发训练
+            </button>
+        </form>
+    </div>
+</div>
+
 <!-- 标签页导航 -->
 <ul class="nav nav-tabs sub-menu mb-4" id="modelPredictTabs" role="tablist">
     <li class="nav-item" role="presentation">
@@ -47,49 +76,38 @@
                                 <th>训练时长</th>
                                 <th>MAE</th>
                                 <th>RMSE</th>
+                                <th>R²</th>
                                 <th>模型文件名</th>
                                 <th>训练状态</th>
                                 <th>操作</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <!-- 示例数据 -->
+                            {% for log in train_logs %}
                             <tr>
-                                <td>2026-02-10</td>
-                                <td>02:00:00</td>
-                                <td>02:15:30</td>
-                                <td>15分30秒</td>
-                                <td>88.80</td>
-                                <td>126.02</td>
-                                <td>bike_lstm_model_20260210.h5</td>
-                                <td><span class="badge bg-success">成功</span></td>
+                                <td>{{ log.train_date }}</td>
+                                <td>{{ log.start_time|time:"H:i:s" }}</td>
+                                <td>{{ log.end_time|time:"H:i:s" }}</td>
+                                <td>{{ log.duration_str }}</td>
+                                <td>{{ log.mae|floatformat:2 }}</td>
+                                <td>{{ log.rmse|floatformat:2 }}</td>
+                                <td>{{ log.r2|floatformat:2 }}%</td>
+                                <td>{{ log.model_filename }}</td>
+                                <td><span class="badge {% if log.status == 'success' %}bg-success{% else %}bg-danger{% endif %}">{% if log.status == 'success' %}成功{% else %}失败{% endif %}</span></td>
                                 <td>
-                                    <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#lossModal">
-                                        <i class="bi bi-eye"></i> 查看损失曲线
+                                    <button type="button" class="btn btn-sm btn-info" onclick="showLossCurve('{% if 'lstm' in log.model_filename %}lstm{% else %}bp{% endif %}')">
+                                        <i class="bi bi-eye"></i> 损失曲线
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-secondary ml-1">
-                                        <i class="bi bi-download"></i> 下载模型
-                                    </button>
+                                    <a href="{% url 'model_management:download_model' 'lstm' %}{% if 'bp' in log.model_filename %}../bp/{% endif %}" class="btn btn-sm btn-secondary ms-1">
+                                        <i class="bi bi-download"></i> 下载
+                                    </a>
                                 </td>
                             </tr>
+                            {% empty %}
                             <tr>
-                                <td>2026-02-09</td>
-                                <td>02:00:00</td>
-                                <td>02:14:15</td>
-                                <td>14分15秒</td>
-                                <td>89.20</td>
-                                <td>127.50</td>
-                                <td>bike_lstm_model_20260209.h5</td>
-                                <td><span class="badge bg-success">成功</span></td>
-                                <td>
-                                    <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#lossModal">
-                                        <i class="bi bi-eye"></i> 查看损失曲线
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-secondary ml-1">
-                                        <i class="bi bi-download"></i> 下载模型
-                                    </button>
-                                </td>
+                                <td colspan="10" class="text-center">暂无训练日志</td>
                             </tr>
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>
@@ -119,33 +137,25 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <!-- 示例数据 -->
+                            {% for prediction in latest_predictions %}
                             <tr>
-                                <td>P001</td>
-                                <td>第四体育场</td>
-                                <td>119.517816</td>
-                                <td>39.913239</td>
-                                <td>18</td>
-                                <td>2026-02-10 00:30:00</td>
+                                <td>{{ prediction.region }}</td>
+                                <td>{{ prediction.get_region_display }}</td>
+                                <td>0</td>
+                                <td>0</td>
+                                <td>{{ prediction.demand_count }}</td>
+                                <td>{{ prediction.create_time|date:"Y-m-d H:i:s" }}</td>
                                 <td>
-                                    <button type="button" class="btn btn-sm btn-primary" onclick="gotoMap('P001', '第四体育场', 39.913239, 119.517816)">
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="gotoMap('{{ prediction.region }}', '{{ prediction.get_region_display }}', 0, 0)">
                                         <i class="bi bi-map-marker"></i> 查看地图
                                     </button>
                                 </td>
                             </tr>
+                            {% empty %}
                             <tr>
-                                <td>P002</td>
-                                <td>西北门</td>
-                                <td>119.517939</td>
-                                <td>39.916532</td>
-                                <td>12</td>
-                                <td>2026-02-10 00:30:00</td>
-                                <td>
-                                    <button type="button" class="btn btn-sm btn-primary" onclick="gotoMap('P002', '西北门', 39.916532, 119.517939)">
-                                        <i class="bi bi-map-marker"></i> 查看地图
-                                    </button>
-                                </td>
+                                <td colspan="7" class="text-center">暂无预测数据</td>
                             </tr>
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>
@@ -159,13 +169,12 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="lossModalLabel">损失曲线</h5>
+                <h5 class="modal-title" id="lossModalLabel">模型训练损失曲线</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <div style="height: 400px; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center;">
-                    <p class="text-muted">模型训练损失曲线</p>
-                </div>
+            <div class="modal-body text-center">
+                <img id="lossCurveImg" src="" alt="损失曲线" style="max-width:100%;max-height:450px" onerror="this.style.display='none';document.getElementById('lossCurveFallback').style.display='block'">
+                <p id="lossCurveFallback" style="display:none" class="text-muted mt-3">损失曲线图片尚未生成，请先运行 train_models.py 训练模型</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
@@ -175,12 +184,17 @@
 </div>
 
 <script>
-    // 跳转到首页地图并高亮停车点
-    function gotoMap(parkingId, parkingName, lat, lng) {
-        // 构造跳转URL，包含停车点信息
-        const url = `/system/dashboard/?parking_id=${parkingId}&parking_name=${encodeURIComponent(parkingName)}&lat=${lat}&lng=${lng}`;
-        // 跳转到首页
-        window.location.href = url;
-    }
+function showLossCurve(modelType) {
+    var img = document.getElementById('lossCurveImg');
+    var fb = document.getElementById('lossCurveFallback');
+    img.style.display = 'block';
+    fb.style.display = 'none';
+    img.src = '/model/loss-curve/' + modelType + '/?t=' + Date.now();
+    var modal = new bootstrap.Modal(document.getElementById('lossModal'));
+    modal.show();
+}
+function gotoMap(parkingId, parkingName, lat, lng) {
+    window.location.href = '/system/dashboard/?parking_id=' + parkingId;
+}
 </script>
 {% endblock %}

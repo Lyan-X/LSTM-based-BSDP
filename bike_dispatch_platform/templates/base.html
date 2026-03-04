@@ -738,43 +738,74 @@
         }
         
         .nav-tabs .nav-link {
-            color: var(--text-secondary);
-            background-color: transparent;
-            border: none;
-            border-bottom: 3px solid transparent;
-            border-radius: 0;
-            padding: 1rem 1.5rem;
-            font-weight: 500;
-            transition: var(--transition);
+            color: #333333;
+            background-color: #f5f5f5;
+            border: 1px solid #e0e0e0;
+            border-bottom-color: transparent;
+            margin-right: 0.5rem;
+            transition: all 0.3s ease;
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.375rem 0.375rem 0 0;
         }
         
         .nav-tabs .nav-link:hover {
-            color: var(--primary-color);
-            background-color: rgba(102, 126, 234, 0.05);
+            color: #ffffff;
+            background-color: #6a5acd;
+            border-color: #6a5acd;
         }
         
         .nav-tabs .nav-link.active {
-            color: var(--primary-color);
-            background-color: transparent;
-            border-bottom-color: var(--primary-color);
+            color: #ffffff;
+            background-color: #55489d;
+            border-color: #55489d;
             font-weight: 600;
         }
         
         /* 模型预测/数据管理页面小菜单栏通用样式 */
         .sub-menu {
-            background-color: #f5f5f5 !important; /* 浅灰色背景，替代纯白 */
-            color: #333333 !important; /* 深灰色字体，保证可读性 */
-            border: 1px solid #e0e0e0 !important; /* 新增边框，区分菜单栏 */
+            background-color: #55489d !important; /* 深紫色主题背景 */
+            color: #ffffff !important; /* 白色字体，保证高对比度 */
+            border: none !important;
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+        }
+        /* 菜单栏选项默认样式 */
+        .sub-menu .nav-item {
+            margin: 0.2rem 0;
+        }
+        /* 菜单栏选项样式 */
+        .sub-menu .nav-link {
+            color: rgba(255, 255, 255, 0.85) !important;
+            background-color: transparent !important;
+            border: none !important;
+            border-radius: 0.375rem;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
         /* 菜单栏选项hover样式（匹配现有紫色主题） */
         .sub-menu .nav-link:hover {
-            background-color: #6a5acd !important; /* 紫色主题色，与现有UI统一 */
+            background-color: #6a5acd !important; /* 浅紫色悬停色 */
             color: #ffffff !important; /* 白色字体，hover时对比明显 */
+            transform: translateX(5px);
         }
         /* 菜单栏激活选项样式 */
         .sub-menu .nav-link.active {
-            background-color: #55489d !important; /* 深紫色，区分激活状态 */
+            background-color: #443880 !important; /* 更深紫激活色 */
             color: #ffffff !important;
+            font-weight: 600;
+            border-left: 3px solid #ffffff;
+        }
+        /* 菜单图标样式 */
+        .sub-menu .nav-link i {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.1rem;
+        }
+        .sub-menu .nav-link:hover i,
+        .sub-menu .nav-link.active i {
+            color: #ffffff;
         }
         
         .tab-content {
@@ -1106,12 +1137,12 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if 'data_process' in request.path %}active{% endif %}" href="#">
+                        <a class="nav-link {% if 'data_process' in request.path %}active{% endif %}" href="/data/manage/">
                             <i class="bi bi-database"></i> 数据管理
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if 'demand_prediction' in request.path %}active{% endif %}" href="#">
+                        <a class="nav-link {% if 'model' in request.path %}active{% endif %}" href="/model/predict/">
                             <i class="bi bi-graph-up-arrow"></i> 模型与预测
                         </a>
                     </li>
@@ -1206,8 +1237,8 @@
                     <h3>快速链接</h3>
                     <ul class="list-unstyled">
                         <li><a href="{% url 'system_support:dashboard' %}">首页</a></li>
-                        <li><a href="#">数据管理</a></li>
-                        <li><a href="#">模型与预测</a></li>
+                        <li><a href="/data/manage/">数据管理</a></li>
+                        <li><a href="/model/predict/">模型与预测</a></li>
                         <li><a href="{% url 'operation_management:operation_dashboard' %}">运维管理</a></li>
                     </ul>
                 </div>

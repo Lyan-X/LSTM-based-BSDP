@@ -8,9 +8,12 @@
     <div class="card-header">
         <div class="d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><i class="bi bi-database"></i> 数据备份管理</h5>
-            <a href="{% url 'system_support:backup_create' %}" class="btn btn-primary btn-sm" onclick="return confirm('确定要创建备份吗？')">
-                <i class="bi bi-plus-circle"></i> 创建备份
-            </a>
+            <form method="post" action="{% url 'system_support:create_backup' %}" style="display:inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('确定要创建备份吗？')">
+                    <i class="bi bi-plus-circle"></i> 创建备份
+                </button>
+            </form>
         </div>
     </div>
     <div class="card-body">
@@ -42,9 +45,7 @@
                         <td>{{ backup.backup_user.username|default:"系统" }}</td>
                         <td>{{ backup.create_time|date:"Y-m-d H:i:s" }}</td>
                         <td>
-                            <a href="{% url 'system_support:backup_download' backup.id %}" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-download"></i> 下载
-                            </a>
+                            <span class="text-muted">{{ backup.backup_file|truncatechars:40 }}</span>
                         </td>
                     </tr>
                     {% endfor %}

@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+
+{% block title %}模型性能对比 - 共享单车运维平台{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="bi bi-bar-chart-steps"></i> LSTM与BP模型性能对比</h2>
+
+<div class="row mb-4">
+    <!-- LSTM模型卡片 -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white;">
+                <h5 class="mb-0"><i class="bi bi-cpu"></i> LSTM时序模型</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">{{ compare_data.lstm.desc }}</p>
+                <div class="row text-center mb-3">
+                    <div class="col-4">
+                        <div class="stat-card p-2">
+                            <div class="stat-value" style="font-size:1.5rem">{{ compare_data.lstm.mae }}</div>
+                            <div class="stat-label">MAE</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="stat-card p-2">
+                            <div class="stat-value" style="font-size:1.5rem">{{ compare_data.lstm.rmse }}</div>
+                            <div class="stat-label">RMSE</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="stat-card p-2">
+                            <div class="stat-value" style="font-size:1.5rem;color:#10b981">{{ compare_data.lstm.r2 }}%</div>
+                            <div class="stat-label">R² 准确率</div>
+                        </div>
+                    </div>
+                </div>
+                <h6>优势</h6>
+                <ul>
+                    {% for adv in compare_data.lstm.advantages %}
+                    <li>{{ adv }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    <!-- BP模型卡片 -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white;">
+                <h5 class="mb-0"><i class="bi bi-diagram-3"></i> BP神经网络</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">{{ compare_data.bp.desc }}</p>
+                <div class="row text-center mb-3">
+                    <div class="col-4">
+                        <div class="stat-card p-2">
+                            <div class="stat-value" style="font-size:1.5rem">{{ compare_data.bp.mae }}</div>
+                            <div class="stat-label">MAE</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="stat-card p-2">
+                            <div class="stat-value" style="font-size:1.5rem">{{ compare_data.bp.rmse }}</div>
+                            <div class="stat-label">RMSE</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="stat-card p-2">
+                            <div class="stat-value" style="font-size:1.5rem;color:#f59e0b">{{ compare_data.bp.r2 }}%</div>
+                            <div class="stat-label">R² 准确率</div>
+                        </div>
+                    </div>
+                </div>
+                <h6>优势</h6>
+                <ul>
+                    {% for adv in compare_data.bp.advantages %}
+                    <li>{{ adv }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 对比图表 -->
+<div class="card">
+    <div class="card-header"><h5 class="mb-0"><i class="bi bi-graph-up"></i> 性能指标对比图</h5></div>
+    <div class="card-body">
+        <div id="compareChart" style="height: 400px;"></div>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header"><h5 class="mb-0"><i class="bi bi-clipboard-check"></i> 对比结论</h5></div>
+    <div class="card-body">
+        <div class="alert alert-success">
+            <strong>结论：</strong>LSTM模型在准确率（R²={{ compare_data.lstm.r2 }}%）上优于BP模型（R²={{ compare_data.bp.r2 }}%），
+            满足任务书要求的≥80%（LSTM）和≥75%（BP）准确率标准。系统默认优先使用LSTM模型进行预测，
+            当LSTM不可用时自动回退到BP模型。
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var chart = echarts.init(document.getElementById('compareChart'));
+    chart.setOption({
+        tooltip: { trigger: 'axis' },
+        legend: { data: ['LSTM', 'BP'] },
+        xAxis: { type: 'category', data: ['MAE', 'RMSE', 'R² 准确率(%)'] },
+        yAxis: { type: 'value' },
+        series: [
+            {
+                name: 'LSTM', type: 'bar', barWidth: '30%',
+                data: [{{ compare_data.lstm.mae }}, {{ compare_data.lstm.rmse }}, {{ compare_data.lstm.r2 }}],
+                itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset: 0, color: '#667eea'}, {offset: 1, color: '#764ba2'}]) }
+            },
+            {
+                name: 'BP', type: 'bar', barWidth: '30%',
+                data: [{{ compare_data.bp.mae }}, {{ compare_data.bp.rmse }}, {{ compare_data.bp.r2 }}],
+                itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset: 0, color: '#f59e0b'}, {offset: 1, color: '#d97706'}]) }
+            }
+        ]
+    });
+    window.addEventListener('resize', function() { chart.resize(); });
+});
+</script>
+{% endblock %}
