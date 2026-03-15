@@ -337,4 +337,4 @@ User.objects.create_user(username='test', password='123456', role='operator')
    - `/data/manage/`：数据管理页面，包含初始数据导入、数据闭环日志、滚动窗口数据预览
    - `/model/predict/`：模型与预测管理页面，包含模型训练日志、实时预测结果
    - `/model/predict/result/`：预测结果对比页面，包含预测值vs真实值对比
-4. **GitHub上传规范**：配置.gitignore排除.trae目录，删除仓库中多余的.trae目录
+4. **GitHub上传规范**：配置.gitignore

@@ -25,6 +25,13 @@ joblib>=1.2.0
 # Excel文件支持
 openpyxl>=3.0.0
 
+# GLM-5 API
+aioz
+
+# 开发工具
+# 仅在开发环境使用
+# pip install -r requirements-dev.txt
+
 # 定时任务
 schedule==1.2.0
 apscheduler==3.10.4

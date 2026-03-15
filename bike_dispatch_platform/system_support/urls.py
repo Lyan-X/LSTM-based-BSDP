@@ -25,5 +25,4 @@ urlpatterns = [
     
     # 多源数据联动查询
     path('data/linkage/', views.data_linkage_query, name='data_linkage_query'),
-
 ]

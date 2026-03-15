@@ -490,33 +490,7 @@ def get_loss_curve(request, model_type, date):
         return HttpResponseNotFound("Error loading loss curve")
 
 
-def download_model(request, model_type):
-    """
-    下载模型文件
-    """
-    # 验证模型类型
-    if model_type not in ['lstm', 'bp']:
-        return HttpResponseBadRequest("Invalid model type")
-    
-    # 构建文件路径（使用现有的模型文件）
-    if model_type == 'lstm':
-        file_path = 'results/ysu_lstm_bsdp_model_168.h5'
-        filename = 'latest_lstm.h5'
-    else:
-        file_path = 'results/ysu_lstm_bsdp_model_168.h5'  # 使用LSTM模型作为BP模型的替代品
-        filename = 'latest_bp.h5'
-    
-    # 检查文件是否存在
-    if not os.path.exists(file_path):
-        return HttpResponseNotFound("Model file not found")
-    
-    # 返回文件
-    try:
-        response = FileResponse(open(file_path, 'rb'), content_type='application/octet-stream')
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        return response
-    except:
-        return HttpResponseNotFound("Error downloading model")
+
 
 
 # ============ Per-Parking-Spot Short-Term Forecast ============

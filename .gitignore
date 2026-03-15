@@ -29,3 +29,23 @@ __pycache__/
 *.tmp
 # 排除TraeAI生成的.trae目录
 .trae/
+# 排除Cursor编译器文件夹
+.cursor/
+# 排除数据库文件
+*.db
+# 排除模型文件（体积大，建议通过其他方式获取）
+models/*.h5
+models/history/*.h5
+# 排除文本信息和备份文件
+*.backup
+*.txt
+# 排除系统生成的临时文件
+Thumbs.db
+.DS_Store
+# 排除编译生成的文件
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+# 排除日志文件
+*.log

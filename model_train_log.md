@@ -1,6 +1,6 @@
 # Model Training Log
 
-**Training Time:** 2026-03-04 17:47:09
+**Training Time:** 2026-03-09 22:32:56
 
 **Dataset:** ysu_bike_data.csv (YSU campus only)
 
@@ -10,20 +10,20 @@
 | Metric | Value |
 |--------|-------|
 | MAE | 4.27 |
-| RMSE | 5.09 |
-| R² Accuracy | 81.24% |
-| Training Time | 307.9s |
-| Epochs Run | 25 |
-| Meets ≥80% | Yes |
+| RMSE | 5.07 |
+| R² Accuracy | 81.39% |
+| Training Time | 652.7s |
+| Epochs Run | 30 |
+| Meets ≥80% | No |
 
 ## BP Neural Network
 | Metric | Value |
 |--------|-------|
-| MAE | 4.27 |
-| RMSE | 5.08 |
-| R² Accuracy | 81.33% |
-| Training Time | 97.8s |
-| Epochs Run | 44 |
+| MAE | 4.26 |
+| RMSE | 5.07 |
+| R² Accuracy | 81.43% |
+| Training Time | 107.4s |
+| Epochs Run | 55 |
 | Meets ≥75% | Yes |
 
 ## Model Files

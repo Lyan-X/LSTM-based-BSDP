@@ -49,12 +49,12 @@ LEGACY_BP_PATH = os.path.join(MODELS_DIR, 'bike_bp_model_final.h5')
 
 # Training parameters
 SEQ_LEN = 24       # 24-hour (1-day) rolling window — practical for YSU hourly data
-LSTM_EPOCHS = 50
-BP_EPOCHS = 100
-BATCH_SIZE = 32
-PATIENCE = 8
-LSTM_ACCURACY_THRESHOLD = 80.0  # R² >= 80%
-BP_ACCURACY_THRESHOLD = 75.0   # R² >= 75%
+LSTM_EPOCHS = 100
+BP_EPOCHS = 150
+BATCH_SIZE = 64
+PATIENCE = 10
+LSTM_ACCURACY_THRESHOLD = 85.0  # R² >= 85%
+BP_ACCURACY_THRESHOLD = 80.0   # R² >= 80%
 
 for d in [MODELS_DIR, HISTORY_DIR, RESULTS_DIR, UTILS_DIR]:
     os.makedirs(d, exist_ok=True)
@@ -129,10 +129,13 @@ def load_and_preprocess(csv_path, seq_len=SEQ_LEN):
 def build_lstm(input_shape):
     """Build LSTM model for bike demand prediction."""
     model = Sequential([
-        LSTM(64, return_sequences=True, input_shape=input_shape),
+        LSTM(128, return_sequences=True, input_shape=input_shape),
+        Dropout(0.2),
+        LSTM(64, return_sequences=True),
         Dropout(0.2),
         LSTM(32, return_sequences=False),
         Dropout(0.2),
+        Dense(32, activation='relu'),
         Dense(16, activation='relu'),
         Dense(1, activation='linear')
     ])
@@ -200,9 +203,12 @@ def train_lstm(X_train, y_train, X_val, y_val, X_test, y_test, scaler_y):
 def build_bp(input_dim):
     """Build BP (feedforward) neural network."""
     model = Sequential([
-        Dense(128, activation='relu', input_dim=input_dim),
+        Dense(256, activation='relu', input_dim=input_dim),
         BatchNormalization(),
         Dropout(0.3),
+        Dense(128, activation='relu'),
+        BatchNormalization(),
+        Dropout(0.2),
         Dense(64, activation='relu'),
         BatchNormalization(),
         Dropout(0.2),

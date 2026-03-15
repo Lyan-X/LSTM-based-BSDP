@@ -223,6 +223,7 @@
             
             let selectedMarker = null;
             
+<<<<<<< HEAD
             // Color by demand-supply gap: red=shortage, green=surplus, yellow=balanced
             function gapColor(gap) {
                 if (gap >= 20) return '#dc2626';      // severe shortage
@@ -307,7 +308,6 @@
                         selectedMarker = this;
                     }
                 });
-            });
             
             // 添加地图点击事件，点击空白处时重置选中状态
             heatMap.on('click', function() {
@@ -316,12 +316,8 @@
                     selectedMarker.setIcon(createGapIcon(selectedMarker._spotGap, false));
                     // 重置管辖范围
                     if (selectedMarker.radiusCircle) {
-                        selectedMarker.radiusCircle.setStyle({
-                            color: '#1890FF',
-                            fillColor: '#1890FF',
-                            fillOpacity: 0.1,
-                            weight: 1
-                        });
+                        var c = gapColor(selectedMarker._spotGap);
+                        selectedMarker.radiusCircle.setStyle({ color: c, fillColor: c, fillOpacity: 0.15, weight: 1 });
                     }
                     // 关闭弹窗
                     selectedMarker.closePopup();

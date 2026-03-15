@@ -92,6 +92,7 @@ def login(request):
         return redirect('system_support:dashboard')
 
     if request.method == 'POST':
+        # 获取表单数据
         username = request.POST.get('username')
         password = request.POST.get('password')
         role = request.POST.get('role')
@@ -236,6 +237,7 @@ def _seed_region_features():
 def region_feature_form(request, pk=None):
     feature = RegionFeature.objects.get(pk=pk) if pk else None
     if request.method == 'POST':
+        # 模拟保存逻辑
         region = request.POST.get('region')
         business_type = request.POST.get('business_type')
         population_density = request.POST.get('population_density')
