@@ -1,112 +1,128 @@
 {% extends 'base.html' %}
-{% block title %}停车点短期预测 - 共享单车运维平台{% endblock %}
+
+{% block title %}站点预测详情 - 基于深度学习的城市共享单车调度需求预测与运维管理平台{% endblock %}
 
 {% block content %}
-<h2 class="mb-3"><i class="bi bi-geo-alt"></i> 停车点短期需求预测（{{ forecast_label }}）</h2>
-
-<!-- Forecast controls -->
+{{ prediction_batch|json_script:"spot-forecast-batch" }}
 <div class="row mb-4">
-    <div class="col-md-8">
-        <div class="btn-group me-3">
-            <a href="?forecast=30min" class="btn {% if forecast_type == '30min' %}btn-primary{% else %}btn-outline-primary{% endif %}">30分钟预测</a>
-            <a href="?forecast=1hr" class="btn {% if forecast_type == '1hr' %}btn-primary{% else %}btn-outline-primary{% endif %}">1小时预测</a>
-        </div>
-        <span class="badge bg-info ms-2">目标时间: {{ target_time }}</span>
-        <span class="badge bg-secondary ms-1">模型: {{ model_used }}</span>
-        <span class="badge bg-success ms-1">置信度: {{ confidence }}%</span>
-    </div>
-    <div class="col-md-4 text-end">
-        <span class="badge bg-warning">温度: {{ temperature }}℃</span>
-        <span class="badge bg-info ms-1">风速: {{ wind_speed }}m/s</span>
+    <div class="col-12">
+        <h2 class="mb-3"><i class="bi bi-geo-alt"></i> 站点短期需求预测</h2>
     </div>
 </div>
 
-<!-- Summary cards -->
+{% if prediction_error %}
+<div class="alert alert-danger">{{ prediction_error }}</div>
+{% endif %}
+
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-sliders"></i> 站点选择</h5>
+    </div>
+    <div class="card-body">
+        <select id="stationSelector" class="form-select">
+            {% for station in prediction_batch.stations %}
+            <option value="{{ forloop.counter0 }}">{{ station.station_id }} - {{ station.station_name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
 <div class="row mb-4">
-    <div class="col-md-3">
+    <div class="col-md-4">
         <div class="stat-card">
-            <div class="stat-icon"><i class="bi bi-geo-alt"></i></div>
-            <div class="stat-value">{{ total_spots }}</div>
-            <div class="stat-label">预测停车点数</div>
+            <div class="stat-icon"><i class="bi bi-diagram-3"></i></div>
+            <div class="stat-value">{{ prediction_batch.stations|length|default:0 }}</div>
+            <div class="stat-label">预测站点数</div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-4">
         <div class="stat-card">
-            <div class="stat-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626)"><i class="bi bi-exclamation-triangle"></i></div>
-            <div class="stat-value">{{ shortage_count }}</div>
-            <div class="stat-label">车辆短缺停车点</div>
+            <div class="stat-icon"><i class="bi bi-clock-history"></i></div>
+            <div class="stat-value">48h</div>
+            <div class="stat-label">预测窗口</div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-4">
         <div class="stat-card">
-            <div class="stat-icon" style="background:linear-gradient(135deg,#10b981,#059669)"><i class="bi bi-arrow-up-circle"></i></div>
-            <div class="stat-value">{{ surplus_count }}</div>
-            <div class="stat-label">车辆过剩停车点</div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="stat-card">
-            <div class="stat-icon" style="background:linear-gradient(135deg,#3b82f6,#2563eb)"><i class="bi bi-cpu"></i></div>
-            <div class="stat-value">{{ model_used }}</div>
-            <div class="stat-label">预测模型</div>
+            <div class="stat-icon"><i class="bi bi-cpu-fill"></i></div>
+            <div class="stat-value" style="font-size:1rem">{{ prediction_batch.model_version|default:"未加载" }}</div>
+            <div class="stat-label">模型版本</div>
         </div>
     </div>
 </div>
 
-<!-- Forecast table -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-graph-up"></i> 站点 48 小时趋势</h5>
+    </div>
+    <div class="card-body">
+        <div id="stationForecastChart" style="height: 420px;"></div>
+    </div>
+</div>
+
 <div class="card">
-    <div class="card-header">
-        <h5 class="mb-0"><i class="bi bi-table"></i> 各停车点{{ forecast_label }}需求预测（按供需缺口排序）</h5>
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-table"></i> 未来 48 小时明细</h5>
     </div>
     <div class="card-body">
         <div class="table-responsive">
             <table class="table table-striped table-hover">
                 <thead>
                     <tr>
-                        <th>停车点</th>
-                        <th>预测需求</th>
-                        <th>当前供给</th>
+                        <th>时刻</th>
+                        <th>预测净流量</th>
+                        <th>预测库存</th>
                         <th>供需缺口</th>
-                        <th>状态</th>
-                        <th>预测模型</th>
-                        <th>置信度</th>
                     </tr>
                 </thead>
-                <tbody>
-                    {% for f in forecasts %}
-                    <tr>
-                        <td><strong>{{ f.spot_name }}</strong></td>
-                        <td>{{ f.demand }}</td>
-                        <td>{{ f.supply }}</td>
-                        <td>
-                            {% if f.gap > 10 %}
-                            <span class="badge bg-danger">+{{ f.gap }} 严重短缺</span>
-                            {% elif f.gap > 0 %}
-                            <span class="badge bg-warning text-dark">+{{ f.gap }} 短缺</span>
-                            {% elif f.gap > -10 %}
-                            <span class="badge bg-success">{{ f.gap }} 均衡</span>
-                            {% else %}
-                            <span class="badge bg-info">{{ f.gap }} 过剩</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if f.gap > 10 %}
-                            <i class="bi bi-exclamation-triangle-fill text-danger"></i> 需调入
-                            {% elif f.gap > 0 %}
-                            <i class="bi bi-exclamation-circle text-warning"></i> 关注
-                            {% elif f.gap > -10 %}
-                            <i class="bi bi-check-circle-fill text-success"></i> 正常
-                            {% else %}
-                            <i class="bi bi-arrow-up-circle text-info"></i> 可调出
-                            {% endif %}
-                        </td>
-                        <td><span class="badge {% if f.model == 'LSTM' %}bg-primary{% else %}bg-success{% endif %}">{{ f.model }}</span></td>
-                        <td>{{ f.confidence }}%</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
+                <tbody id="stationForecastTable"></tbody>
             </table>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const stationNode = document.getElementById('spot-forecast-batch');
+    const stationBatch = stationNode ? JSON.parse(stationNode.textContent) : null;
+    const stationChart = echarts.init(document.getElementById('stationForecastChart'));
+
+    function renderStation(index) {
+        if (!stationBatch || !stationBatch.stations || !stationBatch.stations.length) {
+            return;
+        }
+        const station = stationBatch.stations[index];
+        stationChart.setOption({
+            tooltip: { trigger: 'axis' },
+            legend: { data: ['预测净流量', '预测库存', 'T+1 供需缺口'] },
+            xAxis: { type: 'category', data: station.timestamps },
+            yAxis: [{ type: 'value', name: '净流量' }, { type: 'value', name: '库存/缺口' }],
+            series: [
+                { name: '预测净流量', type: 'line', smooth: true, data: station.predictions },
+                { name: '预测库存', type: 'line', smooth: true, yAxisIndex: 1, data: station.inventory_predictions },
+                {
+                    name: 'T+1 供需缺口',
+                    type: 'bar',
+                    yAxisIndex: 1,
+                    data: station.timestamps.map((_, i) => i === 0 ? station.t_plus_1_gap : 0)
+                }
+            ]
+        });
+        document.getElementById('stationForecastTable').innerHTML = station.timestamps.map((time, i) => `
+            <tr>
+                <td>${time}</td>
+                <td>${Number(station.predictions[i]).toFixed(2)}</td>
+                <td>${Math.round(station.inventory_predictions[i])}</td>
+                <td>${i === 0 ? Number(station.t_plus_1_gap).toFixed(2) : '-'}</td>
+            </tr>
+        `).join('');
+    }
+
+    document.getElementById('stationSelector').addEventListener('change', function () {
+        renderStation(Number(this.value));
+    });
+    renderStation(0);
+    window.addEventListener('resize', function () { stationChart.resize(); });
+</script>
 {% endblock %}

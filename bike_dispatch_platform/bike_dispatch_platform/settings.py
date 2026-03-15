@@ -18,11 +18,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # 必须添加这一行（核心！）
-    'data_process',
-    'demand_prediction',
-    'operation_management',
-    'system_support',
+    'bike_dispatch_platform.data_process.apps.DataProcessConfig',
+    'bike_dispatch_platform.demand_prediction.apps.DemandPredictionConfig',
+    'bike_dispatch_platform.operation_management.apps.OperationManagementConfig',
+    'bike_dispatch_platform.system_support.apps.SystemSupportConfig',
 ]
 
 # 中间件（新增操作日志中间件，满足任务书"系统日志记录"要求）
@@ -34,10 +33,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'system_support.middleware.OperationLogMiddleware',  # 操作日志中间件（任务书要求）
+    'bike_dispatch_platform.system_support.middleware.OperationLogMiddleware',
 ]
 # 根路由配置
-ROOT_URLCONF = 'bike_dispatch_platform.urls'
+ROOT_URLCONF = 'bike_dispatch_platform.bike_dispatch_platform.urls'
 
 # 模板配置（支持模块分目录模板，符合软件工程规范）
 TEMPLATES = [
@@ -56,7 +55,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'bike_dispatch_platform.wsgi.application'
+WSGI_APPLICATION = 'bike_dispatch_platform.bike_dispatch_platform.wsgi.application'
 
 # 数据仓库配置（任务书"结构化数据仓库"要求，开发用SQLite，生产可迁MySQL）
 DATABASES = {
@@ -98,4 +97,3 @@ SESSION_COOKIE_AGE = 28800
 SESSION_SAVE_EVERY_REQUEST = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-

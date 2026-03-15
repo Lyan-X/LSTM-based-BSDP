@@ -1,16 +1,12 @@
 {% extends 'base.html' %}
 
-{% block title %}调度任务详情 - 共享单车运维平台{% endblock %}
+{% block title %}调度任务详情 - 基于深度学习的城市共享单车调度需求预测与运维管理平台{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <h1 class="mb-4">
-                <i class="bi bi-calendar-check"></i> 调度任务详情
-            </h1>
-            
-            <!-- 任务基本信息 -->
+            <h1 class="mb-4"><i class="bi bi-calendar-check"></i> 调度任务详情</h1>
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0">任务基本信息</h5>
@@ -20,206 +16,35 @@
                         <div class="col-md-6">
                             <table class="table table-striped">
                                 <tbody>
-                                    <tr>
-                                        <th class="w-30">任务编号</th>
-                                        <td>{{ task.task_id }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>目标区域</th>
-                                        <td>{{ task.get_target_region_display }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>来源区域</th>
-                                        <td>{{ task.get_source_region_display|default:"无" }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>需求数量</th>
-                                        <td>{{ task.demand_count }} 辆</td>
-                                    </tr>
-                                    <tr>
-                                        <th>实际完成</th>
-                                        <td>{{ task.actual_count|default:"未完成" }} 辆</td>
-                                    </tr>
-                                    <tr>
-                                        <th>分配人员</th>
-                                        <td>{{ task.assign_to.username|default:"未分配" }}</td>
-                                    </tr>
+                                    <tr><th class="w-30">任务编号</th><td>{{ task.id }}</td></tr>
+                                    <tr><th>任务类型</th><td>{{ task.task_type }}</td></tr>
+                                    <tr><th>起点站</th><td>{{ task.start_location }}</td></tr>
+                                    <tr><th>终点站</th><td>{{ task.end_location }}</td></tr>
+                                    <tr><th>调运量</th><td>{{ task.dispatch_count }} 辆</td></tr>
                                 </tbody>
                             </table>
                         </div>
                         <div class="col-md-6">
                             <table class="table table-striped">
                                 <tbody>
-                                    <tr>
-                                        <th class="w-30">任务状态</th>
-                                        <td>
-                                            <span class="badge {% if task.status == 'pending' %}bg-warning{% elif task.status == 'assigned' %}bg-info{% elif task.status == 'in_progress' %}bg-primary{% elif task.status == 'completed' %}bg-success{% else %}bg-danger{% endif %}">
-                                                {{ task.get_status_display }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <th>创建时间</th>
-                                        <td>{{ task.create_time }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>完成时间</th>
-                                        <td>{{ task.complete_time|default:"未完成" }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>创建人员</th>
-                                        <td>{{ task.created_by.username }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>关联预测</th>
-                                        <td>
-                                            {% if task.prediction_result %}
-                                                <a href="{% url 'demand_prediction:predict' %}" class="text-primary">
-                                                    {{ task.prediction_result.id }}
-                                                </a>
-                                            {% else %}
-                                                无
-                                            {% endif %}
-                                        </td>
-                                    </tr>
+                                    <tr><th class="w-30">任务状态</th><td>{{ task.get_status_display }}</td></tr>
+                                    <tr><th>优先级</th><td>{{ task.get_priority_display }}</td></tr>
+                                    <tr><th>预测缺口</th><td>{{ task.predicted_gap }}</td></tr>
+                                    <tr><th>距离成本</th><td>{{ task.distance_cost }}</td></tr>
+                                    <tr><th>创建时间</th><td>{{ task.create_time }}</td></tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- 任务状态更新 -->
-            {% if user.is_operator and task.assign_to == user %}
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5 class="mb-0">任务状态更新</h5>
-                </div>
-                <div class="card-body">
-                    <form id="statusForm">
-                        <div class="mb-3">
-                            <label class="form-label">新状态</label>
-                            <select class="form-select" id="newStatus">
-                                <option value="in_progress" {% if task.status == 'in_progress' %}selected{% endif %}>进行中</option>
-                                <option value="completed" {% if task.status == 'completed' %}selected{% endif %}>已完成</option>
-                                <option value="failed" {% if task.status == 'failed' %}selected{% endif %}>失败</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">实际完成数量</label>
-                            <input type="number" class="form-control" id="actualCount" min="0" max="{{ task.demand_count }}" value="{{ task.actual_count|default:task.demand_count }}">
-                        </div>
-                        <button type="button" class="btn btn-primary" onclick="updateStatus()">
-                            <i class="bi bi-save"></i> 更新状态
-                        </button>
-                    </form>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- 调度评估 -->
-            {% if user.is_admin %}
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5 class="mb-0">调度效果评估</h5>
-                </div>
-                <div class="card-body">
-                    {% if evaluation %}
-                    <div class="alert alert-info">
-                        <h6>评估结果</h6>
-                        <ul>
-                            <li>完成率：{{ evaluation.completion_rate }}%</li>
-                            <li>时间效率：{{ evaluation.time_efficiency }}%</li>
-                            <li>成本效率：{{ evaluation.cost_efficiency|default:"未评估" }}</li>
-                            <li>满意度评分：{{ evaluation.satisfaction_score|default:"未评估" }}</li>
-                            {% if evaluation.notes %}
-                            <li>备注：{{ evaluation.notes }}</li>
-                            {% endif %}
-                        </ul>
-                    </div>
-                    {% else %}
-                    <a href="{% url 'operation_management:schedule_evaluation' task.task_id %}" class="btn btn-primary">
-                        <i class="bi bi-star"></i> 进行评估
-                    </a>
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- 运维轨迹 -->
-            {% if tracks.exists %}
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5 class="mb-0">运维轨迹记录</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>时间</th>
-                                    <th>经度</th>
-                                    <th>纬度</th>
-                                    <th>描述</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for track in tracks %}
-                                <tr>
-                                    <td>{{ track.track_time }}</td>
-                                    <td>{{ track.longitude }}</td>
-                                    <td>{{ track.latitude }}</td>
-                                    <td>{{ track.description|default:"无" }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                    <div class="alert alert-info mt-3 mb-0">
+                        <strong>触发原因：</strong>{{ task.reason|default:"暂无说明" }}
                     </div>
                 </div>
             </div>
-            {% endif %}
-
-            <!-- 操作按钮 -->
             <div class="mt-4">
-                <a href="{% url 'operation_management:task_list' %}" class="btn btn-secondary">
-                    <i class="bi bi-arrow-left"></i> 返回列表
-                </a>
-                {% if user.is_admin %}
-                <a href="{% url 'operation_management:task_create' %}" class="btn btn-primary">
-                    <i class="bi bi-plus"></i> 创建新任务
-                </a>
-                {% endif %}
+                <a href="{% url 'operation_management:task_list' %}" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> 返回列表</a>
             </div>
         </div>
     </div>
 </div>
-
-<script>
-function updateStatus() {
-    const newStatus = document.getElementById('newStatus').value;
-    const actualCount = document.getElementById('actualCount').value;
-    
-    fetch('{% url 'operation_management:task_update_status' task.task_id %}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: `status=${newStatus}&actual_count=${actualCount}`
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('状态更新成功');
-            location.reload();
-        } else {
-            alert('更新失败：' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('更新失败');
-    });
-}
-</script>
 {% endblock %}
