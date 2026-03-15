@@ -29,9 +29,12 @@ __pycache__/
 *.tmp
 # æ’é™¤TraeAIç”Ÿæˆçš„.traeç›®å½•
 .trae/
+<<<<<<< HEAD
 
 # ÅÅ³ı Cursor ±àÒëÆ÷ÎÄ¼ş¼Ğ
 .cursor/
 
 # ÅÅ³ıÄ£ĞÍÀúÊ·ÎÄ¼ş
 models/history/
+=======
+>>>>>>> e731ffdfbb2894ecacc687cdf1e00b1ac6912720
