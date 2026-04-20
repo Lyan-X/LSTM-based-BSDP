@@ -428,10 +428,6 @@
                     <li class="nav-item"><a class="nav-link {% if '/system/settings/' in request.path %}active{% endif %}" href="{% url 'system_support:settings' %}">系统设置</a></li>
                 </ul>
                 <div class="d-flex align-items-center gap-2 ms-auto">
-                    <span class="live-badge">
-                        <span class="pulse-dot"></span>
-                        真实数据模式
-                    </span>
                     {% if user.is_authenticated %}
                     <button id="themeToggle" class="btn btn-outline-light btn-sm">
                         <i class="bi bi-moon-stars"></i>
@@ -577,7 +573,7 @@
                     function updateDisplay() {
                         if (!countdownElement) return;
                         if (refreshing) {
-                            countdownElement.textContent = "0s";
+                            countdownElement.textContent = "重新加载中";
                             window.BSDPUI.setRefreshProgress(progressBar, 0, intervalSeconds);
                             return;
                         }
@@ -588,7 +584,7 @@
                         }
                         const remainingMs = Math.max(0, nextRefreshAt - Date.now());
                         const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
-                        countdownElement.textContent = `${remainingSeconds}s`;
+                        countdownElement.textContent = remainingSeconds <= 0 ? "重新加载中" : `${remainingSeconds}s`;
                         window.BSDPUI.setRefreshProgress(progressBar, remainingMs / 1000, intervalSeconds);
                     }
 

@@ -23,18 +23,23 @@ from station_info.master_data import OFFICIAL_PROJECT_NAME
 
 
 PROJECT_NAME = OFFICIAL_PROJECT_NAME
+FIXED_ACCOUNTS = {
+    "admin": {"username": "admin", "password": "123456aA"},
+    "operator": {"username": "operator", "password": "123456aA"},
+    "predictor": {"username": "predictor", "password": "123456aA"},
+}
 ROLE_PERMISSION_MATRIX = [
     {
-        "role": "系统管理员",
-        "permissions": "仪表盘、需求预测、调度监控、运维管理、系统设置、备份、日志、导出、训练触发",
+        "role": "管理员",
+        "permissions": "系统总览、需求预测、调度监控、运维管理、系统设置、备份、日志、导出、训练触发",
     },
     {
-        "role": "运维调度员",
-        "permissions": "仪表盘、调度监控、手动调度、站点运维、车辆运维、工单处理、调度导出、预测结果只读查看",
+        "role": "运维",
+        "permissions": "系统总览、调度监控、手动调度、站点运维、车辆运维、工单处理、调度导出、预测结果只读查看",
     },
     {
-        "role": "数据分析员",
-        "permissions": "数据查看、需求预测查看、预测报告导出、仪表盘只读；无调度与系统设置权限",
+        "role": "预测",
+        "permissions": "数据查看、需求预测查看、预测报告导出、系统总览只读；无调度与系统设置权限",
     },
 ]
 
@@ -54,6 +59,15 @@ def login(request):
         username = request.POST.get("username", "").strip()
         password = request.POST.get("password", "")
         role = request.POST.get("role", "predictor")
+        allowed_roles = {"admin", "operator", "predictor"}
+        if role not in allowed_roles:
+            messages.error(request, "仅支持管理员、运维、预测三个固定角色。")
+            return render(request, "system_support/login.html", {"project_name": PROJECT_NAME})
+        role_labels = {
+            "admin": "管理员",
+            "operator": "运维",
+            "predictor": "预测",
+        }
 
         user = authenticate(request, username=username, password=password)
         if user is None:

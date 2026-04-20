@@ -69,16 +69,6 @@
         100% { transform: scale(1); }
     }
 
-    .data-view-panel {
-        height: 560px;
-        overflow: hidden;
-    }
-
-    .data-view-scroll {
-        max-height: 480px;
-        overflow: auto;
-    }
-
     .sortable {
         cursor: pointer;
         user-select: none;
@@ -100,7 +90,7 @@
     }
 
     .suggestion-stack {
-        max-height: 252px;
+        max-height: 260px;
         overflow: auto;
     }
 
@@ -113,16 +103,6 @@
     }
 
     .suggestion-card:last-child { margin-bottom: 0; }
-
-    .view-toggle .btn.active {
-        pointer-events: none;
-    }
-
-    @media (max-width: 992px) {
-        .dispatch-hero-grid {
-            grid-template-columns: 1fr;
-        }
-    }
 </style>
 {% endblock %}
 
@@ -134,7 +114,7 @@
                 <i class="bi bi-signpost-split fs-3 text-primary"></i>
                 <div>
                     <h2>调度监控</h2>
-                    <p class="hero-note">本页展示实时快照、站点预测与调度建议联动结果。站点地图、数据视图与建议列表按 10 秒轮询同步更新。</p>
+                    <p class="hero-note">本页显示实时快照、站点预测与调度建议联动结果。地图与供需数据视图按 10 秒自动同步。</p>
                 </div>
             </div>
             <div class="hero-meta">
@@ -165,7 +145,7 @@
                 <div class="value" id="totalShortage">0</div>
             </div>
             <div class="mini-card">
-                <div class="label">可调度车辆</div>
+                <div class="label">可调车辆</div>
                 <div class="value" id="dispatchableVehicles">0</div>
             </div>
         </div>
@@ -180,30 +160,15 @@
                 <button id="refreshBtn" class="btn btn-outline-light btn-sm" type="button">
                     <i class="bi bi-arrow-clockwise"></i> 刷新
                 </button>
-                </div>
-                <div class="card-body">
+            </div>
+            <div class="card-body">
                 <div class="row g-3 text-center mb-3">
-                            <div class="col-4">
-                        <div class="soft-card p-3 h-100">
-                            <div class="section-note">站点</div>
-                            <div class="fw-bold fs-5" id="parkingSpotCount">62</div>
-                        </div>
-                            </div>
-                            <div class="col-4">
-                        <div class="soft-card p-3 h-100">
-                            <div class="section-note text-danger">稀少</div>
-                            <div class="fw-bold fs-5 text-danger" id="shortageCount">0</div>
-                        </div>
-                            </div>
-                            <div class="col-4">
-                        <div class="soft-card p-3 h-100">
-                            <div class="section-note text-success">盈余</div>
-                            <div class="fw-bold fs-5 text-success" id="surplusCount">0</div>
-                        </div>
-                    </div>
+                    <div class="col-4"><div class="soft-card p-3 h-100"><div class="section-note">站点</div><div class="fw-bold fs-5" id="parkingSpotCount">62</div></div></div>
+                    <div class="col-4"><div class="soft-card p-3 h-100"><div class="section-note text-danger">稀少</div><div class="fw-bold fs-5 text-danger" id="shortageCount">0</div></div></div>
+                    <div class="col-4"><div class="soft-card p-3 h-100"><div class="section-note text-success">盈余</div><div class="fw-bold fs-5 text-success" id="surplusCount">0</div></div></div>
                 </div>
                 <div class="small text-secondary mb-3">
-                    数据来源：`runtime_service.ensure_snapshot()` 输出的站点快照与 `station_prediction_service` 的 T+1 预测结果。当前库存表示站点实时停放车辆数；需求表示下一小时预测需求量；供需缺口 = 目标库存 - 当前库存；T+1 预测净流量表示下一小时净增/净减车辆数；T+1 状态表示预测后的库存状态。
+                    当前库存表示站点实时停放车辆数。“T+1 车辆变化”来自模型对下一小时净流量的预测，页面展示时按整数车辆变化量呈现：正值表示预计净流入，负值表示预计净流出。系统再将预测后的 T+1 库存与目标库存比较：低于目标库存判定为预测缺少，高于目标库存判定为预测盈余。
                 </div>
                 <div class="border rounded-4 p-3 bg-light-subtle">
                     <div class="d-flex justify-content-between mb-2"><span>锁定车辆数</span><strong id="lockedVehicles">0</strong></div>
@@ -213,8 +178,8 @@
                 </div>
             </div>
         </div>
-        
-        <div class="card">
+
+        <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5><i class="bi bi-list-check"></i> 调度建议列表</h5>
                 <span class="small">仅真实调度输出</span>
@@ -226,47 +191,44 @@
     </div>
 
     <div class="col-lg-9">
-        <div class="row g-4">
-            <div class="col-lg-7">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5><i class="bi bi-map"></i> 62 站点实时调度地图</h5>
-                        <span class="small">标记大小和颜色随真实库存与缺口实时变化</span>
-                    </div>
-                    <div class="card-body p-0">
-                        <div id="dispatchCampusMap" style="height: 560px; width: 100%;"></div>
-                    </div>
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="bi bi-map"></i> 62 站点实时调度地图</h5>
+                <span class="small">标记大小和颜色随真实库存与缺口实时变化</span>
+            </div>
+            <div class="card-body p-0">
+                <div id="dispatchCampusMap" style="height: 560px; width: 100%;"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="bi bi-layout-text-sidebar-reverse"></i> 供需数据视图</h5>
+                <div class="btn-group btn-group-sm view-toggle">
+                    <button id="tableViewBtn" type="button" class="btn btn-light active">表格</button>
+                    <button id="chartViewBtn" type="button" class="btn btn-outline-light">柱状图</button>
                 </div>
             </div>
-
-            <div class="col-lg-5">
-                <div class="card data-view-panel">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5><i class="bi bi-layout-text-sidebar-reverse"></i> 供需数据视图</h5>
-                        <div class="btn-group btn-group-sm view-toggle">
-                            <button id="tableViewBtn" type="button" class="btn btn-light active">表格</button>
-                            <button id="chartViewBtn" type="button" class="btn btn-outline-light">柱状图</button>
-                        </div>
+            <div class="card-body p-0">
+                <div id="dispatchTableView">
+                    <div class="table-responsive" style="max-height: 480px; overflow:auto;">
+                        <table class="table table-striped table-hover mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="sortable" data-sort="name">站点名称</th>
+                                    <th class="sortable text-center" data-sort="count">当前库存</th>
+                                    <th class="sortable text-center" data-sort="t_plus_1_gap">T+1 缺口</th>
+                                    <th class="sortable text-center" data-sort="status_rank">供需状态</th>
+                                    <th class="sortable text-center" data-sort="t_plus_1_net_flow">T+1 车辆变化</th>
+                                    <th class="text-center">预测缺少/盈余</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dispatchTableBody"></tbody>
+                        </table>
                     </div>
-                <div class="card-body p-0">
-                        <div id="dispatchTableView" class="data-view-scroll">
-                            <table class="table table-striped table-hover mb-0">
-                                <thead class="table-light sticky-top">
-                                    <tr>
-                                        <th class="sortable" data-sort="name">站点名称</th>
-                                        <th class="sortable text-center" data-sort="count">当前库存</th>
-                                        <th class="sortable text-center" data-sort="t_plus_1_gap">T+1 缺口</th>
-                                        <th class="sortable text-center" data-sort="status_rank">供需状态</th>
-                                        <th class="sortable text-center" data-sort="t_plus_1_net_flow">T+1 预测净流量</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="dispatchTableBody"></tbody>
-                            </table>
-                        </div>
-                        <div id="dispatchChartView" class="data-view-scroll" style="display:none;">
-                            <div id="dispatchBarChart" style="height: 480px;"></div>
-                        </div>
-                    </div>
+                </div>
+                <div id="dispatchChartView" style="display:none;">
+                    <div id="dispatchBarChart" style="height: 480px;"></div>
                 </div>
             </div>
         </div>
@@ -303,7 +265,7 @@
     let activeView = 'table';
     const refreshState = { previousRows: [] };
 
-        L.tileLayer('https://webrd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+    L.tileLayer('https://webrd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
         maxZoom: 18
     }).addTo(dispatchCampusMap);
     L.polygon(campusPolygon, { color: '#1890FF', weight: 2, fillOpacity: 0.08 }).addTo(dispatchCampusMap);
@@ -311,35 +273,21 @@
     function markerColor(row) {
         if (row.current_state_group === 'scarce') return '#dc2626';
         if (row.current_state_group === 'saturated') return '#f59e0b';
-        if (row.current_state_group === 'balanced') return '#16a34a';
-        if ((row.gap || 0) > 15) return '#dc2626';
-        if ((row.gap || 0) < -15) return '#16a34a';
-        if (row.warning_status === 'low' || row.warning_status === 'high') return '#f59e0b';
-        return '#2563eb';
+        return '#16a34a';
     }
 
     function markerSize(row) {
-        const capacityRatio = row.capacity ? row.count / row.capacity : 0;
-        const gapRatio = Math.min(1, Math.abs(row.gap || 0) / 30);
-        return Math.round(28 + capacityRatio * 12 + gapRatio * 10);
+        return Math.round(36 + Math.min(24, Number(row.count || 0) * 0.35));
     }
 
     function markerFontSize(size) {
-        return size >= 42 ? 13 : 12;
+        return size >= 50 ? 16 : 13;
     }
 
     function stationStatus(row) {
-        if (row.current_state_label) {
-            if (row.current_state_group === 'scarce') return { label: row.current_state_label, rank: 0, badge: 'danger' };
-            if (row.current_state_group === 'saturated') return { label: row.current_state_label, rank: 2, badge: 'warning' };
-            return { label: row.current_state_label, rank: 1, badge: 'success' };
-        }
-        if ((row.gap || 0) > 15) return { label: '稀少', rank: 0, badge: 'danger' };
-        if ((row.gap || 0) < -15) return { label: '盈余', rank: 2, badge: 'success' };
-        if (row.warning_status === 'low' || row.warning_status === 'high' || Math.abs(row.gap || 0) > 0) {
-            return { label: '预警', rank: 1, badge: 'warning' };
-        }
-        return { label: '充足', rank: 3, badge: 'primary' };
+        if (row.current_state_group === 'scarce') return { label: row.current_state_label || '稀少', rank: 0, badge: 'danger' };
+        if (row.current_state_group === 'saturated') return { label: row.current_state_label || '盈余', rank: 2, badge: 'warning' };
+        return { label: row.current_state_label || '适中', rank: 1, badge: 'success' };
     }
 
     function compareRows(a, b) {
@@ -379,7 +327,7 @@
 
         rows.forEach(row => {
             const previous = previousMap.get(row.station_id);
-            const changed = !previous || previous.count !== row.count || previous.gap !== row.gap;
+            const changed = !previous || previous.count !== row.count || previous.gap !== row.gap || previous.t_plus_1_gap !== row.t_plus_1_gap;
             const size = markerSize(row);
             const isActive = selectedStationId === row.station_id;
             const icon = L.divIcon({
@@ -393,10 +341,19 @@
                 iconAnchor: [size / 2, size / 2]
             });
             const shortageIndicator = Number(row.t_plus_1_gap || 0);
-            const shortageLabel = shortageIndicator > 0 ? `缺少 ${shortageIndicator.toFixed(2)} 辆` : (shortageIndicator < 0 ? `盈余 ${Math.abs(shortageIndicator).toFixed(2)} 辆` : '基本平衡');
-            const marker = L.marker([row.lat, row.lng], { icon }).bindPopup(
-                `<strong>${row.name}</strong><br>当前库存：${row.count}<br>下一小时需求量：${Number(row.demand || 0).toFixed(2)}<br>供需缺口：${Number(row.gap || 0).toFixed(2)}<br>T+1 预测净流量：${Number(row.t_plus_1_net_flow || 0).toFixed(2)}<br>T+1 站点状态：${row.t_plus_1_state_label || '--'}<br>预测库存变化：${shortageLabel}`
-            );
+            const shortageLabel = shortageIndicator > 0 ? `缺少 ${shortageIndicator.toFixed(0)} 辆` : (shortageIndicator < 0 ? `盈余 ${Math.abs(shortageIndicator).toFixed(0)} 辆` : '基本平衡');
+            const popupHtml = `
+                <strong>${row.name}</strong><br>
+                当前库存：${row.count}<br>
+                需求：${Math.round(Number(row.demand || 0))}<br>
+                供需缺口：${Math.round(Number(row.gap || 0))}<br>
+                T+1 车辆变化：${Math.round(Number(row.t_plus_1_net_flow || 0))}<br>
+                预测缺少/盈余：${shortageLabel}<br>
+                当前状态：${row.current_state_label || '--'}<br>
+                T+1 状态：${row.t_plus_1_state_label || '--'}<br>
+                预测库存：${Math.round(Number(row.predicted_inventory_t1 || 0))}
+            `;
+            const marker = L.marker([row.lat, row.lng], { icon }).bindPopup(popupHtml);
             marker.on('click', function () {
                 selectedStationId = row.station_id;
                 renderMarkers(currentRows);
@@ -413,15 +370,16 @@
             const status = stationStatus(item);
             const previous = previousMap.get(item.station_id);
             const changed = !previous || previous.count !== item.count || previous.gap !== item.gap;
-            return `
-                <tr class="${selectedStationId === item.station_id ? 'dispatch-row-active' : ''} ${changed ? 'dispatch-row-updated' : ''}" data-station-id="${item.station_id}">
-                    <td>${item.name}</td>
-                    <td class="text-center">${item.count}</td>
-                    <td class="text-center">${Number(item.t_plus_1_gap || 0).toFixed(2)}</td>
-                    <td class="text-center"><span class="badge bg-${status.badge}">${status.label}</span></td>
-                    <td class="text-center">${Number(item.t_plus_1_net_flow || 0).toFixed(2)}</td>
-                </tr>
-            `;
+            const gapValue = Number(item.t_plus_1_gap || 0);
+            const gapLabel = gapValue > 0 ? '缺少 ' + gapValue.toFixed(0) : (gapValue < 0 ? '盈余 ' + Math.abs(gapValue).toFixed(0) : '平衡');
+            return '<tr class="' + (selectedStationId === item.station_id ? 'dispatch-row-active' : '') + ' ' + (changed ? 'dispatch-row-updated' : '') + '" data-station-id="' + item.station_id + '">'
+                + '<td>' + item.name + '</td>'
+                + '<td class="text-center">' + item.count + '</td>'
+                + '<td class="text-center">' + gapValue.toFixed(0) + '</td>'
+                + '<td class="text-center"><span class="badge bg-' + status.badge + '">' + status.label + '</span></td>'
+                + '<td class="text-center">' + Math.round(Number(item.t_plus_1_net_flow || 0)) + '</td>'
+                + '<td class="text-center">' + gapLabel + '</td>'
+                + '</tr>';
         }).join('');
 
         document.querySelectorAll('#dispatchTableBody tr').forEach(function (row) {
@@ -434,7 +392,7 @@
     function renderChart(rows) {
         dispatchBarChart.setOption({
             tooltip: { trigger: 'axis' },
-            legend: { data: ['当前库存', '供需缺口', 'T+1 预测净流量'] },
+            legend: { data: ['当前库存', 'T+1 缺口', 'T+1 车辆变化'] },
             grid: { left: 54, right: 18, top: 28, bottom: 110 },
             xAxis: {
                 type: 'category',
@@ -442,13 +400,13 @@
                 axisLabel: { rotate: 45, interval: 0 }
             },
             yAxis: [
-                { type: 'value', name: '库存/泊位' },
-                { type: 'value', name: '净流量' }
+                { type: 'value', name: '车辆数 / 缺口' },
+                { type: 'value', name: '变化量' }
             ],
             series: [
                 { name: '当前库存', type: 'bar', data: rows.map(item => item.count), itemStyle: { color: '#4f46e5' } },
-                { name: '供需缺口', type: 'bar', data: rows.map(item => item.t_plus_1_gap || 0), itemStyle: { color: '#0f766e' } },
-                { name: 'T+1 预测净流量', type: 'line', smooth: true, yAxisIndex: 1, data: rows.map(item => item.t_plus_1_net_flow || 0), itemStyle: { color: '#f59e0b' } }
+                { name: 'T+1 缺口', type: 'bar', data: rows.map(item => Math.round(Number(item.t_plus_1_gap || 0))), itemStyle: { color: '#0f766e' } },
+                { name: 'T+1 车辆变化', type: 'line', smooth: true, yAxisIndex: 1, data: rows.map(item => Math.round(Number(item.t_plus_1_net_flow || 0))), itemStyle: { color: '#dc2626' } }
             ]
         });
     }
@@ -465,13 +423,16 @@
         document.getElementById('dispatchChartView').style.display = view === 'chart' ? 'block' : 'none';
         document.getElementById('tableViewBtn').className = view === 'table' ? 'btn btn-light active' : 'btn btn-outline-light';
         document.getElementById('chartViewBtn').className = view === 'chart' ? 'btn btn-light active' : 'btn btn-outline-light';
-        if (view === 'chart') {
-            dispatchBarChart.resize();
-        }
+        if (view === 'chart') dispatchBarChart.resize();
     }
 
-    function renderSuggestions(suggestions) {
-        document.getElementById('suggestionsBox').innerHTML = suggestions.length
+    function renderSuggestions(suggestions, metrics) {
+        const totalGap = Number(metrics?.current_gap_total || 0);
+        const shortage = Number(metrics?.total_shortage || 0);
+        const surplus = Number(metrics?.total_surplus || 0);
+        const hasAction = suggestions.length > 0;
+        const emptyText = hasAction ? '' : (Math.abs(totalGap) >= 1 ? '当前存在明显供需差异，但未生成匹配到的调度建议，请检查阈值或输入数据。' : '当前供需基本平衡，无需调度');
+        document.getElementById('suggestionsBox').innerHTML = hasAction
             ? suggestions.map(item => `
                 <div class="suggestion-card">
                     <div class="d-flex justify-content-between align-items-center mb-2">
@@ -479,10 +440,10 @@
                         <span class="status-chip">真实调度建议</span>
                     </div>
                     <div class="fw-semibold">${item.from} → ${item.to}</div>
-                    <div class="section-note mt-2">T+1 缺口：${item.predicted_gap} · 距离成本：${item.distance_cost}</div>
+                    <div class="section-note mt-2">来源站点盈余 ${Number(item.from_surplus || 0).toFixed(0)} · 目标站点短缺 ${Number(item.to_shortage || 0).toFixed(0)} · 调度距离 ${Math.round(Number(item.distance_cost || 0) * 1000)} 米</div>
                 </div>
             `).join('')
-            : '<div class="empty-state">当前供需基本平衡，无需调度</div>';
+            : `<div class="empty-state">${emptyText}<br>总短缺量：${shortage} · 总盈余量：${surplus} · 当前全局缺口：${totalGap.toFixed(0)}</div>`;
     }
 
     function renderSnapshot(snapshot) {
@@ -492,8 +453,8 @@
         const metrics = snapshot.metrics || {};
 
         window.BSDPUI.animateNumber(document.getElementById('parkingSpotCount'), currentRows.length);
-        window.BSDPUI.animateNumber(document.getElementById('shortageCount'), currentRows.filter(item => (item.gap || 0) > 15).length);
-        window.BSDPUI.animateNumber(document.getElementById('surplusCount'), currentRows.filter(item => (item.gap || 0) < -15).length);
+        window.BSDPUI.animateNumber(document.getElementById('shortageCount'), currentRows.filter(item => item.current_state_group === 'scarce').length);
+        window.BSDPUI.animateNumber(document.getElementById('surplusCount'), currentRows.filter(item => item.current_state_group === 'saturated').length);
         window.BSDPUI.animateNumber(document.getElementById('globalTotal'), metrics.global_vehicle_total || 1200);
         window.BSDPUI.animateNumber(document.getElementById('dispatchableVehicles'), metrics.dispatchable_vehicles || 0);
         window.BSDPUI.animateNumber(document.getElementById('lockedVehicles'), metrics.locked_vehicles || 0);
@@ -509,9 +470,9 @@
                 dispatchRefreshController.setIntervalSeconds(refreshSeconds);
             }
         }
-        document.getElementById('dispatchRefreshLabel').textContent = '数据来源：实时快照服务 + T+1 预测缺口';
+        document.getElementById('dispatchRefreshLabel').textContent = '数据来源：实时快照服务 + T+1 车辆变化';
 
-        renderSuggestions(currentSuggestions);
+        renderSuggestions(currentSuggestions, metrics);
         renderMarkers(currentRows);
         renderDataView();
         toggleView(activeView);
@@ -550,18 +511,14 @@
     document.getElementById('tableViewBtn').addEventListener('click', function () { toggleView('table'); });
     document.getElementById('chartViewBtn').addEventListener('click', function () { toggleView('chart'); });
     document.getElementById('refreshBtn').addEventListener('click', function () {
-        if (dispatchRefreshController) {
-            dispatchRefreshController.triggerNow();
-        } else {
-            refreshSnapshot();
-        }
+        if (dispatchRefreshController) dispatchRefreshController.triggerNow();
     });
 
     renderSnapshot(initialSnapshot);
     dispatchRefreshController = window.BSDPUI.createRefreshController({
         countdownElement: document.getElementById('dispatchRefreshCountdown'),
         progressBar: document.getElementById('dispatchRefreshBar'),
-        alignToInterval: true,
+        alignToInterval: false,
         intervalSeconds: refreshSeconds,
         onRefresh: refreshSnapshot
     });

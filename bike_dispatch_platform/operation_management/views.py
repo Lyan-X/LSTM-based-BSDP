@@ -406,7 +406,7 @@ def vehicle_management(request):
     page_number = request.GET.get("page", "1")
 
     vehicle_queryset = build_vehicle_queryset(station_filter=station_filter, status_filter=status_filter)
-    vehicles_page = paginate_vehicle_queryset(vehicle_queryset, page_number=page_number, per_page=50)
+    vehicles_page = paginate_vehicle_queryset(vehicle_queryset, page_number=page_number, per_page=1200)
     for vehicle in vehicles_page.object_list:
         normalized = normalize_vehicle_status(vehicle.status)
         vehicle.normalized_status = normalized
@@ -442,7 +442,7 @@ def vehicle_runtime_api(request):
 
     ensure_vehicle_registry()
     vehicle_queryset = build_vehicle_queryset(station_filter=station_filter, status_filter=status_filter)
-    vehicles_page = paginate_vehicle_queryset(vehicle_queryset, page_number=page_number, per_page=50)
+    vehicles_page = paginate_vehicle_queryset(vehicle_queryset, page_number=page_number, per_page=1200)
     rows = []
     for vehicle in vehicles_page.object_list:
         normalized = normalize_vehicle_status(vehicle.status)

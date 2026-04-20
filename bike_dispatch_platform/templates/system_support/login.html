@@ -17,6 +17,22 @@
         .form-group input:focus, .form-group select:focus { outline: none; border-color: #667eea; }
         .btn-login { width: 100%; padding: 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
         .btn-login:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4); }
+        .btn-login.is-loading { position: relative; pointer-events: none; color: transparent; }
+        .btn-login.is-loading::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 1.1rem;
+            height: 1.1rem;
+            margin-top: -0.55rem;
+            margin-left: -0.55rem;
+            border: 2px solid rgba(255,255,255,0.45);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: loginSpin 0.8s linear infinite;
+        }
+        @keyframes loginSpin { to { transform: rotate(360deg); } }
         .alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9rem; }
         .alert-error { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
         .role-selector { display: flex; gap: 12px; }
@@ -24,13 +40,39 @@
         .role-selector input { display: none; }
         .role-selector input:checked + span { color: #667eea; font-weight: 600; }
         .role-selector label:has(input:checked) { border-color: #667eea; background: #f8f6ff; }
+        .login-loading-mask {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(255,255,255,0.72);
+            backdrop-filter: blur(8px);
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .login-loading-card {
+            width: min(320px, 86vw);
+            padding: 1.4rem 1.5rem;
+            border-radius: 18px;
+            background: rgba(255,255,255,0.96);
+            box-shadow: 0 22px 60px rgba(0,0,0,0.18);
+            text-align: center;
+        }
     </style>
 </head>
 <body>
+    <div class="login-loading-mask" id="loginLoadingMask" aria-hidden="true">
+        <div class="login-loading-card">
+            <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+            <div class="mt-3 fw-semibold">正在登录，请稍候...</div>
+            <div class="small text-secondary mt-2">系统正在加载最新的真实数据视图</div>
+        </div>
+    </div>
     <div class="login-container">
         <div class="login-header">
             <h1>{{ project_name }}</h1>
             <p>共享单车调度需求预测与运维管理</p>
+            <p style="margin-top:6px;color:#4b5563;font-size:0.86rem;line-height:1.5;">系统仅保留 3 个账号：管理员 `admin / 123456aA`、运维 `operator / 123456aA`、预测 `predictor / 123456aA`。</p>
         </div>
 
         {% if messages %}
@@ -39,7 +81,7 @@
             {% endfor %}
         {% endif %}
 
-        <form method="post">
+        <form method="post" id="loginForm">
             {% csrf_token %}
             <div class="form-group">
                 <label for="username">用户名</label>
@@ -56,9 +98,23 @@
                     <label><input type="radio" name="role" value="operator"><span>运维</span></label>
                     <label><input type="radio" name="role" value="predictor"><span>预测</span></label>
                 </div>
+                <div style="margin-top:8px;color:#6b7280;font-size:0.82rem;line-height:1.5;">仅支持以上 3 个固定角色；选择的角色必须与账号本身一致。</div>
             </div>
-            <button type="submit" class="btn-login">登录</button>
+            <button type="submit" class="btn-login" id="loginSubmitBtn">登录</button>
         </form>
     </div>
+    <script>
+        (function () {
+            const form = document.getElementById('loginForm');
+            const button = document.getElementById('loginSubmitBtn');
+            const mask = document.getElementById('loginLoadingMask');
+            if (!form || !button || !mask) return;
+            form.addEventListener('submit', function () {
+                button.classList.add('is-loading');
+                button.disabled = true;
+                mask.style.display = 'flex';
+            });
+        })();
+    </script>
 </body>
 </html>

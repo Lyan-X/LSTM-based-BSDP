@@ -2,71 +2,69 @@
 
 ## 项目简介
 
-本项目是一个**计算机软件型毕业设计项目**，基于Django框架和深度学习技术，实现共享单车调度需求预测与运维管理的一体化平台。系统集成了LSTM和BP神经网络模型，提供数据采集、需求预测、调度管理、系统监控等核心功能。
+本项目是一个**计算机软件型毕业设计项目**，基于 Django 框架和深度学习技术，实现共享单车调度需求预测与运维管理的一体化平台。系统以华盛顿真实共享单车数据为基础，构建燕山大学 62 个停车点的小时级核心数据集，并结合 LSTM 时序预测模型完成未来 48 小时需求预测、库存推演、实时状态刷新、供需缺口分析和调度建议生成，形成“数据—预测—调度—运维”完整闭环。
 
 ## 核心功能模块
 
 ### 1. 数据处理模块
-- ✅ CSV/Excel数据上传（支持多编码格式）
-- ✅ 数据清洗与格式标准化
-- ✅ 天气数据导入
-- ✅ 结构化数据仓库构建
+- ✅ 真实骑行数据映射到燕山大学 62 个停车点
+- ✅ 站点主数据同步与统一管理
+- ✅ 小时级核心数据集构建
+- ✅ 数据预览与导出
+- ✅ 支持真实数据驱动的统一分析口径
 
 ### 2. 需求预测模块
-- ✅ LSTM时序模型（准确率82%）
-- ✅ BP神经网络模型（准确率74.5%）
-- ✅ 特征融合（天气+区域+时空特征）
-- ✅ Web预测交互界面
+- ✅ LSTM 时序预测模型
+- ✅ 未来 48 小时净流量预测
+- ✅ 站点库存轨迹推演
+- ✅ 批量预测与单站点预测
 - ✅ 预测结果可视化展示
 
 ### 3. 运维管理模块
-- ✅ 车辆状态实时监控
-- ✅ 供需热力图动态展示（ECharts）
-- ✅ 调度任务生成与分配
-- ✅ 运维人员轨迹追踪
-- ✅ 调度效果评估
+- ✅ 实时站点状态刷新
+- ✅ 供需缺口分析
+- ✅ 调度建议生成
+- ✅ 站点运维管理
+- ✅ 车辆运维、故障上报与工单流转
 
 ### 4. 系统支撑模块
-- ✅ 多角色权限管理（管理员/运维人员/预测人员）
-- ✅ 数据加密存储与定期备份
-- ✅ 系统日志记录
-- ✅ 系统总览Dashboard
+- ✅ 登录认证与权限控制
+- ✅ 系统参数配置
+- ✅ 操作日志记录
+- ✅ 数据库备份
+- ✅ 仪表盘与实时概览
 
 ## 技术栈
 
 ### 后端
-- **Web框架**：Django 4.2.10
-- **深度学习**：TensorFlow 2.15.0
-- **数据处理**：Pandas, NumPy
-- **可视化**：ECharts 5.4.3, Matplotlib
+- **Web 框架**：Django 4.2.x
+- **深度学习**：TensorFlow / Keras
+- **数据处理**：Pandas、NumPy
+- **优化求解**：SciPy
 
 ### 前端
-- **UI框架**：Bootstrap 5.3.0
-- **图标库**：Bootstrap Icons 1.11.0
-- **图表库**：ECharts 5.4.3
-- **地图库**：Leaflet.js 1.9.4
+- **页面渲染**：Django Template
+- **图表展示**：ECharts
+- **地图展示**：Leaflet.js
+- **样式框架**：Bootstrap
 
 ### 数据库
-- **开发环境**：SQLite 3
-- **生产环境**：MySQL/PostgreSQL（推荐）
+- **开发环境**：SQLite
+- **生产环境**：SQLite / MySQL / PostgreSQL 可扩展
 
 ## 快速开始
 
 ### 1. 环境准备
 
 ```bash
-# 克隆项目
-git clone <repository-url>
+# 进入项目目录
 cd BSDP
 
 # 创建虚拟环境（推荐）
 python -m venv venv
 
 # 激活虚拟环境
-# Windows:
 venv\Scripts\activate
-# Linux/Mac:
-source venv/bin/activate
 
 # 安装依赖
 pip install -r requirements.txt
@@ -76,11 +74,7 @@ pip install -r requirements.txt
 
 ```bash
 cd bike_dispatch_platform
-
-# 创建迁移文件
 python manage.py makemigrations
-
-# 执行迁移
 python manage.py migrate
 ```
 
@@ -90,251 +84,157 @@ python manage.py migrate
 python manage.py createsuperuser
 ```
 
-按提示输入用户名、邮箱、密码，**角色选择：admin**
+按提示输入用户名、邮箱、密码后完成创建。
 
-### 4. 准备模型文件（可选）
-
-如果模型文件不存在，需要先训练模型：
-
-```bash
-# 训练LSTM模型
-cd models
-python train_lstm.py
-
-# 训练BP模型
-python train_bp.py
-```
-
-确保以下文件存在：
-- `models/bike_lstm_model.h5`
-- `models/bike_bp_model_radical.h5`
-- `utils/scaler_x.pkl`
-- `utils/scaler_y.pkl`
-
-### 5. 启动服务
+### 4. 启动服务
 
 ```bash
 cd bike_dispatch_platform
 python manage.py runserver
 ```
 
-访问：`http://localhost:8000/system/login/`
+访问：`http://127.0.0.1:8000/`
+
+系统根路径会自动跳转到首页仪表盘，登录入口为：`/system/login/`
 
 ## 项目结构
 
-```
+```text
 BSDP/
-├── bike_dispatch_platform/          # Django项目主目录
+├── bike_dispatch_platform/          # Django 项目主目录
 │   ├── bike_dispatch_platform/      # 项目配置
-│   │   ├── settings.py             # Django配置
-│   │   └── urls.py                 # 根URL配置
-│   │
-│   ├── data_process/               # 数据处理模块
-│   │   ├── models.py              # 数据模型
-│   │   ├── views.py               # 视图函数
-│   │   ├── urls.py                # URL配置
-│   │   ├── services/              # 数据服务
-│   │   └── templates/             # 数据管理模板
-│   │       └── data_process/
-│   │           └── data_manage.html  # 数据管理页面
-│   │
-│   ├── demand_prediction/          # 需求预测模块
-│   │   ├── models.py              # 预测结果模型
-│   │   ├── views.py               # 预测视图
-│   │   ├── urls.py                # URL配置
-│   │   ├── model_urls.py          # 模型预测URL配置
-│   │   └── templates/             # 预测管理模板
-│   │       └── demand_prediction/
-│   │           ├── model_predict.html    # 模型预测页面
-│   │           └── predict_result.html   # 预测结果页面
-│   │
+│   ├── data_process/                # 数据处理模块
+│   ├── demand_prediction/           # 需求预测模块
 │   ├── operation_management/       # 运维管理模块
-│   │   ├── models.py              # 车辆、任务模型
-│   │   ├── views.py               # 运维视图
-│   │   └── urls.py                # URL配置
-│   │
 │   ├── system_support/             # 系统支撑模块
-│   │   ├── models.py              # 用户、日志、备份模型
-│   │   ├── views.py               # 系统视图
-│   │   ├── middleware.py          # 日志中间件
-│   │   ├── urls.py                # URL配置
-│   │   └── templates/             # 系统支撑模板
-│   │       └── system_support/
-│   │           └── dashboard.html  # 系统总览页面
-│   │
-│   ├── templates/                 # 模板文件
-│   │   ├── base.html              # 基础模板
-│   │   ├── system_support/        # 系统支撑模板
-│   │   ├── demand_prediction/     # 需求预测模板
-│   │   └── operation_management/  # 运维管理模板
-│   │
-│   └── manage.py                   # Django管理脚本
+│   └── manage.py                   # Django 管理脚本
 │
-├── models/                         # 模型训练脚本
-│   ├── train.py                    # 模型训练
-│   ├── model.py                    # 模型定义
-│   └── preprocess.py               # 数据预处理
-│
-├── data/                           # 数据目录
-│   ├── processed/                  # 处理后的数据
-│   └── raw/                        # 原始数据
-│
-├── results/                        # 结果目录
-│   └── *.png                       # 训练结果可视化
-│
-├── predict_results/                # 预测结果目录
-├── station_info/                   # 站点信息目录
-├── utils/                          # 工具函数
-├── config.py                       # 配置文件
-├── ysu_bike_data.csv               # 训练数据
-├── generate_ysu_bike_data.py       # 数据生成脚本
-├── clear_all_data.py               # 清理数据脚本
-├── clear_database.py               # 清理数据库脚本
-├── data_loader.py                  # 数据加载脚本
-├── geo_visualization.py            # 地理可视化脚本
-├── visualize_results.py            # 结果可视化脚本
-├── 集成文档.md                      # 详细集成文档
-├── 测试用例文档.md                  # 测试用例
-├── 项目完成总结.md                  # 项目总结
-├── 数据导入指南.md                  # 数据导入指南
-└── README.md                       # 本文件
+├── station_info/                   # 站点主数据与映射
+├── results/                        # 模型结果与可视化
+├── output/                         # 浏览器/测试输出文件
+├── bike_demand_research/          # 独立研究与实验脚本
+├── ysu_62_station_master_data.csv  # 站点主数据
+├── ysu_62_station_mapping.csv      # 站点映射数据
+├── ysu_62_stations_hourly_core_dataset.csv  # 小时级核心数据集
+├── README.md                       # 项目说明文档
+└── 其他脚本与报告文件
 ```
 
 ## 功能演示
 
-### 1. 登录系统
-访问 `http://localhost:8000/system/login/`，选择角色并登录。
+### 1. 首页仪表盘
+访问 `/system/dashboard/`。
 
-### 2. 系统总览
-- 登录后访问 `/system/dashboard/`
-- 查看系统状态、地图和数据概览
-- 地图支持缩放、平移和停车点弹窗
+可查看：
+- 平台总车辆数
+- 在线站点数
+- 当日骑行量
+- 当前供需缺口
+- 实时地图与站点状态
+- 未来 48 小时预测趋势
+- 调度建议摘要
 
-### 3. 数据管理
-- 访问 `/data/manage/`
-- **初始数据导入**：上传CSV/Excel数据文件
-- **数据闭环日志**：查看自动收集的停车点数据
-- **滚动窗口数据预览**：查看14天窗口的数据统计
+### 2. 预测接口
+- `GET /predict/api/48h/`：全站 62 个站点未来 48 小时预测结果
+- `GET /predict/api/station/<station_id>/`：单站点预测结果
+- `GET /predict/spot/api/`：前端批量预测展示接口
 
-### 4. 模型与预测管理
-- 访问 `/model/predict/`
-- **模型训练日志**：查看模型训练历史和性能指标
-- **实时预测结果**：查看各停车点的未来30分钟需求量预测
+### 3. 运维管理
+可在运维页面查看：
+- 站点实时状态
+- 供需热力图
+- 调度建议
+- 车辆状态与故障工单
 
-### 5. 预测结果对比
-- 访问 `/model/predict/result/`
-- 查看预测值与真实值的对比数据
-- 导出CSV格式的对比报告
-
-### 6. 调度任务管理
-- 管理员访问 `/operation/tasks/create/`
-- 基于预测结果创建调度任务
-- 分配给运维人员
-- 查看任务列表和详情
-
-### 7. 供需热力图
-- 访问 `/operation/heatmap/`
-- 查看各区域-时段的骑行需求热力图
-- 支持时间范围筛选
-
-### 8. 数据备份
-- 管理员访问 `/system/backup/`
-- 创建数据备份
-- 查看备份列表和下载备份文件
+### 4. 系统设置与日志
+管理员可进行：
+- 参数配置
+- 操作日志查看
+- 数据库备份
+- 系统状态检查
 
 ## 验收标准对照
 
-| 验收项 | 要求 | 完成情况 |
-|-------|------|---------|
-| 预测模型准确率 | ≥75% | ✅ **82%** (LSTM) |
-| 系统响应时间 | ≤3秒 | ✅ **平均2.3秒** |
-| 多用户并发 | 支持 | ✅ Django Session |
-| 多角色权限 | 管理员/运维人员 | ✅ 三种角色 |
-| 界面操作便捷 | 布局合理 | ✅ Bootstrap 5响应式 |
-| 代码规范 | 命名规范、注释 | ✅ 关键模块有注释 |
+| 验收项 | 当前实现 |
+|-------|---------|
+| 真实数据映射 | ✅ 华盛顿真实骑行数据映射到 62 个站点 |
+| 需求预测 | ✅ LSTM 未来 48 小时预测 |
+| 实时状态刷新 | ✅ 10 秒级快照更新 |
+| 车辆守恒 | ✅ 全局 1200 辆守恒 |
+| 调度建议 | ✅ 基于缺口与盈余生成建议 |
+| 运维管理 | ✅ 站点、车辆、工单、日志、备份 |
 
 ## 用户角色说明
 
 ### 系统管理员（admin）
 - ✅ 全功能访问权限
-- ✅ 数据备份与恢复
-- ✅ 系统日志查看
-- ✅ 用户管理（通过Admin后台）
+- ✅ 系统参数配置
+- ✅ 数据库备份与恢复
+- ✅ 日志查看
 
 ### 运维人员（operator）
-- ✅ 车辆状态监控
-- ✅ 调度任务查看与执行
-- ✅ 运维轨迹记录
-- ❌ 无系统管理权限
+- ✅ 站点状态查看
+- ✅ 车辆运维与工单处理
+- ✅ 调度任务查看
 
 ### 预测人员（predictor）
-- ✅ 数据导入
-- ✅ 需求预测
-- ✅ 预测结果查看
-- ❌ 无运维管理权限
+- ✅ 需求预测查看
+- ✅ 数据分析与结果导出
+- ✅ 预测结果可视化
 
 ## 常见问题
 
-### Q1: 模型文件不存在怎么办？
-**A:** 系统已添加容错处理，如果模型文件不存在，会显示友好提示。建议先运行模型训练脚本生成模型文件。
+### Q1: 启动后访问哪个地址？
+**A:** 访问 `http://127.0.0.1:8000/`，系统会自动跳转到首页仪表盘。
 
-### Q2: 如何创建测试用户？
-**A:** 使用Django Admin后台或Python shell：
-```python
-from system_support.models import User
-User.objects.create_user(username='test', password='123456', role='operator')
-```
+### Q2: 登录入口在哪里？
+**A:** 登录入口为 `/system/login/`。
 
-### Q3: 数据库迁移失败？
-**A:** 删除`bike_dispatch_db.db`文件，重新执行`python manage.py migrate`
+### Q3: 数据文件缺失怎么办？
+**A:** 请确认以下文件存在于项目根目录：
+- `ysu_62_station_master_data.csv`
+- `ysu_62_station_mapping.csv`
+- `ysu_62_stations_hourly_core_dataset.csv`
 
-### Q4: 静态文件404错误？
-**A:** 运行`python manage.py collectstatic`收集静态文件
+### Q4: 模型文件缺失怎么办？
+**A:** 请检查 `bike_dispatch_platform/demand_prediction/model_assets/` 目录下的模型与缩放器文件是否存在。
 
 ## 开发文档
 
-- [集成文档](集成文档.md) - 详细的集成步骤和配置说明
-- [测试用例文档](测试用例文档.md) - 完整的功能测试用例
-- [项目完成总结](项目完成总结.md) - 项目完成情况总结
+- [项目当前功能与实现说明](项目当前功能与实现说明.md)
+- [系统全量测试报告](系统全量测试报告.md)
+- [项目最终验收报告](项目最终验收报告.md)
+- [项目部署与操作手册](项目部署与操作手册.md)
 
 ## 技术亮点
 
-1. **特征融合**：天气数据 + 区域特征 + 历史骑行数据，提升预测准确率
-2. **权限控制**：基于装饰器的角色权限管理，代码简洁易维护
-3. **日志中间件**：自动记录用户操作，无需手动添加日志代码
-4. **响应式设计**：Bootstrap 5实现，支持PC/平板/手机访问
-5. **模型优化**：延迟加载模型，避免重复加载，提升响应速度
+1. **真实映射数据驱动**：以真实共享单车订单为基础，保证数据来源与业务场景一致。
+2. **预测到调度闭环**：从净流量预测延伸到库存推演与调度建议生成。
+3. **实时状态刷新**：支持 10 秒级快照更新，适合仪表盘高频展示。
+4. **全局守恒约束**：严格保持 1200 辆车辆总数不变，符合实际调度逻辑。
+5. **工程化运维能力**：支持日志、备份、工单、站点与车辆管理。
 
 ## 后续改进建议
 
-1. **API开发**：提供RESTful API，支持移动端接入
-2. **实时通信**：使用WebSocket实现车辆位置实时更新
-3. **数据分析**：添加数据可视化Dashboard
-4. **机器学习优化**：尝试更多模型（GRU、Transformer等）
-5. **部署优化**：使用Docker容器化部署
+1. **引入更丰富的时序模型**：可尝试 GRU、Transformer 等模型对比。
+2. **增强实时通信能力**：可加入 WebSocket 提升状态推送效率。
+3. **扩展 API 接口**：便于移动端或第三方系统接入。
+4. **容器化部署**：使用 Docker 提升部署一致性。
+5. **完善监控体系**：增加系统运行监控与告警面板。
 
 ## 许可证
 
-本项目为毕业设计项目，仅供学习参考。
+本项目为毕业设计项目，仅供学习与研究参考。
 
 ## 联系方式
 
-如有问题，请查看：
-- [集成文档](集成文档.md) - 常见问题解决
-- [测试用例文档](测试用例文档.md) - 功能测试说明
+如需进一步了解项目内容，请查看：
+- [项目当前功能与实现说明](项目当前功能与实现说明.md)
+- [项目部署与操作手册](项目部署与操作手册.md)
+- [系统全量测试报告](系统全量测试报告.md)
 
 ---
 
 **项目状态：** ✅ 核心功能已完成  
-**最后更新：** 2026-02-10  
-**版本：** v1.1
-
-## 最近更新内容
-
-1. **地图功能优化**：限制最大放大级别为18，避免过度放大导致地图错位
-2. **UI修复**：修复模型预测/数据管理页面小菜单栏的白字白背景问题
-3. **新增页面**：
-   - `/data/manage/`：数据管理页面，包含初始数据导入、数据闭环日志、滚动窗口数据预览
-   - `/model/predict/`：模型与预测管理页面，包含模型训练日志、实时预测结果
-   - `/model/predict/result/`：预测结果对比页面，包含预测值vs真实值对比
-4. **GitHub上传规范**：配置.gitignore排除.trae目录，删除仓库中多余的.trae目录
+**最后更新：** 2026-04-20  
+**版本：** v2.0

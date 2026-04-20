@@ -321,7 +321,7 @@
                     symbolSize: 5,
                     areaStyle: { opacity: 0.12 },
                     lineStyle: { width: 3 },
-                    data: station.predictions || []
+                    data: (station.predictions || []).map(item => Math.round(Number(item || 0)))
                 },
                 {
                     name: '预测库存',
@@ -347,8 +347,8 @@
                     <span class="badge" style="background-color:${station.t_plus_1_state_color || '#6c757d'};">${station.t_plus_1_state_label || '--'}</span>
                 </td>
                 <td>${station.t_plus_1_state_range || '--'}</td>
-                <td>${Number(station.t_plus_1_state_midpoint || 0).toFixed(2)}</td>
-                <td>${Number(station.t_plus_1_gap || 0).toFixed(2)}</td>
+                <td>${Math.round(Number(station.t_plus_1_state_midpoint || 0))}</td>
+                <td>${Math.round(Number(station.t_plus_1_gap || 0))}</td>
             </tr>
         `).join('') : '<tr><td colspan="6" class="text-center text-muted py-4">暂无预测数据</td></tr>';
     }
@@ -449,7 +449,7 @@
     predictionRefreshController = window.BSDPUI.createRefreshController({
         countdownElement: document.getElementById('predictionRefreshCountdown'),
         progressBar: document.getElementById('predictionRefreshBar'),
-        alignToInterval: true,
+        alignToInterval: false,
         intervalSeconds: refreshSeconds,
         onRefresh: refreshPredictionBatch
     });

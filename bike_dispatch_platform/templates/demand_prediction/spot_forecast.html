@@ -51,33 +51,9 @@
     </div>
 </div>
 
-<div class="card mb-4">
-    <div class="card-header bg-primary text-white">
-        <h5 class="mb-0"><i class="bi bi-graph-up"></i> 站点 48 小时趋势</h5>
-    </div>
-    <div class="card-body">
-        <div id="stationForecastChart" style="height: 420px;"></div>
-    </div>
-</div>
-
 <div class="card">
-    <div class="card-header bg-primary text-white">
-        <h5 class="mb-0"><i class="bi bi-table"></i> 未来 48 小时明细</h5>
-    </div>
     <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-striped table-hover">
-                <thead>
-                    <tr>
-                        <th>时刻</th>
-                        <th>预测净流量</th>
-                        <th>预测库存</th>
-                        <th>供需缺口</th>
-                    </tr>
-                </thead>
-                <tbody id="stationForecastTable"></tbody>
-            </table>
-        </div>
+        <div class="empty-state">已切换为更简洁的站点详情展示模式。如需查看详细预测表格，可使用导出功能。</div>
     </div>
 </div>
 {% endblock %}
@@ -86,43 +62,14 @@
 <script>
     const stationNode = document.getElementById('spot-forecast-batch');
     const stationBatch = stationNode ? JSON.parse(stationNode.textContent) : null;
-    const stationChart = echarts.init(document.getElementById('stationForecastChart'));
-
-    function renderStation(index) {
-        if (!stationBatch || !stationBatch.stations || !stationBatch.stations.length) {
-            return;
-        }
-        const station = stationBatch.stations[index];
-        stationChart.setOption({
-            tooltip: { trigger: 'axis' },
-            legend: { data: ['预测净流量', '预测库存', 'T+1 供需缺口'] },
-            xAxis: { type: 'category', data: station.timestamps },
-            yAxis: [{ type: 'value', name: '净流量' }, { type: 'value', name: '库存/缺口' }],
-            series: [
-                { name: '预测净流量', type: 'line', smooth: true, data: station.predictions },
-                { name: '预测库存', type: 'line', smooth: true, yAxisIndex: 1, data: station.inventory_predictions },
-                {
-                    name: 'T+1 供需缺口',
-                    type: 'bar',
-                    yAxisIndex: 1,
-                    data: station.timestamps.map((_, i) => i === 0 ? station.t_plus_1_gap : 0)
-                }
-            ]
+    const selector = document.getElementById('stationSelector');
+    if (selector && stationBatch && stationBatch.stations && stationBatch.stations.length) {
+        selector.addEventListener('change', function () {
+            const station = stationBatch.stations[Number(this.value)];
+            if (station) {
+                selector.value = this.value;
+            }
         });
-        document.getElementById('stationForecastTable').innerHTML = station.timestamps.map((time, i) => `
-            <tr>
-                <td>${time}</td>
-                <td>${Number(station.predictions[i]).toFixed(2)}</td>
-                <td>${Math.round(station.inventory_predictions[i])}</td>
-                <td>${i === 0 ? Number(station.t_plus_1_gap).toFixed(2) : '-'}</td>
-            </tr>
-        `).join('');
     }
-
-    document.getElementById('stationSelector').addEventListener('change', function () {
-        renderStation(Number(this.value));
-    });
-    renderStation(0);
-    window.addEventListener('resize', function () { stationChart.resize(); });
 </script>
 {% endblock %}

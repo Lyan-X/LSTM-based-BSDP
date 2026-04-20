@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
 {% block title %}总览 - 基于深度学习的城市共享单车调度需求预测与运维管理平台{% endblock %}
 
@@ -41,7 +41,14 @@
         margin-top: 0.2rem;
     }
 
+    #campusRealtimeMap .leaflet-marker-icon {
+        background: transparent !important;
+        border: 0 !important;
+    }
+
     #campusRealtimeMap .station-marker {
+        position: relative;
+        z-index: 460;
         border-radius: 999px;
         border: 2px solid rgba(255,255,255,0.95);
         color: #fff;
@@ -49,8 +56,10 @@
         align-items: center;
         justify-content: center;
         font-weight: 800;
-        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
         line-height: 1;
+        opacity: 1 !important;
+        visibility: visible !important;
         transition: transform 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
     }
 
@@ -60,12 +69,12 @@
 
     @keyframes markerPulse {
         0% { transform: scale(0.96); }
-        40% { transform: scale(1.16); }
+        45% { transform: scale(1.16); }
         100% { transform: scale(1); }
     }
 
     .station-side-list {
-        max-height: 270px;
+        max-height: 360px;
         overflow: auto;
         padding-right: 0.2rem;
     }
@@ -90,16 +99,6 @@
         box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.08);
     }
 
-    .dispatch-suggestion-card {
-        border: 1px solid rgba(245, 158, 11, 0.26);
-        border-radius: 16px;
-        padding: 0.9rem 0.95rem;
-        background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(234, 179, 8, 0.08));
-        margin-bottom: 0.8rem;
-    }
-
-    .dispatch-suggestion-card:last-child { margin-bottom: 0; }
-
     .map-card-body {
         position: relative;
     }
@@ -114,7 +113,7 @@
         border-radius: 16px;
         padding: 0.75rem 0.9rem;
         box-shadow: var(--shadow-sm);
-        min-width: 210px;
+        min-width: 240px;
     }
 
     body.dark-mode .map-overlay {
@@ -135,11 +134,6 @@
 
     .map-overlay strong {
         color: var(--text-color);
-    }
-
-    .chart-note {
-        color: var(--text-secondary);
-        font-size: 0.82rem;
     }
 
     @media (max-width: 992px) {
@@ -167,11 +161,10 @@
                 <i class="bi bi-speedometer2 fs-3 text-primary"></i>
                 <div>
                     <h2>城市级运维总览</h2>
-                    <p class="hero-note">页面数据全部来自实时快照服务与预测服务，不使用随机补值；当前页每 10 秒自动同步一次最新快照。</p>
+                    <p class="hero-note">本页只保留总览必需信息：核心指标、实时地图、单站点骑行小时趋势和重点站点状态。数据每 10 秒自动刷新一次。</p>
                 </div>
             </div>
             <div class="hero-meta">
-                <span class="data-badge"><i class="bi bi-database-check"></i> 真实数据驱动</span>
                 <span class="data-badge"><i class="bi bi-arrow-repeat"></i> 10 秒自动刷新</span>
                 <span class="data-badge"><i class="bi bi-geo-alt"></i> 62 个固定站点</span>
                 <span class="data-badge"><i class="bi bi-bicycle"></i> 1200 车辆守恒</span>
@@ -195,10 +188,10 @@
             </div>
             <div class="meta-tile">
                 <div class="label">数据来源</div>
-                <div class="value">实时快照 + 预测服务</div>
+                <div class="value">实时快照 + 真实预测</div>
             </div>
             <div class="meta-tile">
-                <div class="label">系统模型版本</div>
+                <div class="label">模型版本</div>
                 <div class="value" id="dashboardModelVersion">{{ settings_obj.model_version }}</div>
             </div>
         </div>
@@ -211,7 +204,7 @@
             <div class="stat-icon"><i class="bi bi-bicycle"></i></div>
             <div class="stat-value" id="kpi-total">1200</div>
             <div class="stat-label">平台总车辆数</div>
-            <div class="stat-meta">来自 10 秒实时快照聚合结果</div>
+            <div class="stat-meta">来自实时快照守恒校验结果</div>
         </div>
     </div>
     <div class="col-md-6 col-xl-3">
@@ -227,7 +220,7 @@
             <div class="stat-icon"><i class="bi bi-activity"></i></div>
             <div class="stat-value" id="kpi-rides">0</div>
             <div class="stat-label">当日累计骑行量</div>
-            <div class="stat-meta">来自真实映射数据日内统计</div>
+            <div class="stat-meta">基于当前回放日的真实小时出流</div>
         </div>
     </div>
     <div class="col-md-6 col-xl-3">
@@ -235,7 +228,7 @@
             <div class="stat-icon"><i class="bi bi-arrows-angle-expand"></i></div>
             <div class="stat-value" id="kpi-gap">0</div>
             <div class="stat-label">当前全局供需缺口</div>
-            <div class="stat-meta">按实时快照与 T+1 预测共同计算</div>
+            <div class="stat-meta">按实时快照与 T+1 结果共同计算</div>
         </div>
     </div>
 </div>
@@ -245,92 +238,43 @@
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5><i class="bi bi-map"></i> 燕山大学 62 站点实时地图</h5>
-                <span class="small">站点标记直接显示当前库存，颜色代表实时供需状态</span>
+                <span class="small">站点数字显示当前库存，颜色显示当前供需状态</span>
             </div>
             <div class="card-body map-card-body p-0">
-                <div id="campusRealtimeMap" style="height: 520px;"></div>
+                <div id="campusRealtimeMap" style="height: 560px;"></div>
                 <div class="map-overlay">
                     <div class="row-line"><span>地图中心</span><strong>119.528179, 39.909689</strong></div>
                     <div class="row-line"><span>快照时间</span><strong id="mapSnapshotTime">--</strong></div>
+                    <div class="row-line"><span>预警阈值</span><strong id="warningThreshold">{{ settings_obj.demand_warning_threshold }}</strong></div>
                     <div class="row-line"><span>调度阈值</span><strong id="mapDispatchThreshold">{{ settings_obj.dispatch_trigger_threshold }}</strong></div>
-                    <div class="row-line"><span>数据口径</span><strong>真实库存 + T+1 预测</strong></div>
+                    <div class="row-line"><span>数据口径</span><strong>真实库存 + T+1 车辆变化</strong></div>
                 </div>
             </div>
         </div>
     </div>
     <div class="col-xl-4">
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5><i class="bi bi-sliders"></i> 系统设置概览</h5>
-                <span class="small">与系统设置页同步</span>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-6">
-                        <div class="soft-card p-3 h-100">
-                            <div class="section-note">刷新频率</div>
-                            <div class="fw-bold fs-5"><span id="refreshSeconds">{{ settings_obj.dashboard_refresh_seconds }}</span> 秒</div>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="soft-card p-3 h-100">
-                            <div class="section-note">预警阈值</div>
-                            <div class="fw-bold fs-5" id="warningThreshold">{{ settings_obj.demand_warning_threshold }}</div>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="soft-card p-3 h-100">
-                            <div class="section-note">调度阈值</div>
-                            <div class="fw-bold fs-5" id="dispatchThreshold">{{ settings_obj.dispatch_trigger_threshold }}</div>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="soft-card p-3 h-100">
-                            <div class="section-note">模型版本</div>
-                            <div class="fw-bold small" id="modelVersion">{{ settings_obj.model_version }}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5><i class="bi bi-signpost-split"></i> 调度建议</h5>
-                <span class="small">仅展示真实调度输出</span>
-            </div>
-            <div class="card-body" id="suggestionList">
-                <div class="empty-state">暂无调度建议</div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row g-4">
-    <div class="col-xl-7">
-        <div class="card h-100">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5><i class="bi bi-graph-up-arrow"></i> 站点预测趋势</h5>
-                <div class="d-flex align-items-center gap-2">
-                    <select id="trendStationSelector" class="form-select form-select-sm" style="width:auto;min-width:180px;"></select>
-                    <span class="chart-note">展示选中站点的 48 小时预测结果</span>
-                </div>
-            </div>
-            <div class="card-body">
-                <div id="rideTrendChart" style="height: 340px;"></div>
-            </div>
-        </div>
-    </div>
-    <div class="col-xl-5">
-        <div class="card h-100">
-            <div class="card-header d-flex justify-content-between align-items-center">
                 <h5><i class="bi bi-exclamation-diamond"></i> 重点站点状态</h5>
-                <span class="chart-note">按实时缺口绝对值排序</span>
+                <span class="small">按实时缺口绝对值排序</span>
             </div>
             <div class="card-body">
                 <div class="station-side-list" id="stationStatusCards"></div>
             </div>
         </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5><i class="bi bi-graph-up-arrow"></i> 单站点骑行小时趋势</h5>
+        <div class="d-flex align-items-center gap-2">
+            <select id="trendStationSelector" class="form-select form-select-sm" style="width:auto;min-width:220px;"></select>
+            <span class="small">默认展示供需缺口最大的站点，可切换查看单站点当天车辆数与下一小时预测车辆数</span>
+        </div>
+    </div>
+    <div class="card-body">
+        <div id="rideTrendChart" style="height: 360px;"></div>
     </div>
 </div>
 {% endblock %}
@@ -353,7 +297,10 @@
         [39.910460,119.537806],[39.913813,119.529450]
     ];
 
-    const campusRealtimeMap = L.map('campusRealtimeMap').setView(campusCenter, 15);
+    const campusRealtimeMap = L.map('campusRealtimeMap', {
+        preferCanvas: false,
+        zoomControl: true
+    }).setView(campusCenter, 15);
     const stationLayer = L.layerGroup().addTo(campusRealtimeMap);
     const markerRegistry = {};
     const stateCache = { previousPayload: null };
@@ -365,11 +312,7 @@
     L.polygon(campusPolygon, { color: '#1890FF', weight: 2, fillOpacity: 0.08 }).addTo(campusRealtimeMap);
 
     function markerColor(row) {
-        if (row.current_state_color) return row.current_state_color;
-        if ((row.gap || 0) > 15) return '#dc2626';
-        if ((row.gap || 0) < -15) return '#16a34a';
-        if (row.warning_status === 'low' || row.warning_status === 'high') return '#f59e0b';
-        return '#2563eb';
+        return row.current_state_color || '#2563eb';
     }
 
     function markerSize(row) {
@@ -381,15 +324,9 @@
     }
 
     function statusLabel(row) {
-        if (row.current_state_label) {
-            if (row.current_state_group === 'scarce') return { text: row.current_state_label, badge: 'danger' };
-            if (row.current_state_group === 'saturated') return { text: row.current_state_label, badge: 'warning' };
-            return { text: row.current_state_label, badge: 'success' };
-        }
-        if ((row.gap || 0) > 15) return { text: '稀少', badge: 'danger' };
-        if ((row.gap || 0) < -15) return { text: '盈余', badge: 'success' };
-        if (row.warning_status === 'low' || row.warning_status === 'high') return { text: '预警观察', badge: 'warning' };
-        return { text: '运行平稳', badge: 'primary' };
+        if (row.current_state_group === 'scarce') return { text: row.current_state_label || '稀少', badge: 'danger' };
+        if (row.current_state_group === 'saturated') return { text: row.current_state_label || '盈余', badge: 'warning' };
+        return { text: row.current_state_label || '适中', badge: 'success' };
     }
 
     function applyKpi(elementId, cardId, nextValue, decimals = 0, suffix = '') {
@@ -402,13 +339,11 @@
         }
     }
 
-    let predictionCache = null;
-
     function ensureTrendStationSelector(stations) {
         const selector = document.getElementById('trendStationSelector');
         const currentValue = selector.value;
         selector.innerHTML = (stations || []).map(station =>
-            `<option value="${station.station_id}">${station.station_id} - ${station.station_name || station.name || ('站点 ' + station.station_id)}</option>`
+            `<option value="${station.station_id}">${station.station_id} - ${station.name}</option>`
         ).join('');
         if (currentValue && (stations || []).some(item => String(item.station_id) === String(currentValue))) {
             selector.value = currentValue;
@@ -419,76 +354,80 @@
         renderTrendChartForStation(this.value);
     });
 
-    async function fetchPredictionData() {
-        try {
-            const response = await fetch('/predict/api/48h/', { cache: 'no-store' });
-            const payload = await response.json();
-            if (payload && payload.stations) {
-                predictionCache = payload;
-                ensureTrendStationSelector(payload.stations);
-                const selectedId = document.getElementById('trendStationSelector').value;
-                renderTrendChartForStation(selectedId);
-            }
-        } catch (error) {
-            console.error('Failed to fetch prediction data for trend chart:', error);
-        }
-    }
-
     function renderTrendChartForStation(stationId) {
-        if (!predictionCache || !predictionCache.stations) return;
-        const station = predictionCache.stations.find(s => String(s.station_id) === String(stationId));
-        if (!station) return;
-
-        const timestamps = (station.timestamps || []).map(t => t.slice(11, 16));
+        const trendMap = stateCache.previousPayload?.charts?.station_trends || dashboardPayload.charts?.station_trends || {};
+        const trendRows = trendMap[String(stationId)] || [];
+        if (!trendRows.length) {
+            rideTrendChart.clear();
+            return;
+        }
+        const actualRows = trendRows.filter(item => !item.is_prediction);
+        const predictionRow = trendRows.find(item => item.is_prediction);
+        const timestamps = actualRows.map(item => String(item.hour).padStart(2, '0') + ':00');
+        const actualSeries = actualRows.map(item => Math.round(Number(item.value || 0)));
+        const predictionIndex = predictionRow ? actualRows.findIndex(item => Number(item.hour) === Number(predictionRow.hour)) : -1;
+        const predictionHourLabel = predictionRow ? String(predictionRow.hour).padStart(2, '0') + ':00' : null;
+        const chartLabels = predictionHourLabel && !timestamps.includes(predictionHourLabel)
+            ? timestamps.concat([predictionHourLabel])
+            : timestamps;
         rideTrendChart.setOption({
             tooltip: { trigger: 'axis' },
-            legend: { data: ['预测净流量', '预测库存'] },
+            legend: { data: ['车辆数', '下一小时预测车辆数'] },
             grid: { left: 44, right: 16, top: 28, bottom: 36 },
-            xAxis: { type: 'category', data: timestamps },
-            yAxis: [
-                { type: 'value', name: '净流量' },
-                { type: 'value', name: '库存' }
-            ],
+            xAxis: {
+                type: 'category',
+                data: chartLabels,
+                boundaryGap: false,
+                axisLabel: { interval: 0 },
+                axisTick: { alignWithLabel: true }
+            },
+            yAxis: [{ type: 'value', name: '车辆数' }],
+            dataZoom: [{ type: 'inside', xAxisIndex: 0 }],
             series: [
                 {
-                    name: '预测净流量',
+                    name: '车辆数',
                     type: 'line',
                     smooth: true,
                     symbol: 'circle',
                     symbolSize: 4,
                     areaStyle: { opacity: 0.12 },
                     lineStyle: { width: 2 },
-                    data: station.predictions || []
+                    data: actualSeries.concat([null]),
+                    connectNulls: false
                 },
                 {
-                    name: '预测库存',
+                    name: '下一小时预测车辆数',
                     type: 'line',
                     smooth: true,
-                    yAxisIndex: 1,
-                    symbol: 'none',
-                    lineStyle: { width: 2, color: '#0f766e' },
-                    areaStyle: { opacity: 0.08 },
-                    data: station.inventory_predictions || []
+                    symbol: 'diamond',
+                    symbolSize: 8,
+                    lineStyle: { width: 2, type: 'dashed', color: '#f59e0b' },
+                    itemStyle: { color: '#f59e0b' },
+                    data: predictionRow ? chartLabels.map((item, index) => index === chartLabels.length - 1 ? Math.round(Number(predictionRow.value || 0)) : null) : [],
+                    connectNulls: false
                 }
             ]
         });
+        rideTrendChart.resize();
     }
 
     function renderTrendCharts(payload) {
-        if (predictionCache) {
-            ensureTrendStationSelector(predictionCache.stations);
-            const selectedId = document.getElementById('trendStationSelector').value;
-            renderTrendChartForStation(selectedId);
-        } else {
-            fetchPredictionData();
+        const topIds = payload.charts?.top_gap_station_ids || [];
+        const stations = (payload.stations || []).filter(item => topIds.includes(item.station_id));
+        if (!stations.length) {
+            rideTrendChart.clear();
+            return;
         }
+        ensureTrendStationSelector(stations);
+        const selectedId = document.getElementById('trendStationSelector').value || String(stations[0].station_id);
+        renderTrendChartForStation(selectedId);
     }
 
     function renderStationCards(payload) {
         const previousMap = new Map((stateCache.previousPayload?.stations || []).map(item => [item.station_id, item]));
         const priorityStations = (payload.stations || [])
             .slice()
-            .sort((a, b) => Math.abs(b.gap || 0) - Math.abs(a.gap || 0))
+            .sort((a, b) => Math.abs(Number(b.gap || 0)) - Math.abs(Number(a.gap || 0)))
             .slice(0, 8);
 
         document.getElementById('stationStatusCards').innerHTML = priorityStations.length ? priorityStations.map(station => {
@@ -500,42 +439,24 @@
                     <div class="d-flex justify-content-between align-items-start gap-2">
                         <div>
                             <div class="fw-bold">${station.name}</div>
-                            <div class="section-note mt-1">当前库存 ${station.count} · 需求 ${Number(station.demand || 0).toFixed(0)} · T+1净流量 ${Number(station.t_plus_1_net_flow || 0).toFixed(2)}</div>
+                            <div class="section-note mt-1">当前库存 ${station.count} · 需求 ${Math.round(Number(station.demand || 0))} · T+1 车辆变化 ${Math.round(Number(station.t_plus_1_net_flow || 0))}</div>
                         </div>
                         <span class="badge bg-${state.badge}">${state.text}</span>
                     </div>
                     <div class="row g-2 mt-2 small">
-                        <div class="col-6"><span class="text-secondary">需求</span><div class="fw-semibold">${station.demand}</div></div>
-                        <div class="col-6"><span class="text-secondary">T+1状态</span><div class="fw-semibold">${station.t_plus_1_state_label || '--'}</div></div>
+                        <div class="col-6"><span class="text-secondary">供需缺口</span><div class="fw-semibold">${Math.round(Number(station.gap || 0))}</div></div>
+                        <div class="col-6"><span class="text-secondary">T+1 状态</span><div class="fw-semibold">${station.t_plus_1_state_label || '--'}</div></div>
                     </div>
                 </div>
             `;
         }).join('') : '<div class="empty-state">暂无重点站点数据</div>';
     }
 
-    function renderSuggestions(payload) {
-        const suggestions = payload.dispatch_suggestions || [];
-        document.getElementById('suggestionList').innerHTML = suggestions.length
-            ? suggestions.map(item => `
-                <div class="dispatch-suggestion-card">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <strong>调运 ${item.count} 辆</strong>
-                        <span class="status-chip">真实调度建议</span>
-                    </div>
-                    <div class="fw-semibold">${item.from} → ${item.to}</div>
-                    <div class="section-note mt-2">预测缺口：${item.predicted_gap} · 距离成本：${item.distance_cost}</div>
-                </div>
-            `).join('')
-            : '<div class="empty-state">当前供需基本平衡，暂无调度建议</div>';
-    }
-
     function renderSettings(payload) {
         if (payload.metrics.refresh_seconds) {
             refreshSeconds = Number(payload.metrics.refresh_seconds) || refreshSeconds;
         }
-        document.getElementById('refreshSeconds').textContent = refreshSeconds;
         document.getElementById('warningThreshold').textContent = payload.metrics.warning_threshold || '{{ settings_obj.demand_warning_threshold }}';
-        document.getElementById('dispatchThreshold').textContent = payload.metrics.dispatch_threshold || '{{ settings_obj.dispatch_trigger_threshold }}';
         document.getElementById('mapDispatchThreshold').textContent = payload.metrics.dispatch_threshold || '{{ settings_obj.dispatch_trigger_threshold }}';
         document.getElementById('dashboardModelVersion').textContent = '{{ settings_obj.model_version }}';
         if (dashboardRefreshController) {
@@ -553,27 +474,34 @@
             const changed = !previous || previous.count !== row.count || previous.warning_status !== row.warning_status;
             const size = markerSize(row);
             const icon = L.divIcon({
-                className: '',
+                className: 'dashboard-div-icon',
                 html: `
                     <div class="station-marker ${changed ? 'is-updated' : ''}" style="width:${size}px;height:${size}px;background:${markerColor(row)};font-size:${markerFontSize(size)}px;">
                         ${row.count}
                     </div>
                 `,
                 iconSize: [size, size],
-                iconAnchor: [size / 2, size / 2]
+                iconAnchor: [size / 2, size / 2],
+                popupAnchor: [0, -Math.round(size / 2)]
             });
             const popupHtml = `
                 <strong>${row.name}</strong><br>
                 当前库存：${row.count}<br>
-                需求：${row.demand}<br>
-                供需缺口：${row.gap}<br>
-                T+1 预测净流量：${Number(row.t_plus_1_net_flow || 0).toFixed(2)}<br>
+                需求：${Math.round(Number(row.demand || 0))}<br>
+                供需缺口：${Math.round(Number(row.gap || 0))}<br>
+                T+1 车辆变化：${Math.round(Number(row.t_plus_1_net_flow || 0))}<br>
                 当前状态：${row.current_state_label || '--'}<br>
                 T+1 状态：${row.t_plus_1_state_label || '--'}
             `;
-            const marker = L.marker([row.lat, row.lng], { icon }).bindPopup(popupHtml).addTo(stationLayer);
+            const marker = L.marker([row.lat, row.lng], {
+                icon,
+                keyboard: false,
+                riseOnHover: true,
+                zIndexOffset: 1000 + Number(row.count || 0)
+            }).bindPopup(popupHtml).addTo(stationLayer);
             markerRegistry[row.station_id] = marker;
         });
+
     }
 
     function renderDashboard(payload) {
@@ -584,11 +512,10 @@
 
         document.getElementById('dashboardGeneratedAt').textContent = window.BSDPUI.formatDateTime(payload.generated_at);
         document.getElementById('mapSnapshotTime').textContent = window.BSDPUI.formatDateTime(payload.generated_at);
-        document.getElementById('dashboardRefreshLabel').textContent = '数据来源：实时快照服务 + 预测服务';
+        document.getElementById('dashboardRefreshLabel').textContent = '数据来源：实时快照服务 + 单站点真实趋势';
 
         renderTrendCharts(payload);
         renderStationCards(payload);
-        renderSuggestions(payload);
         renderSettings(payload);
         renderMarkers(payload);
 
@@ -607,10 +534,13 @@
     }
 
     renderDashboard(dashboardPayload);
+    window.requestAnimationFrame(function () {
+        campusRealtimeMap.invalidateSize();
+    });
     dashboardRefreshController = window.BSDPUI.createRefreshController({
         countdownElement: document.getElementById('dashboardRefreshCountdown'),
         progressBar: document.getElementById('dashboardRefreshBar'),
-        alignToInterval: true,
+        alignToInterval: false,
         intervalSeconds: refreshSeconds,
         onRefresh: refreshDashboard
     });
