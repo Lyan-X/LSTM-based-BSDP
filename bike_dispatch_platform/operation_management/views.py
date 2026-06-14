@@ -10,8 +10,8 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from bike_dispatch_platform.operation_management.models import ParkingSpot, ScheduleTask, Vehicle
-from bike_dispatch_platform.operation_management.services.runtime_service import runtime_service
+from bike_dispatch_platform.operation_management.models import ParkingSpot, ScheduleTask, Vehicle, VehicleLocationHistory
+from bike_dispatch_platform.operation_management.services.runtime_service import build_suggestion_fingerprint, dispatch_priority, runtime_service
 from bike_dispatch_platform.operation_management.services.station_service import get_runtime_settings, sync_parking_spots
 from bike_dispatch_platform.operation_management.services.vehicle_service import (
     build_vehicle_queryset,
@@ -24,6 +24,7 @@ from bike_dispatch_platform.operation_management.services.vehicle_service import
     latest_ride_records,
     normalize_vehicle_status,
     paginate_vehicle_queryset,
+    update_vehicle_status,
     vehicle_status_label,
 )
 from bike_dispatch_platform.system_support.export_utils import dataframe_to_response, resolve_export_format
@@ -51,19 +52,69 @@ def _vehicle_query_string(request) -> str:
     return urlencode(query)
 
 
+def _prediction_batch_time_from_snapshot(snapshot):
+    if snapshot.station_rows and snapshot.station_rows[0].get("decision_basis_hour"):
+        return pd.Timestamp(snapshot.station_rows[0]["decision_basis_hour"]).to_pydatetime()
+    return snapshot.bucket_time.to_pydatetime()
+
+
+def _visible_suggestions(snapshot):
+    prediction_batch_time = _prediction_batch_time_from_snapshot(snapshot)
+    visible = []
+    for suggestion in snapshot.dispatch_suggestions:
+        fingerprint = build_suggestion_fingerprint(
+            from_station_id=suggestion["from_station_id"],
+            to_station_id=suggestion["to_station_id"],
+            dispatch_count=suggestion["count"],
+            prediction_batch_time=prediction_batch_time,
+        )
+        if ScheduleTask.objects.filter(suggestion_fingerprint=fingerprint).exists():
+            continue
+        visible.append(suggestion)
+    return visible
+
+
 @login_required
-@role_required("admin", "operator", message="仅系统管理员或运维调度员可以访问调度监控。")
+@role_required("admin", "predictor", "operator", message="仅系统管理员、预测人员或运维调度员可以访问调度监控。")
 def supply_demand_heatmap(request):
     sync_parking_spots()
     snapshot = runtime_service.ensure_snapshot()
+    task_type_labels = {
+        "manual_dispatch": "手动调度任务",
+        "vehicle_dispatch": "调度任务工单",
+        "vehicle_fault_report": "车辆故障上报",
+        "maintenance_work_order": "车辆维修工单",
+        "operation_work_order": "站点运维工单",
+    }
     context = {
         "project_name": PROJECT_NAME,
         "snapshot_payload": json.dumps(
             {
                 "generated_at": snapshot.bucket_time.isoformat(),
                 "data": snapshot.station_rows,
-                "suggestions": snapshot.dispatch_suggestions,
+                "suggestions": _visible_suggestions(snapshot),
                 "metrics": snapshot.metrics,
+                "tasks": [
+                    {
+                        "id": task.id,
+                        "task_type": task.task_type,
+                        "task_type_label": task_type_labels.get(task.task_type, task.task_type),
+                        "start_location": task.start_location,
+                        "end_location": task.end_location,
+                        "dispatch_count": task.dispatch_count,
+                        "status": task.status,
+                        "status_label": task.get_status_display(),
+                        "priority": dispatch_priority(task.dispatch_count) if task.task_type in {"manual_dispatch", "vehicle_dispatch"} else task.priority,
+                        "priority_label": dict(ScheduleTask.PRIORITY_CHOICES).get(dispatch_priority(task.dispatch_count) if task.task_type in {"manual_dispatch", "vehicle_dispatch"} else task.priority, "--"),
+                        "source_label": task.creator_identity_display if task.created_by_id else ("系统自动实施" if task.task_type == "vehicle_dispatch" and task.status == "in_progress" and task.reason.startswith("系统自动实施：") else ("系统建议待确认" if task.task_type == "vehicle_dispatch" and task.reason.startswith("系统建议待确认：") else "系统自动生成")),
+                        "predicted_gap": task.predicted_gap,
+                        "distance_cost": task.distance_cost,
+                        "reason": task.reason,
+                        "created_at": task.create_time.isoformat(),
+                        "predicted_time": task.predicted_time.isoformat() if task.predicted_time else "",
+                    }
+                    for task in ScheduleTask.objects.select_related("created_by").order_by("-create_time")[:50]
+                ],
             },
             ensure_ascii=False,
         ),
@@ -74,7 +125,7 @@ def supply_demand_heatmap(request):
 
 
 @login_required
-@role_required("admin", "operator", message="仅系统管理员或运维调度员可以访问调度监控实时数据。")
+@role_required("admin", "predictor", "operator", message="仅系统管理员、预测人员或运维调度员可以访问调度监控实时数据。")
 def get_realtime_parking_data(request):
     snapshot = runtime_service.ensure_snapshot()
     return JsonResponse(
@@ -82,40 +133,23 @@ def get_realtime_parking_data(request):
             "success": True,
             "current_time": snapshot.bucket_time.isoformat(),
             "data": snapshot.station_rows,
-            "suggestions": snapshot.dispatch_suggestions,
+            "suggestions": _visible_suggestions(snapshot),
             "metrics": snapshot.metrics,
         }
     )
 
 
 @login_required
-@role_required("admin", "operator", message="仅系统管理员或运维调度员可以访问调度任务列表。")
+@role_required("admin", "predictor", "operator", message="仅系统管理员、预测人员或运维调度员可以访问调度任务列表。")
 def task_list(request):
-    snapshot = runtime_service.ensure_snapshot()
-    runtime_service.create_schedule_tasks(snapshot)
-    tasks = ScheduleTask.objects.select_related("from_station", "to_station", "related_vehicle").order_by("-create_time")
-    return render(
-        request,
-        "operation_management/task_list.html",
-        {
-            "project_name": PROJECT_NAME,
-            "tasks": tasks,
-            "parking_spots": ParkingSpot.objects.filter(is_active=True).order_by("ysu_id"),
-            "pending_tasks": tasks.filter(status="pending").count(),
-            "in_progress_tasks": tasks.filter(status="in_progress").count(),
-            "completed_tasks": tasks.filter(status="completed").count(),
-            "cancelled_tasks": tasks.filter(status="cancelled").count(),
-            "current_time": timezone.now(),
-            "access_flags": role_flags(request.user),
-        },
-    )
+    return redirect("operation_management:dispatch_dashboard")
 
 
 @login_required
-@role_required("admin", "operator", message="仅系统管理员或运维调度员可以查看调度任务详情。")
+@role_required("admin", "predictor", "operator", message="仅系统管理员、预测人员或运维调度员可以查看调度任务详情。")
 def task_detail(request, task_id: int):
     task = get_object_or_404(
-        ScheduleTask.objects.select_related("from_station", "to_station", "related_vehicle"),
+        ScheduleTask.objects.select_related("from_station", "to_station", "related_vehicle", "created_by"),
         pk=task_id,
     )
     return render(
@@ -126,7 +160,7 @@ def task_detail(request, task_id: int):
 
 
 @login_required
-@role_required("admin", "operator", message="仅系统管理员或运维调度员可以生成调度任务。")
+@role_required("admin", "predictor", "operator", message="仅系统管理员、预测人员或运维调度员可以生成调度任务。")
 def auto_generate_tasks(request):
     snapshot = runtime_service.ensure_snapshot()
     created_tasks = runtime_service.create_schedule_tasks(snapshot)
@@ -144,19 +178,42 @@ def auto_generate_tasks(request):
 @role_required("admin", "operator", message="仅系统管理员或运维调度员可以创建手动调度任务。")
 def manual_dispatch_create(request):
     if request.method != "POST":
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": False, "error": "POST required"}, status=405)
         return redirect("operation_management:task_list")
+
+    from_station_id = int(request.POST.get("from_station_id", "0"))
+    to_station_id = int(request.POST.get("to_station_id", "0"))
+    dispatch_count = int(request.POST.get("dispatch_count", "0"))
+    reason = request.POST.get("reason", "")
 
     try:
         task = create_manual_dispatch_task(
-            from_station_id=int(request.POST.get("from_station_id", "0")),
-            to_station_id=int(request.POST.get("to_station_id", "0")),
-            dispatch_count=int(request.POST.get("dispatch_count", "0")),
+            from_station_id=from_station_id,
+            to_station_id=to_station_id,
+            dispatch_count=dispatch_count,
             operator_name=request.user.username,
-            reason=request.POST.get("reason", ""),
+            creator_user=request.user,
+            reason=reason,
         )
     except Exception as exc:
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": False, "error": str(exc)}, status=400)
         messages.error(request, str(exc))
         return redirect("operation_management:task_list")
+
+    snapshot = runtime_service.ensure_snapshot()
+    if snapshot.station_rows and snapshot.station_rows[0].get("decision_basis_hour"):
+        prediction_batch_time = pd.Timestamp(snapshot.station_rows[0]["decision_basis_hour"]).to_pydatetime()
+    else:
+        prediction_batch_time = snapshot.bucket_time.to_pydatetime()
+    task.suggestion_fingerprint = build_suggestion_fingerprint(
+        from_station_id=from_station_id,
+        to_station_id=to_station_id,
+        dispatch_count=dispatch_count,
+        prediction_batch_time=prediction_batch_time,
+    )
+    task.save(update_fields=["suggestion_fingerprint"])
 
     SystemLog.objects.create(
         user=request.user,
@@ -164,6 +221,28 @@ def manual_dispatch_create(request):
         description=f"{request.user.username} 创建人工调度任务 #{task.id}",
         ip_address=_client_ip(request),
     )
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return JsonResponse({
+            "success": True,
+            "task": {
+                "id": task.id,
+                "task_type": task.task_type,
+                "task_type_label": "手动调度任务" if task.task_type == "manual_dispatch" else task.task_type,
+                "status": task.status,
+                "status_label": task.get_status_display(),
+                "start_location": task.start_location,
+                "end_location": task.end_location,
+                "dispatch_count": task.dispatch_count,
+                "priority": dispatch_priority(task.dispatch_count) if task.task_type in {"manual_dispatch", "vehicle_dispatch"} else task.priority,
+                "priority_label": dict(ScheduleTask.PRIORITY_CHOICES).get(dispatch_priority(task.dispatch_count) if task.task_type in {"manual_dispatch", "vehicle_dispatch"} else task.priority, "--"),
+                "source_label": task.creator_identity_display,
+                "predicted_gap": task.predicted_gap,
+                "distance_cost": task.distance_cost,
+                "reason": task.reason,
+                "created_at": task.create_time.isoformat(),
+                "predicted_time": task.predicted_time.isoformat() if task.predicted_time else "",
+            },
+        })
     messages.success(request, f"人工调度任务 #{task.id} 已创建。")
     return redirect("operation_management:task_list")
 
@@ -171,29 +250,49 @@ def manual_dispatch_create(request):
 @login_required
 @role_required("admin", "operator", message="仅系统管理员或运维调度员可以访问调度实时任务数据。")
 def get_realtime_task_data(request):
-    snapshot = runtime_service.ensure_snapshot()
-    runtime_service.create_schedule_tasks(snapshot)
-    tasks = ScheduleTask.objects.select_related("from_station", "to_station", "related_vehicle").order_by("-create_time")[:20]
-    payload = [
-        {
-            "id": task.id,
-            "from": task.start_location,
-            "to": task.end_location,
-            "start_location": task.start_location,
-            "end_location": task.end_location,
-            "count": task.dispatch_count,
-            "dispatch_count": task.dispatch_count,
-            "status": task.status,
-            "priority": task.priority,
-            "predicted_gap": task.predicted_gap,
-            "distance_cost": task.distance_cost,
-            "reason": task.reason,
-            "related_vehicle_id": task.related_vehicle_id or "",
-            "predicted_time": task.predicted_time.isoformat() if task.predicted_time else "",
-            "created_at": task.create_time.isoformat(),
-        }
-        for task in tasks
-    ]
+    tasks = ScheduleTask.objects.select_related("from_station", "to_station", "related_vehicle", "created_by").order_by("-create_time")[:50]
+    payload = []
+    task_type_labels = {
+        "manual_dispatch": "手动调度任务",
+        "vehicle_dispatch": "调度任务工单",
+        "vehicle_fault_report": "车辆故障上报",
+        "maintenance_work_order": "车辆维修工单",
+        "operation_work_order": "站点运维工单",
+    }
+    for task in tasks:
+        if task.created_by_id:
+            source_label = task.creator_identity_display
+        elif task.task_type == "vehicle_dispatch" and task.status == "in_progress" and task.reason.startswith("系统自动实施："):
+            source_label = "系统自动实施"
+        elif task.task_type == "vehicle_dispatch" and task.reason.startswith("系统建议待确认："):
+            source_label = "系统建议待确认"
+        else:
+            source_label = "系统自动生成"
+
+        payload.append(
+            {
+                "id": task.id,
+                "from": task.start_location,
+                "to": task.end_location,
+                "start_location": task.start_location,
+                "end_location": task.end_location,
+                "count": task.dispatch_count,
+                "dispatch_count": task.dispatch_count,
+                "status": task.status,
+                "status_label": task.get_status_display(),
+                "priority": dispatch_priority(task.dispatch_count) if task.task_type in {"manual_dispatch", "vehicle_dispatch"} else task.priority,
+                "priority_label": dict(ScheduleTask.PRIORITY_CHOICES).get(dispatch_priority(task.dispatch_count) if task.task_type in {"manual_dispatch", "vehicle_dispatch"} else task.priority, "--"),
+                "predicted_gap": task.predicted_gap,
+                "distance_cost": task.distance_cost,
+                "reason": task.reason,
+                "related_vehicle_id": task.related_vehicle_id or "",
+                "predicted_time": task.predicted_time.isoformat() if task.predicted_time else "",
+                "created_at": task.create_time.isoformat(),
+                "task_type": task.task_type,
+                "task_type_label": task_type_labels.get(task.task_type, task.task_type),
+                "source_label": source_label,
+            }
+        )
     return JsonResponse(
         {
             "success": True,
@@ -226,6 +325,33 @@ def update_task_status(request):
     task.status = new_status
     task.save(update_fields=["status"])
     return JsonResponse({"success": True, "status": task.status})
+
+
+@login_required
+@role_required("admin", "operator", message="仅系统管理员或运维调度员可以删除调度任务。")
+def delete_task(request, task_id: int):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "POST required"}, status=405)
+
+    task = get_object_or_404(ScheduleTask, pk=task_id)
+    if task.status not in {"pending", "in_progress"}:
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": False, "error": f"仅待处理或进行中任务可删除，任务 #{task.id} 当前状态为 {task.get_status_display()}。"}, status=400)
+        messages.error(request, f"仅待处理或进行中任务可删除，任务 #{task.id} 当前状态为 {task.get_status_display()}。")
+        return redirect("operation_management:task_list")
+
+    if task.suggestion_fingerprint:
+        task.status = "cancelled"
+        reason_text = (task.reason or "").strip()
+        if "【已人工删除抑制重建】" not in reason_text:
+            task.reason = (reason_text + "\n【已人工删除抑制重建】").strip()
+        task.save(update_fields=["status", "reason"])
+    else:
+        task.delete()
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return JsonResponse({"success": True, "task_id": task_id})
+    messages.success(request, f"调度任务 #{task_id} 已删除。")
+    return redirect("operation_management:task_list")
 
 
 @login_required
@@ -360,40 +486,60 @@ def station_history_export(request, station_id: int):
 @role_required("admin", "operator", message="仅系统管理员或运维调度员可以创建运维工单。")
 def create_work_order(request, station_id: int):
     station = get_object_or_404(ParkingSpot, ysu_id=station_id)
+    if request.method != "POST":
+        messages.info(request, "请使用页面中的提交操作创建运维工单。")
+        return redirect("operation_management:station_list")
+
+    reason = (request.POST.get("reason", "") or "").strip() or f"站点 {station.spot_name} 触发运维工单。"
     task = ScheduleTask.objects.create(
         task_type="operation_work_order",
         start_location=station.spot_name,
         end_location=station.spot_name,
         dispatch_count=0,
-        priority="medium",
+        priority="low",
         status="pending",
         predicted_time=timezone.now(),
-        reason=f"站点 {station.spot_name} 触发运维工单。",
+        created_by=request.user,
+        creator_role=getattr(request.user, "role", ""),
+        reason=reason,
     )
     messages.success(request, f"已为站点 {station.spot_name} 创建工单 #{task.id}。")
-    return redirect("operation_management:task_detail", task_id=task.id)
+    return redirect("operation_management:station_list")
 
 
 @login_required
 @role_required("admin", "operator", message="仅系统管理员或运维调度员可以访问车辆运维页面。")
 def vehicle_management(request):
-    ensure_vehicle_registry()
+    # 同步当前实时快照，确保车辆站点变更历史能够反映最新调度/位置变化
+    ensure_vehicle_registry(sync_runtime=True)
     next_query = _vehicle_query_string(request)
 
     if request.method == "POST":
         vehicle = get_object_or_404(Vehicle.objects.select_related("parking_spot"), pk=request.POST.get("vehicle_id"))
         action = request.POST.get("action")
         description = request.POST.get("description", "").strip()
+        target_status = request.POST.get("target_status", "").strip()
 
-        if action == "report_fault":
-            fault_task = create_vehicle_fault_task(vehicle, description, request.user.username)
-            work_order = create_vehicle_work_order(vehicle, description or "故障待维修处理", request.user.username)
+        if action == "change_status":
+            update_vehicle_status(vehicle, target_status, request.user.username, description)
+            if target_status == "faulty":
+                fault_task = create_vehicle_fault_task(vehicle, description or "车辆状态调整为故障", request.user.username, request.user)
+                work_order = create_vehicle_work_order(vehicle, description or "故障待维修处理", request.user.username, request.user)
+                messages.success(
+                    request,
+                    f"车辆 {vehicle.id} 状态已调整为故障，并生成故障记录 #{fault_task.id} 与工单 #{work_order.id}。",
+                )
+            else:
+                messages.success(request, f"车辆 {vehicle.id} 状态已更新。")
+        elif action == "report_fault":
+            fault_task = create_vehicle_fault_task(vehicle, description, request.user.username, request.user)
+            work_order = create_vehicle_work_order(vehicle, description or "故障待维修处理", request.user.username, request.user)
             messages.success(
                 request,
                 f"车辆 {vehicle.id} 已标记为故障待维修，并生成故障记录 #{fault_task.id} 与工单 #{work_order.id}。",
             )
         elif action == "create_work_order":
-            work_order = create_vehicle_work_order(vehicle, description, request.user.username)
+            work_order = create_vehicle_work_order(vehicle, description, request.user.username, request.user)
             messages.success(request, f"车辆 {vehicle.id} 运维工单 #{work_order.id} 已创建。")
 
         target_url = "operation_management:vehicle_management"
@@ -413,7 +559,7 @@ def vehicle_management(request):
         vehicle.normalized_status_label = vehicle_status_label(normalized)
     work_orders = ScheduleTask.objects.filter(
         task_type__in=["vehicle_fault_report", "maintenance_work_order", "operation_work_order"]
-    ).select_related("related_vehicle").order_by("-create_time")[:100]
+    ).select_related("related_vehicle", "created_by").order_by("-create_time")[:100]
 
     return render(
         request,
@@ -459,12 +605,13 @@ def vehicle_runtime_api(request):
 
     work_orders = ScheduleTask.objects.filter(
         task_type__in=["vehicle_fault_report", "maintenance_work_order", "operation_work_order"]
-    ).select_related("related_vehicle").order_by("-create_time")[:20]
+    ).select_related("related_vehicle", "created_by").order_by("-create_time")[:20]
     work_order_rows = [
         {
             "id": task.id,
             "task_type": task.task_type,
             "related_vehicle_id": task.related_vehicle_id or "-",
+            "creator_identity": task.creator_identity_display,
             "status": task.get_status_display(),
             "created_at": task.create_time.strftime("%Y-%m-%d %H:%M:%S"),
         }
@@ -496,22 +643,34 @@ def vehicle_runtime_api(request):
 @login_required
 @role_required("admin", "operator", message="仅系统管理员或运维调度员可以访问车辆详情。")
 def vehicle_detail(request, vehicle_id: str):
-    ensure_vehicle_registry()
+    ensure_vehicle_registry(sync_runtime=True)
     vehicle = get_object_or_404(Vehicle.objects.select_related("parking_spot"), pk=vehicle_id)
     history_rows = get_vehicle_history(vehicle, limit=10)
 
     if request.method == "POST":
         action = request.POST.get("action")
         description = request.POST.get("description", "").strip()
-        if action == "report_fault":
-            fault_task = create_vehicle_fault_task(vehicle, description, request.user.username)
-            work_order = create_vehicle_work_order(vehicle, description or "故障待维修处理", request.user.username)
+        target_status = request.POST.get("target_status", "").strip()
+        if action == "change_status":
+            update_vehicle_status(vehicle, target_status, request.user.username, description)
+            if target_status == "faulty":
+                fault_task = create_vehicle_fault_task(vehicle, description or "车辆状态调整为故障", request.user.username, request.user)
+                work_order = create_vehicle_work_order(vehicle, description or "故障待维修处理", request.user.username, request.user)
+                messages.success(
+                    request,
+                    f"车辆 {vehicle.id} 状态已调整为故障，并生成故障记录 #{fault_task.id} 与工单 #{work_order.id}。",
+                )
+            else:
+                messages.success(request, f"车辆 {vehicle.id} 状态已更新。")
+        elif action == "report_fault":
+            fault_task = create_vehicle_fault_task(vehicle, description, request.user.username, request.user)
+            work_order = create_vehicle_work_order(vehicle, description or "故障待维修处理", request.user.username, request.user)
             messages.success(
                 request,
                 f"车辆 {vehicle.id} 已标记为故障待维修，并生成故障记录 #{fault_task.id} 与工单 #{work_order.id}。",
             )
         elif action == "create_work_order":
-            work_order = create_vehicle_work_order(vehicle, description, request.user.username)
+            work_order = create_vehicle_work_order(vehicle, description, request.user.username, request.user)
             messages.success(request, f"车辆 {vehicle.id} 运维工单 #{work_order.id} 已创建。")
         return redirect("operation_management:vehicle_detail", vehicle_id=vehicle.id)
 
@@ -526,6 +685,39 @@ def vehicle_detail(request, vehicle_id: str):
             "back_query": _vehicle_query_string(request),
             "access_flags": role_flags(request.user),
         },
+    )
+
+
+@login_required
+@role_required("admin", "operator", message="仅系统管理员或运维调度员可以访问车辆详情。")
+def vehicle_detail_api(request, vehicle_id: str):
+    ensure_vehicle_registry(sync_runtime=True)
+    vehicle = get_object_or_404(Vehicle.objects.select_related("parking_spot"), pk=vehicle_id)
+    history_rows = get_vehicle_history(vehicle, limit=10)
+    return JsonResponse(
+        {
+            "success": True,
+            "vehicle": {
+                "id": vehicle.id,
+                "status": vehicle.status,
+                "status_label": vehicle_status_label(normalize_vehicle_status(vehicle.status)),
+                "station_name": vehicle.parking_spot.spot_name if vehicle.parking_spot else "-",
+                "latitude": vehicle.latitude,
+                "longitude": vehicle.longitude,
+                "update_time": vehicle.update_time.strftime("%Y-%m-%d %H:%M:%S"),
+            },
+            "history_rows": [
+                {
+                    "changed_at": row.changed_at.strftime("%Y-%m-%d %H:%M:%S"),
+                    "previous_station": row.previous_station.spot_name if row.previous_station else "-",
+                    "current_station": row.current_station.spot_name if row.current_station else "-",
+                    "previous_status": row.previous_status or "-",
+                    "current_status": row.current_status or "-",
+                    "change_reason": row.change_reason or "-",
+                }
+                for row in history_rows
+            ],
+        }
     )
 
 

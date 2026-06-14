@@ -1,40 +1,95 @@
-# 虚拟环境（体积大，无需提交）
+# ======================
+# 运行环境与依赖库
+# ======================
+cuda/
+venv/
 bsdp_env/
-# 模型文件（若超过100MB，GitHub无法直接提交，建议注释说明获取方式）
-models/bike_lstm_model.h5
-# Python缓存文件
-__pycache__/
-*.pyc
-*.pyd
-# IDE配置文件（VSCode/PyCharm）
+bike_demand_research/venv/
+
+# ======================
+# 数据库与运行时文件
+# ======================
+*.db
+*.sqlite
+bike_dispatch_platform/bike_dispatch_db.db
+
+# ======================
+# 模型文件与训练产物
+# ======================
+*.pkl
+*.h5
+*.pth
+models/
+models/history/
+bike_dispatch_platform/demand_prediction/model_assets/
+
+# ======================
+# 原始数据集与大体积数据
+# ======================
+*.csv
+*.json
+data/
+data/raw/
+dataset/
+bike_demand_research/data/
+bike_demand_research/dataset/
+
+# ======================
+# 开发工具临时文件
+# ======================
+.playwright-cli/
 .idea/
 .vscode/
-# 系统临时文件
-.DS_Store
-Thumbs.db
-# 补充过滤缓存/日志文件
-*.log
-# 过滤原始数据集（仅保留预处理脚本，避免大文件）
-data/raw/
-# 可选：过滤可视化结果（若图片体积大，也可保留小体积的prediction_result.png）
-# results/
-# 屏蔽临时文件
-temp.txt
-# 屏蔽Python编译文件
+.cursor/
+.trae/
+
+# ======================
+# Python 缓存与编译文件
+# ======================
 __pycache__/
 *.pyc
 *.pyo
-# 屏蔽系统临时文件
+*.pyd
+
+# ======================
+# 系统临时文件与日志
+# ======================
 .DS_Store
+Thumbs.db
+*.log
 *.tmp
-# 排除TraeAI生成的.trae目录
-.trae/
-<<<<<<< HEAD
+temp.txt
 
-# �ų� Cursor �������ļ���
-.cursor/
+# 屏蔽CUDA运行库（单文件几百MB，完全不需要提交）
+cuda/
 
-# �ų�ģ����ʷ�ļ�
-models/history/
-=======
->>>>>>> e731ffdfbb2894ecacc687cdf1e00b1ac6912720
+# 屏蔽所有数据集文件
+*.csv
+*.json
+data/
+dataset/
+bike_demand_research/data/
+
+# 屏蔽模型训练产物
+*.pkl
+*.h5
+*.pth
+model_assets/
+models/
+
+# 屏蔽运行时数据库
+*.db
+*.sqlite
+bike_dispatch_platform/bike_dispatch_db.db
+
+# 屏蔽虚拟环境
+venv/
+bsdp_env/
+bike_demand_research/venv/
+
+# 屏蔽IDE和工具缓存
+.idea/
+.vscode/
+.playwright-cli/
+__pycache__/
+*.pyc

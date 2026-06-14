@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}系统设置 - 基于深度学习的校园共享单车调度需求预测与运维管理平台{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0">系统参数配置</h4>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">仪表盘刷新频率（秒）</label>
+                        <input class="form-control" type="number" min="10" name="dashboard_refresh_seconds" value="{{ settings_obj.dashboard_refresh_seconds }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">供需预警阈值</label>
+                        <input class="form-control" type="number" min="1" name="demand_warning_threshold" value="{{ settings_obj.demand_warning_threshold }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">调度触发阈值</label>
+                        <input class="form-control" type="number" min="1" name="dispatch_trigger_threshold" value="{{ settings_obj.dispatch_trigger_threshold }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">预测时长（小时）</label>
+                        <input class="form-control" type="number" name="prediction_horizon_hours" value="{{ settings_obj.prediction_horizon_hours }}" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">当前活动模型</label>
+                        <select class="form-select" name="active_model_alias">
+                            {% for option in available_prediction_models %}
+                            <option value="{{ option.alias }}" {% if option.selected %}selected{% endif %}>{{ option.alias }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">当前状态方案</label>
+                        <select class="form-select" name="active_state_scheme_key">
+                            {% for option in available_state_schemes %}
+                            <option value="{{ option.scheme_key }}" {% if option.selected %}selected{% endif %}>{{ option.scheme_key }}（{{ option.class_count }} 档）</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">当前模型版本标识</label>
+                        <input class="form-control" type="text" name="model_version" value="{{ settings_obj.model_version }}">
+                    </div>
+                </div>
+
+                <div class="alert alert-info mt-3">
+                    <strong>阈值说明：</strong><br>
+                    预警阈值 `{{ settings_obj.demand_warning_threshold }}` 用于提醒人工关注明显偏差站点。<br>
+                    调度阈值 `{{ settings_obj.dispatch_trigger_threshold }}` 用于控制是否自动生成调度建议。
+                </div>
+
+                <div class="alert alert-info mt-4 mb-0">
+                    <strong>当前活动模型：</strong>{{ active_prediction_model_alias }}
+                    <br>
+                    <strong>当前状态方案：</strong>{{ active_state_scheme_key }}
+                    {% if recommended_state_scheme_key and recommended_state_scheme_key != active_state_scheme_key %}
+                    <br>
+                    <strong>推荐状态方案：</strong>{{ recommended_state_scheme_key }}
+                    {% endif %}
+                    <br>
+                    <span class="small text-muted">生产模型与并行状态分类模型共存，切换不会覆盖任何已冻结生产资产。状态方案切换只影响并行分类模型的标签、区间与资产装载，不改变生产 48→48 数值预测链路。</span>
+                </div>
+
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary">保存设置</button>
+                    <a href="{% url 'system_support:system_logs' %}" class="btn btn-secondary">查看系统日志</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">可用模型说明</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>模型别名</th>
+                            <th>说明</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for option in available_prediction_models %}
+                        <tr>
+                            <td>{{ option.alias }}</td>
+                            <td>{{ option.description }}</td>
+                            <td>
+                                {% if option.selected %}
+                                <span class="badge bg-success">当前启用</span>
+                                {% else %}
+                                <span class="badge bg-secondary">可切换</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">可用状态方案说明</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>方案键</th>
+                            <th>类别数</th>
+                            <th>说明</th>
+                            <th>状态标签</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for option in available_state_schemes %}
+                        <tr>
+                            <td>{{ option.scheme_key }}</td>
+                            <td>{{ option.class_count }}</td>
+                            <td>{{ option.description }}</td>
+                            <td>{{ option.labels|join:" / " }}</td>
+                            <td>
+                                {% if option.selected %}
+                                <span class="badge bg-success">当前启用</span>
+                                {% elif option.recommended %}
+                                <span class="badge bg-info text-dark">推荐方案</span>
+                                {% else %}
+                                <span class="badge bg-secondary">备选方案</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">RBAC 角色权限矩阵</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>角色</th>
+                            <th>权限范围</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in role_permission_matrix %}
+                        <tr>
+                            <td>{{ row.role }}</td>
+                            <td>{{ row.permissions }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

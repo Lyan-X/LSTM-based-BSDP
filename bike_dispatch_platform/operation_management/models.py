@@ -1,6 +1,7 @@
 from django.db import models
 
 from bike_dispatch_platform.system_support.models import User
+from bike_dispatch_platform.system_support.permissions import ROLE_DISPLAY_NAMES
 
 
 class ParkingSpot(models.Model):
@@ -91,6 +92,12 @@ class Vehicle(models.Model):
 class ScheduleTask(models.Model):
     """Dispatch task driven by station-level forecast gaps."""
 
+    CREATOR_ROLE_CHOICES = [
+        ("admin", ROLE_DISPLAY_NAMES["admin"]),
+        ("predictor", ROLE_DISPLAY_NAMES["predictor"]),
+        ("operator", ROLE_DISPLAY_NAMES["operator"]),
+    ]
+
     PRIORITY_CHOICES = [
         ("high", "高"),
         ("medium", "中"),
@@ -138,13 +145,41 @@ class ScheduleTask(models.Model):
     distance_cost = models.FloatField(default=0, verbose_name="调度距离成本")
     prediction_batch_time = models.DateTimeField(null=True, blank=True, verbose_name="预测批次时间")
     predicted_time = models.DateTimeField(null=True, blank=True, verbose_name="预测时刻")
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_schedule_tasks",
+        verbose_name="工单发起人",
+    )
+    creator_role = models.CharField(
+        max_length=20,
+        choices=CREATOR_ROLE_CHOICES,
+        blank=True,
+        verbose_name="发起人角色",
+    )
     reason = models.TextField(blank=True, verbose_name="调度原因")
+    suggestion_fingerprint = models.CharField(max_length=128, blank=True, db_index=True, verbose_name="建议指纹")
     create_time = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
 
     class Meta:
         verbose_name = "调度任务"
         verbose_name_plural = "调度任务"
         ordering = ["-create_time"]
+
+    @property
+    def creator_role_display(self) -> str:
+        if self.creator_role:
+            return dict(self.CREATOR_ROLE_CHOICES).get(self.creator_role, self.creator_role)
+        if self.created_by and getattr(self.created_by, "role", ""):
+            return ROLE_DISPLAY_NAMES.get(self.created_by.role, self.created_by.role)
+        return "未标注"
+
+    @property
+    def creator_identity_display(self) -> str:
+        username = self.created_by.username if self.created_by else "系统"
+        return f"{username}（{self.creator_role_display}）"
 
     def __str__(self):
         return f"task#{self.id} {self.start_location}->{self.end_location}"

@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
 {% block title %}需求预测 - 基于深度学习的城市共享单车调度需求预测与运维管理平台{% endblock %}
 
@@ -8,167 +8,126 @@
     <div class="hero-title">
         <i class="bi bi-graph-up-arrow fs-3 text-primary"></i>
         <div>
-            <h2>需求预测与模型效果展示</h2>
-            <p class="hero-note">页面展示只使用现有预测服务输出与真实历史回溯数据。未来趋势来自 `/predict/api/48h/`，真实值对比来自 `/predict/api/compare/`。</p>
+            <h2>需求预测</h2>
+            <p class="hero-note">本页专注单站点分析：查看单个站点的历史真实值、模型预测结果、未来 48 小时车辆变化量与库存推演，不再重复首页总览功能。</p>
         </div>
     </div>
     <div class="hero-meta">
-        <span class="data-badge"><i class="bi bi-cpu"></i> 真实预测批次</span>
-        <span class="data-badge"><i class="bi bi-arrow-repeat"></i> 60 秒同步最新批次</span>
-        <span class="data-badge"><i class="bi bi-kanban"></i> T+1 状态驱动决策</span>
-        <span class="data-badge"><i class="bi bi-clock-history"></i> 历史真实值回溯对比</span>
+        <span class="data-badge"><i class="bi bi-database-check"></i> 单站点真实预测结果</span>
+        <span class="data-badge"><i class="bi bi-arrow-repeat"></i> 10 秒自动刷新</span>
+        <span class="data-badge"><i class="bi bi-activity"></i> 车辆变化量按整数展示</span>
     </div>
-    <div class="refresh-strip">
+    <div class="refresh-strip mt-3">
         <div class="d-flex justify-content-between small text-secondary mb-2">
-            <span id="predictionRefreshLabel">正在接入最新预测批次与历史回溯结果</span>
-            <span id="predictionRefreshCountdown">60s</span>
+            <span id="predictionRefreshLabel">正在读取最新单站点预测批次</span>
+            <span id="predictionRefreshCountdown">10s</span>
         </div>
         <div class="refresh-track"><div class="refresh-bar" id="predictionRefreshBar"></div></div>
     </div>
 </div>
 
 <div class="row g-4 mb-4">
-    <div class="col-md-6 col-xl-3">
-        <div class="stat-card" id="predict-card-stations">
+    <div class="col-md-3">
+        <div class="stat-card">
             <div class="stat-icon"><i class="bi bi-diagram-3"></i></div>
             <div class="stat-value" id="predictStationCount">0</div>
             <div class="stat-label">预测站点数</div>
-            <div class="stat-meta">来自当前预测批次</div>
         </div>
     </div>
-    <div class="col-md-6 col-xl-3">
-        <div class="stat-card" id="predict-card-hours">
+    <div class="col-md-3">
+        <div class="stat-card">
             <div class="stat-icon"><i class="bi bi-clock-history"></i></div>
             <div class="stat-value">48h</div>
             <div class="stat-label">预测时长</div>
-            <div class="stat-meta">过去 48 小时输入，未来 48 小时输出</div>
         </div>
     </div>
-    <div class="col-md-6 col-xl-3">
-        <div class="stat-card" id="predict-card-scheme">
+    <div class="col-md-3">
+        <div class="stat-card">
             <div class="stat-icon"><i class="bi bi-layers"></i></div>
             <div class="stat-value" id="predictSchemeClassCount">-</div>
-            <div class="stat-label">当前状态档数</div>
+            <div class="stat-label">状态档数</div>
             <div class="stat-meta" id="predictSchemeKey">--</div>
         </div>
     </div>
-    <div class="col-md-6 col-xl-3">
-        <div class="stat-card" id="predict-card-batch">
+    <div class="col-md-3">
+        <div class="stat-card">
             <div class="stat-icon"><i class="bi bi-calendar-event"></i></div>
             <div class="stat-value" style="font-size: 1rem;" id="predictBatchTime">--</div>
-            <div class="stat-label">预测批次时间</div>
+            <div class="stat-label">批次时间</div>
             <div class="stat-meta" id="predictModelAlias">--</div>
         </div>
     </div>
 </div>
 
-<div class="row g-4 mb-4">
-    <div class="col-xl-8">
-        <div class="card h-100">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5><i class="bi bi-activity"></i> 当前模型运行态</h5>
-                <span class="small">指标与状态标签跟随当前状态方案</span>
-            </div>
-            <div class="card-body">
-                <div class="row g-3 mb-3">
-                    <div class="col-md-4">
-                        <div class="soft-card p-3 h-100">
-                            <div class="section-note">活动模型</div>
-                            <div class="fw-bold fs-5" id="runtimeActiveAlias">--</div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="soft-card p-3 h-100">
-                            <div class="section-note">分类准确率</div>
-                            <div class="fw-bold fs-5" id="runtimeAccuracy">--</div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="soft-card p-3 h-100">
-                            <div class="section-note">Macro F1</div>
-                            <div class="fw-bold fs-5" id="runtimeMacroF1">--</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="row g-3 mb-3">
-                    <div class="col-md-6">
-                        <div class="soft-card p-3 h-100">
-                            <div class="section-note">Weighted F1</div>
-                            <div class="fw-bold fs-5" id="runtimeWeightedF1">--</div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="soft-card p-3 h-100">
-                            <div class="section-note">分类准确率</div>
-                            <div class="fw-bold fs-5" id="runtimeAccuracyInline">--</div>
-                        </div>
-                    </div>
-                </div>
-                <div>
-                    <div class="section-note mb-2">当前状态标签</div>
-                    <div id="stateLabelBadges" class="d-flex flex-wrap gap-2"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-xl-4">
-        <div class="card h-100">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5><i class="bi bi-stars"></i> T+1 关键摘要</h5>
-                <span class="small">全部来自当前预测批次</span>
-            </div>
-            <div class="card-body">
-                <div id="predictionHighlights" class="d-flex flex-column gap-3">
-                    <div class="empty-state">正在加载预测摘要...</div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h5><i class="bi bi-graph-up"></i> 未来 48 小时预测趋势</h5>
+        <h5><i class="bi bi-bullseye"></i> 单站点分析控制台</h5>
         <div class="d-flex align-items-center gap-2">
-            <select id="predictStationSelector" class="form-select form-select-sm" style="width:auto;min-width:180px;"></select>
-            <span class="small">展示当前活动模型返回的真实预测序列</span>
+            <select id="predictStationSelector" class="form-select form-select-sm" style="width:auto;min-width:220px;"></select>
+            <select id="compareHoursSelector" class="form-select form-select-sm" style="width:auto;min-width:120px;">
+                <option value="24">最近24点</option>
+                <option value="48" selected>最近48点</option>
+            </select>
         </div>
     </div>
     <div class="card-body">
-        <div id="predictChart" style="height: 400px;"></div>
+        <div class="row g-3">
+            <div class="col-md-3">
+                <div class="soft-card p-3 h-100">
+                    <div class="section-note">活动模型</div>
+                    <div class="fw-bold fs-5" id="runtimeActiveAlias">--</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="soft-card p-3 h-100">
+                    <div class="section-note">分类准确率</div>
+                    <div class="fw-bold fs-5" id="runtimeAccuracy">--</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="soft-card p-3 h-100">
+                    <div class="section-note">Macro F1</div>
+                    <div class="fw-bold fs-5" id="runtimeMacroF1">--</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="soft-card p-3 h-100">
+                    <div class="section-note">Weighted F1</div>
+                    <div class="fw-bold fs-5" id="runtimeWeightedF1">--</div>
+                </div>
+            </div>
+        </div>
+        <div class="mt-3" id="stationStateSummary"></div>
     </div>
 </div>
 
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h5><i class="bi bi-arrow-left-right"></i> 历史回溯：真实值 vs 预测值</h5>
-        <span class="small">仅使用真实库存与当前模型的历史回推结果</span>
+        <h5><i class="bi bi-graph-up"></i> 单站点未来 48 小时趋势</h5>
+        <div class="d-flex align-items-center gap-2">
+            <span class="small">默认隐藏，按需展开查看</span>
+            <button type="button" class="btn btn-light btn-sm" id="togglePredictChartBtn">显示趋势图</button>
+        </div>
+    </div>
+    <div class="card-body" id="predictChartWrap" style="display:none;">
+        <div id="predictChart" style="height: 420px;"></div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5><i class="bi bi-arrow-left-right"></i> 历史真实值 vs 预测值</h5>
+        <span class="small" id="compareSummaryText">正在加载历史对比数据...</span>
     </div>
     <div class="card-body">
-        <div class="row g-3 mb-3">
-            <div class="col-md-4">
-                <label class="form-label">站点</label>
-                <select id="compareStationSelector" class="form-select"></select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">样本数</label>
-                <select id="compareHoursSelector" class="form-select">
-                    <option value="24">24</option>
-                    <option value="48" selected>48</option>
-                </select>
-            </div>
-            <div class="col-md-6 d-flex align-items-end">
-                <div class="small text-muted" id="compareSummaryText">正在加载历史回溯对比数据...</div>
-            </div>
-        </div>
         <div id="compareChart" style="height: 420px;"></div>
     </div>
 </div>
 
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h5><i class="bi bi-table"></i> 站点预测摘要</h5>
-        <span class="small">展示前 20 个站点的 T+1 业务摘要</span>
+        <h5><i class="bi bi-table"></i> 站点级 T+1 摘要</h5>
+        <span class="small">数值按运营展示口径取整；模型内部仍使用连续值推演库存</span>
     </div>
     <div class="card-body">
         <div class="table-responsive">
@@ -178,9 +137,9 @@
                         <th>站点编号</th>
                         <th>站点名称</th>
                         <th>T+1 状态</th>
-                        <th>T+1 状态区间</th>
-                        <th>T+1 代表库存</th>
-                        <th>T+1 供需缺口</th>
+                        <th>T+1 车辆变化</th>
+                        <th>T+1 库存</th>
+                        <th>T+1 缺口</th>
                     </tr>
                 </thead>
                 <tbody id="predictionTableBody">
@@ -200,19 +159,19 @@
     const compareChart = echarts.init(document.getElementById('compareChart'));
     let refreshSeconds = 10;
     let predictionRefreshController = null;
-    const predictState = {
-        batch: initialBatch
-    };
+    const predictState = { batch: initialBatch };
 
-    function ensureStationSelector(stations) {
-        const selector = document.getElementById('compareStationSelector');
-        const currentValue = selector.value;
-        selector.innerHTML = (stations || []).map(station => (
-            `<option value="${station.station_id}">${station.station_id} - ${station.station_name}</option>`
-        )).join('');
-        if (currentValue && (stations || []).some(item => String(item.station_id) === String(currentValue))) {
-            selector.value = currentValue;
-        }
+    function ensureStationSelectors(stations) {
+        const selectors = [document.getElementById('predictStationSelector')];
+        selectors.forEach(selector => {
+            const currentValue = selector.value;
+            selector.innerHTML = (stations || []).map(station =>
+                `<option value="${station.station_id}">${station.station_id} - ${station.station_name}</option>`
+            ).join('');
+            if (currentValue && (stations || []).some(item => String(item.station_id) === String(currentValue))) {
+                selector.value = currentValue;
+            }
+        });
     }
 
     function renderTopCards(batch) {
@@ -229,92 +188,61 @@
         const summary = batch.model_runtime_summary || {};
         const metrics = summary.active_state_scheme_metrics?.test_metrics || {};
         document.getElementById('runtimeActiveAlias').textContent = summary.active_alias || '--';
-        document.getElementById('runtimeAccuracy').textContent = metrics.classification_accuracy != null ? metrics.classification_accuracy.toFixed(4) : '--';
+        document.getElementById('runtimeAccuracy').textContent = metrics.classification_accuracy != null ? (metrics.classification_accuracy * 100).toFixed(2) + '%' : '--';
         document.getElementById('runtimeMacroF1').textContent = metrics.macro_f1 != null ? metrics.macro_f1.toFixed(4) : '--';
         document.getElementById('runtimeWeightedF1').textContent = metrics.weighted_f1 != null ? metrics.weighted_f1.toFixed(4) : '--';
-        document.getElementById('runtimeAccuracyInline').textContent = metrics.classification_accuracy != null ? (metrics.classification_accuracy * 100).toFixed(2) + '%' : '--';
         if (batch.metrics && batch.metrics.refresh_seconds) {
             refreshSeconds = Number(batch.metrics.refresh_seconds) || refreshSeconds;
             if (predictionRefreshController) {
                 predictionRefreshController.setIntervalSeconds(refreshSeconds);
             }
         }
-
-        const labels = summary.active_state_scheme?.labels || [];
-        const colors = summary.active_state_scheme?.colors || [];
-        document.getElementById('stateLabelBadges').innerHTML = labels.map((label, index) => `
-            <span class="badge border text-dark" style="background:${colors[index] || '#e2e8f0'}22;border-color:${colors[index] || '#cbd5e1'};">
-                <span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:${colors[index] || '#64748b'};margin-right:6px;"></span>
-                ${label}
-            </span>
-        `).join('');
     }
 
-    function renderHighlights(batch) {
-        const stations = (batch.stations || []).slice();
-        if (!stations.length) {
-            document.getElementById('predictionHighlights').innerHTML = '<div class="empty-state">暂无预测摘要</div>';
-            return;
-        }
-
-        const shortage = stations.slice().sort((a, b) => b.t_plus_1_gap - a.t_plus_1_gap).slice(0, 3);
-        const surplus = stations.slice().sort((a, b) => a.t_plus_1_gap - b.t_plus_1_gap).slice(0, 3);
-
-        document.getElementById('predictionHighlights').innerHTML = `
+    function renderStateSummary(station) {
+        if (!station) return;
+        document.getElementById('stationStateSummary').innerHTML = `
             <div class="soft-card p-3">
-                <div class="section-note mb-2">缺口最高站点</div>
-                ${shortage.map(item => `<div class="d-flex justify-content-between mb-2"><span>${item.station_name}</span><strong>${Number(item.t_plus_1_gap || 0).toFixed(2)}</strong></div>`).join('')}
-            </div>
-            <div class="soft-card p-3">
-                <div class="section-note mb-2">盈余最高站点</div>
-                ${surplus.map(item => `<div class="d-flex justify-content-between mb-2"><span>${item.station_name}</span><strong>${Number(item.t_plus_1_gap || 0).toFixed(2)}</strong></div>`).join('')}
-            </div>
-            <div class="soft-card p-3">
-                <div class="section-note mb-2">真实数据说明</div>
-                <div class="small text-secondary">未来趋势来自当前预测批次；历史对比来自真实库存回溯。页面不使用随机模拟值。</div>
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <div class="section-note">当前选中站点</div>
+                        <div class="fw-bold">${station.station_name}</div>
+                    </div>
+                    <span class="badge" style="background-color:${station.t_plus_1_state_color || '#6c757d'};">${station.t_plus_1_state_label || '--'}</span>
+                </div>
+                <div class="row g-3 mt-2">
+                    <div class="col-md-4"><div class="section-note">T+1 车辆变化</div><div class="fw-bold">${Math.round(Number(station.t_plus_1_prediction || 0))}</div></div>
+                    <div class="col-md-4"><div class="section-note">T+1 库存</div><div class="fw-bold">${Math.round(Number(station.t_plus_1_inventory || 0))}</div></div>
+                    <div class="col-md-4"><div class="section-note">T+1 缺口</div><div class="fw-bold">${Math.round(Number(station.t_plus_1_gap || 0))}</div></div>
+                </div>
+                <div class="small text-muted mt-2">净流量在系统中的作用是做库存推演和调度判定；页面展示时已转成更可读的整数车辆变化量。</div>
             </div>
         `;
     }
 
-    function ensurePredictStationSelector(stations) {
-        const selector = document.getElementById('predictStationSelector');
-        const currentValue = selector.value;
-        selector.innerHTML = (stations || []).map(station =>
-            `<option value="${station.station_id}">${station.station_id} - ${station.station_name}</option>`
-        ).join('');
-        if (currentValue && (stations || []).some(item => String(item.station_id) === String(currentValue))) {
-            selector.value = currentValue;
-        }
-    }
-
-    document.getElementById('predictStationSelector').addEventListener('change', function() {
-        renderFutureChartForStation(this.value);
-    });
-
-    function renderFutureChart(batch) {
-        ensurePredictStationSelector(batch.stations || []);
-        const selectedId = document.getElementById('predictStationSelector').value;
-        renderFutureChartForStation(selectedId);
-    }
-
     function renderFutureChartForStation(stationId) {
+        const chartWrap = document.getElementById('predictChartWrap');
+        if (chartWrap && chartWrap.style.display === 'none') {
+            return;
+        }
         const station = (predictState.batch?.stations || []).find(s => String(s.station_id) === String(stationId));
         if (!station) {
             predictChart.clear();
             return;
         }
+        renderStateSummary(station);
         predictChart.setOption({
             tooltip: { trigger: 'axis' },
-            legend: { data: ['预测净流量', '预测库存'] },
+            legend: { data: ['T+1车辆变化', '预测库存'] },
             grid: { left: 44, right: 18, top: 28, bottom: 36 },
             xAxis: { type: 'category', data: station.timestamps || [] },
             yAxis: [
-                { type: 'value', name: '净流量' },
+                { type: 'value', name: '车辆变化量' },
                 { type: 'value', name: '库存' }
             ],
             series: [
                 {
-                    name: '预测净流量',
+                    name: 'T+1车辆变化',
                     type: 'line',
                     smooth: true,
                     symbol: 'circle',
@@ -331,7 +259,7 @@
                     symbol: 'none',
                     lineStyle: { width: 3, color: '#0f766e' },
                     areaStyle: { opacity: 0.08 },
-                    data: station.inventory_predictions || []
+                    data: (station.inventory_predictions || []).map(item => Math.round(Number(item || 0)))
                 }
             ]
         });
@@ -343,18 +271,16 @@
             <tr>
                 <td>${station.station_id}</td>
                 <td>${station.station_name}</td>
-                <td>
-                    <span class="badge" style="background-color:${station.t_plus_1_state_color || '#6c757d'};">${station.t_plus_1_state_label || '--'}</span>
-                </td>
-                <td>${station.t_plus_1_state_range || '--'}</td>
-                <td>${Math.round(Number(station.t_plus_1_state_midpoint || 0))}</td>
+                <td><span class="badge" style="background-color:${station.t_plus_1_state_color || '#6c757d'};">${station.t_plus_1_state_label || '--'}</span></td>
+                <td>${Math.round(Number(station.t_plus_1_prediction || 0))}</td>
+                <td>${Math.round(Number(station.t_plus_1_inventory || 0))}</td>
                 <td>${Math.round(Number(station.t_plus_1_gap || 0))}</td>
             </tr>
         `).join('') : '<tr><td colspan="6" class="text-center text-muted py-4">暂无预测数据</td></tr>';
     }
 
     async function loadCompareData() {
-        const stationId = document.getElementById('compareStationSelector').value;
+        const stationId = document.getElementById('predictStationSelector').value;
         const hours = document.getElementById('compareHoursSelector').value;
         const summary = document.getElementById('compareSummaryText');
         if (!stationId) {
@@ -362,16 +288,14 @@
             compareChart.clear();
             return;
         }
-
-        summary.textContent = '正在加载历史回溯对比数据...';
+        summary.textContent = '正在加载历史对比数据...';
         const response = await fetch(`{% url "demand_prediction:compare_api" %}?station_id=${stationId}&hours=${hours}`, { cache: 'no-store' });
         const payload = await response.json();
         if (!response.ok) {
-            summary.textContent = payload.error || '历史回溯对比数据加载失败';
+            summary.textContent = payload.error || '历史对比数据加载失败';
             return;
         }
-
-        summary.textContent = `当前模型：${payload.model_alias}，状态方案：${payload.state_scheme_key}，站点：${payload.station_name}，展示最近 ${payload.hours} 个历史样本`;
+        summary.textContent = `当前模型：${payload.model_alias}，状态方案：${payload.state_scheme_key}，站点：${payload.station_name}，展示最近 ${payload.hours} 个历史样本；页面数值按运营展示口径取整。`;
         compareChart.setOption({
             tooltip: {
                 trigger: 'axis',
@@ -379,8 +303,8 @@
                     const index = params[0].dataIndex;
                     return [
                         payload.timestamps[index],
-                        `真实值：${payload.actual_values[index]}`,
-                        `预测值：${payload.predicted_values[index]}`,
+                        `真实值：${Math.round(Number(payload.actual_values[index] || 0))}`,
+                        `预测值：${Math.round(Number(payload.predicted_values[index] || 0))}`,
                         `真实状态：${payload.actual_states[index]}`,
                         `预测状态：${payload.predicted_states[index]}`,
                         `状态区间：${payload.state_ranges[index]}`
@@ -399,7 +323,7 @@
                     symbol: 'circle',
                     symbolSize: 5,
                     lineStyle: { width: 3, color: '#4f46e5' },
-                    data: payload.actual_values || []
+                    data: (payload.actual_values || []).map(item => Math.round(Number(item || 0)))
                 },
                 {
                     name: '预测值',
@@ -408,7 +332,7 @@
                     symbol: 'none',
                     lineStyle: { width: 3, color: '#0f766e' },
                     areaStyle: { opacity: 0.08 },
-                    data: payload.predicted_values || []
+                    data: (payload.predicted_values || []).map(item => Math.round(Number(item || 0)))
                 }
             ]
         });
@@ -419,20 +343,18 @@
         predictState.batch = batch;
         renderTopCards(batch);
         renderRuntimeSummary(batch);
-        renderHighlights(batch);
-        renderFutureChart(batch);
         renderPredictionTable(batch);
-        ensureStationSelector(batch.stations || []);
-        document.getElementById('predictionRefreshLabel').textContent = `最新批次时间：${window.BSDPUI.formatDateTime(batch.batch_time)} · 数据来自预测服务`;
+        ensureStationSelectors(batch.stations || []);
+        const selectedId = document.getElementById('predictStationSelector').value || String((batch.stations || [])[0]?.station_id || '');
+        renderFutureChartForStation(selectedId);
+        document.getElementById('predictionRefreshLabel').textContent = `最新批次时间：${window.BSDPUI.formatDateTime(batch.batch_time)} · 数据来自真实预测服务`;
     }
 
     async function refreshPredictionBatch() {
         try {
             const response = await fetch('{% url "demand_prediction:predict_48h_api" %}', { cache: 'no-store' });
             const payload = await response.json();
-            if (!response.ok) {
-                throw new Error(payload.error || '预测批次刷新失败');
-            }
+            if (!response.ok) throw new Error(payload.error || '预测批次刷新失败');
             renderBatch(payload);
             await loadCompareData();
         } catch (error) {
@@ -441,8 +363,22 @@
         }
     }
 
-    document.getElementById('compareStationSelector').addEventListener('change', loadCompareData);
+    document.getElementById('predictStationSelector').addEventListener('change', function() {
+        renderFutureChartForStation(this.value);
+        loadCompareData();
+    });
     document.getElementById('compareHoursSelector').addEventListener('change', loadCompareData);
+    document.getElementById('togglePredictChartBtn').addEventListener('click', function () {
+        const wrap = document.getElementById('predictChartWrap');
+        const visible = wrap.style.display !== 'none';
+        wrap.style.display = visible ? 'none' : 'block';
+        this.textContent = visible ? '显示趋势图' : '隐藏趋势图';
+        if (!visible) {
+            const selectedId = document.getElementById('predictStationSelector').value;
+            renderFutureChartForStation(selectedId);
+            predictChart.resize();
+        }
+    });
 
     renderBatch(initialBatch);
     loadCompareData();

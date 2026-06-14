@@ -25,13 +25,62 @@ def _client_ip(request) -> str | None:
     return request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")[0] or request.META.get("REMOTE_ADDR")
 
 
+def _regression_metrics_for_station(station_id: int, hours: int = 48) -> dict[str, object]:
+    payload = station_prediction_service.get_compare_response(station_id=station_id, hours=hours)
+    actual = pd.Series(payload["actual_values"], dtype="float64")
+    predicted = pd.Series(payload["predicted_values"], dtype="float64")
+    if actual.empty:
+        return {
+            "mae": None,
+            "rmse": None,
+            "r2": None,
+            "sample_count": 0,
+            "error_score_accuracy": None,
+            "smape": None,
+        }
+
+    errors = predicted - actual
+    abs_errors = errors.abs()
+    mae = float(abs_errors.mean())
+    rmse = float((errors.pow(2).mean()) ** 0.5)
+    actual_mean = float(actual.mean())
+    ss_res = float(errors.pow(2).sum())
+    ss_tot = float(((actual - actual_mean) ** 2).sum())
+    r2 = 1.0 - (ss_res / ss_tot) if ss_tot else 0.0
+
+    # 更细粒度误差评分：结合相对误差、绝对误差并按样本平滑计分，不使用简单二值阈值
+    denominator = ((actual.abs() + predicted.abs()) / 2.0).replace(0, 1.0)
+    relative_error = (abs_errors / denominator).clip(lower=0.0)
+    # 每个样本得分区间 [0, 1]，误差越小得分越高
+    sample_scores = (1.0 - relative_error).clip(lower=0.0, upper=1.0)
+    # 结合轻量绝对误差惩罚，避免低值样本相对误差失真
+    abs_penalty = (abs_errors / (abs_errors.quantile(0.9) + 1.0)).clip(upper=1.0)
+    sample_scores = (sample_scores * 0.8 + (1.0 - abs_penalty) * 0.2).clip(lower=0.0, upper=1.0)
+    error_score_accuracy = float(sample_scores.mean())
+
+    smape = float((2.0 * abs_errors / (actual.abs() + predicted.abs() + 1e-9)).mean())
+
+    return {
+        "mae": round(mae, 4),
+        "rmse": round(rmse, 4),
+        "r2": round(r2, 4),
+        "sample_count": int(len(actual)),
+        "error_score_accuracy": round(error_score_accuracy, 4),
+        "smape": round(smape, 4),
+    }
+
+
 @login_required
-@role_required("admin", "operator", "predictor", message="当前账号无权访问需求预测模块。")
+@role_required("admin", "predictor", message="仅系统管理员或预测人员可以访问需求预测模块。")
 def model_predict_view(request):
     prediction_error = None
     batch = None
+    default_station_metrics = None
     try:
         batch = station_prediction_service.get_batch_response(force=False)
+        stations = batch.get("stations", [])
+        if stations:
+            default_station_metrics = _regression_metrics_for_station(stations[0]["station_id"], hours=48)
     except FileNotFoundError as exc:
         prediction_error = str(exc)
     return render(
@@ -40,6 +89,7 @@ def model_predict_view(request):
         {
             "prediction_batch": batch,
             "prediction_error": prediction_error,
+            "default_station_metrics": default_station_metrics,
             "project_name": PROJECT_NAME,
             "access_flags": role_flags(request.user),
         },
@@ -47,13 +97,13 @@ def model_predict_view(request):
 
 
 @login_required
-@role_required("admin", "operator", "predictor", message="当前账号无权访问需求预测模块。")
+@role_required("admin", "predictor", message="仅系统管理员或预测人员可以访问需求预测模块。")
 def model_compare(request):
     return redirect("demand_prediction:model_predict")
 
 
 @login_required
-@role_required("admin", "operator", "predictor", message="当前账号无权查看预测结果。")
+@role_required("admin", "predictor", message="仅系统管理员或预测人员可以查看预测结果。")
 def predict_result_view(request):
     station_predictions = (
         StationPrediction.objects.select_related("station")
@@ -71,7 +121,7 @@ def predict_result_view(request):
 
 
 @login_required
-@role_required("admin", "operator", "predictor", message="当前账号无权查看站点预测详情。")
+@role_required("admin", "predictor", message="仅系统管理员或预测人员可以查看站点预测详情。")
 def spot_forecast(request):
     prediction_error = None
     batch = None
@@ -92,7 +142,7 @@ def spot_forecast(request):
 
 
 @login_required
-@role_required("admin", "operator", "predictor", message="当前账号无权访问预测 API。")
+@role_required("admin", "predictor", message="仅系统管理员或预测人员可以访问预测 API。")
 def spot_forecast_api(request):
     try:
         payload = station_prediction_service.get_batch_response(force=False)
@@ -102,7 +152,7 @@ def spot_forecast_api(request):
 
 
 @login_required
-@role_required("admin", "operator", "predictor", message="当前账号无权访问预测 API。")
+@role_required("admin", "predictor", message="仅系统管理员或预测人员可以访问预测 API。")
 def predict_48h_api(request):
     try:
         payload = station_prediction_service.get_batch_response(force=request.GET.get("refresh") == "1")
@@ -112,7 +162,7 @@ def predict_48h_api(request):
 
 
 @login_required
-@role_required("admin", "operator", "predictor", message="当前账号无权访问站点预测 API。")
+@role_required("admin", "predictor", message="仅系统管理员或预测人员可以访问站点预测 API。")
 def predict_station_api(request, station_id: int):
     station = get_object_or_404(ParkingSpot, ysu_id=station_id)
     try:
@@ -136,7 +186,7 @@ def predict_station_api(request, station_id: int):
 
 
 @login_required
-@role_required("admin", "operator", "predictor", message="当前账号无权访问预测对比接口。")
+@role_required("admin", "predictor", message="仅系统管理员或预测人员可以访问预测对比接口。")
 def compare_api(request):
     try:
         station_id = int(request.GET.get("station_id", 1))
@@ -150,6 +200,7 @@ def compare_api(request):
         payload = station_prediction_service.get_compare_response(station_id=station_id, hours=hours)
     except ParkingSpot.DoesNotExist:
         return JsonResponse({"success": False, "error": "Station not found"}, status=404)
+    payload["regression_metrics"] = _regression_metrics_for_station(station_id=station_id, hours=hours)
     return JsonResponse(payload)
 
 
@@ -191,7 +242,7 @@ def download_model(request, model_type: str):
 
 
 @login_required
-@role_required("admin", "operator", "predictor", message="当前账号无权导出预测报告。")
+@role_required("admin", "predictor", message="仅系统管理员或预测人员可以导出预测报告。")
 def export_prediction_report(request):
     try:
         payload = station_prediction_service.get_batch_response(force=False)
@@ -236,6 +287,6 @@ def export_prediction_report(request):
 
 
 @login_required
-@role_required("admin", "operator", "predictor", message="当前账号无权访问预测产物说明。")
+@role_required("admin", "predictor", message="仅系统管理员或预测人员可以访问预测产物说明。")
 def get_loss_curve(request, model_type: str, date: str):
     return JsonResponse({"success": False, "error": "Loss curve is generated in the training artifacts directory"}, status=404)

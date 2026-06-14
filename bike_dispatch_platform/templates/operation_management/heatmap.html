@@ -5,104 +5,44 @@
 {% block extra_css %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
 <style>
-    .dispatch-hero-grid {
-        display: grid;
-        grid-template-columns: 1.35fr 1fr;
-        gap: 1rem;
-        align-items: center;
-    }
-
-    .dispatch-hero-side {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0.85rem;
-    }
-
-    .mini-card {
-        border: 1px solid var(--border-color);
-        border-radius: 16px;
-        background: rgba(255,255,255,0.72);
-        padding: 0.9rem 1rem;
-    }
-
-    body.dark-mode .mini-card {
-        background: rgba(22,34,56,0.8);
-    }
-
-    .mini-card .label {
-        color: var(--text-secondary);
-        font-size: 0.8rem;
-        font-weight: 600;
-    }
-
-    .mini-card .value {
-        margin-top: 0.25rem;
-        font-weight: 800;
-        font-size: 1rem;
-    }
-
-    #dispatchCampusMap .station-marker {
-        border-radius: 999px;
-        border: 2px solid rgba(255,255,255,0.95);
-        color: #fff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 800;
-        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
-        line-height: 1;
-        transition: transform 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
-    }
-
-    #dispatchCampusMap .station-marker.is-active {
-        transform: scale(1.18);
-        box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.26), 0 10px 24px rgba(0, 0, 0, 0.3);
-    }
-
+    .dispatch-hero-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 1rem; align-items: center; }
+    .dispatch-hero-side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem; }
+    .mini-card { border: 1px solid var(--border-color); border-radius: 16px; background: rgba(255,255,255,0.72); padding: 0.9rem 1rem; }
+    body.dark-mode .mini-card { background: rgba(22,34,56,0.8); }
+    .mini-card .label { color: var(--text-secondary); font-size: 0.8rem; font-weight: 600; }
+    .mini-card .value { margin-top: 0.25rem; font-weight: 800; font-size: 1rem; }
+    #dispatchCampusMap .station-marker { border-radius: 999px; border: 2px solid rgba(255,255,255,0.95); color: #fff; display:flex; align-items:center; justify-content:center; font-weight:800; box-shadow:0 8px 18px rgba(0,0,0,.24); line-height:1; transition:transform .18s ease, background-color .18s ease, box-shadow .18s ease; }
+    #dispatchCampusMap .station-marker.is-active { transform: scale(1.18); box-shadow: 0 0 0 5px rgba(37,99,235,.26), 0 10px 24px rgba(0,0,0,.3); }
     #dispatchCampusMap .station-marker.is-updated {
-        animation: dispatchPulse 0.9s ease;
+        animation: dispatchPulse .9s ease, dispatchGlow .9s ease;
     }
-
-    @keyframes dispatchPulse {
-        0% { transform: scale(0.94); }
-        45% { transform: scale(1.15); }
-        100% { transform: scale(1); }
+    #dispatchCampusMap .station-delta-badge {
+        position: absolute;
+        right: -6px;
+        top: -10px;
+        min-width: 28px;
+        padding: 2px 7px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 800;
+        color: #fff;
+        box-shadow: 0 6px 14px rgba(0,0,0,.18);
+        border: 1px solid rgba(255,255,255,.9);
+        animation: deltaBadgePop .9s ease;
     }
-
-    .sortable {
-        cursor: pointer;
-        user-select: none;
-        white-space: nowrap;
-    }
-
-    .sortable::after {
-        content: " ↕";
-        color: var(--text-secondary);
-        font-size: 12px;
-    }
-
-    .dispatch-row-active {
-        background: rgba(37, 99, 235, 0.10) !important;
-    }
-
-    .dispatch-row-updated {
-        box-shadow: inset 3px 0 0 rgba(79, 70, 229, 0.85);
-    }
-
-    .suggestion-stack {
-        max-height: 260px;
-        overflow: auto;
-    }
-
-    .suggestion-card {
-        border: 1px solid rgba(245, 158, 11, 0.24);
-        border-radius: 16px;
-        padding: 0.9rem 0.95rem;
-        background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(234, 179, 8, 0.08));
-        margin-bottom: 0.75rem;
-    }
-
-    .suggestion-card:last-child { margin-bottom: 0; }
+    #dispatchCampusMap .station-delta-badge.delta-up { background: linear-gradient(135deg, #16a34a, #22c55e); }
+    #dispatchCampusMap .station-delta-badge.delta-down { background: linear-gradient(135deg, #dc2626, #ef4444); }
+    @keyframes dispatchPulse { 0% { transform: scale(.94); } 45% { transform: scale(1.15); } 100% { transform: scale(1); } }
+    @keyframes dispatchGlow { 0% { box-shadow: 0 8px 18px rgba(0,0,0,.24), 0 0 0 0 rgba(59,130,246,.0); } 50% { box-shadow: 0 8px 18px rgba(0,0,0,.24), 0 0 0 10px rgba(59,130,246,.18); } 100% { box-shadow: 0 8px 18px rgba(0,0,0,.24), 0 0 0 0 rgba(59,130,246,.0); } }
+    @keyframes deltaBadgePop { 0% { transform: translateY(4px) scale(.7); opacity: 0; } 45% { transform: translateY(0) scale(1.08); opacity: 1; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
+    .sortable { cursor:pointer; user-select:none; white-space:nowrap; }
+    .sortable::after { content:" ↕"; color:var(--text-secondary); font-size:12px; }
+    .dispatch-row-active { background: rgba(37,99,235,.10) !important; }
+    .dispatch-row-updated { box-shadow: inset 3px 0 0 rgba(79,70,229,.85); }
+    .suggestion-stack { max-height: 280px; overflow: auto; }
+    .suggestion-card { border: 1px solid rgba(245,158,11,.24); border-radius:16px; padding:.9rem .95rem; background: linear-gradient(135deg, rgba(245,158,11,.12), rgba(234,179,8,.08)); margin-bottom:.75rem; }
+    .suggestion-card:last-child { margin-bottom:0; }
+    .task-table-wrap { max-height: 340px; overflow:auto; }
 </style>
 {% endblock %}
 
@@ -132,65 +72,38 @@
             </div>
         </div>
         <div class="dispatch-hero-side">
-            <div class="mini-card">
-                <div class="label">快照时间</div>
-                <div class="value" id="predictTime">--</div>
-            </div>
-            <div class="mini-card">
-                <div class="label">全局车辆数</div>
-                <div class="value" id="globalTotal">1200</div>
-            </div>
-            <div class="mini-card">
-                <div class="label">总短缺量</div>
-                <div class="value" id="totalShortage">0</div>
-            </div>
-            <div class="mini-card">
-                <div class="label">可调车辆</div>
-                <div class="value" id="dispatchableVehicles">0</div>
-            </div>
+            <div class="mini-card"><div class="label">快照时间</div><div class="value" id="predictTime">--</div></div>
+            <div class="mini-card"><div class="label">全局车辆数</div><div class="value" id="globalTotal">0</div></div>
+            <div class="mini-card"><div class="label">总短缺量</div><div class="value" id="totalShortage">0</div></div>
+            <div class="mini-card"><div class="label">可调车辆</div><div class="value" id="dispatchableVehicles">0</div></div>
         </div>
     </div>
 </div>
 
 <div class="row g-4">
-    <div class="col-lg-3">
+    <div class="col-12">
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5><i class="bi bi-sliders"></i> 供需控制面板</h5>
-                <button id="refreshBtn" class="btn btn-outline-light btn-sm" type="button">
-                    <i class="bi bi-arrow-clockwise"></i> 刷新
-                </button>
+                <button id="refreshBtn" class="btn btn-outline-light btn-sm" type="button"><i class="bi bi-arrow-clockwise"></i> 刷新</button>
             </div>
             <div class="card-body">
                 <div class="row g-3 text-center mb-3">
-                    <div class="col-4"><div class="soft-card p-3 h-100"><div class="section-note">站点</div><div class="fw-bold fs-5" id="parkingSpotCount">62</div></div></div>
-                    <div class="col-4"><div class="soft-card p-3 h-100"><div class="section-note text-danger">稀少</div><div class="fw-bold fs-5 text-danger" id="shortageCount">0</div></div></div>
-                    <div class="col-4"><div class="soft-card p-3 h-100"><div class="section-note text-success">盈余</div><div class="fw-bold fs-5 text-success" id="surplusCount">0</div></div></div>
+                    <div class="col-md-3"><div class="soft-card p-3 h-100"><div class="section-note">站点</div><div class="fw-bold fs-5" id="parkingSpotCount">0</div></div></div>
+                    <div class="col-md-3"><div class="soft-card p-3 h-100"><div class="section-note text-danger">稀少</div><div class="fw-bold fs-5 text-danger" id="shortageCount">0</div></div></div>
+                    <div class="col-md-3"><div class="soft-card p-3 h-100"><div class="section-note text-success">盈余</div><div class="fw-bold fs-5 text-success" id="surplusCount">0</div></div></div>
+                    <div class="col-md-3"><div class="soft-card p-3 h-100"><div class="section-note">缺口</div><div class="fw-bold fs-5" id="currentGapTotal">0</div></div></div>
                 </div>
-                <div class="small text-secondary mb-3">
-                    当前库存表示站点实时停放车辆数。“T+1 车辆变化”来自模型对下一小时净流量的预测，页面展示时按整数车辆变化量呈现：正值表示预计净流入，负值表示预计净流出。系统再将预测后的 T+1 库存与目标库存比较：低于目标库存判定为预测缺少，高于目标库存判定为预测盈余。
-                </div>
-                <div class="border rounded-4 p-3 bg-light-subtle">
-                    <div class="d-flex justify-content-between mb-2"><span>锁定车辆数</span><strong id="lockedVehicles">0</strong></div>
-                    <div class="d-flex justify-content-between mb-2"><span>总盈余量</span><strong id="totalSurplus">0</strong></div>
-                    <div class="d-flex justify-content-between mb-2"><span>总短缺量</span><strong id="totalShortageMirror">0</strong></div>
-                    <div class="d-flex justify-content-between"><span>当前全局缺口</span><strong id="currentGapTotal">0</strong></div>
+                <div class="small text-secondary mb-3">当前库存表示站点实时停放车辆数。T+1 车辆变化来自模型下一小时净流量预测，系统会将预测后的 T+1 库存与目标库存比较，低于目标库存判定为预测缺少，高于目标库存判定为预测盈余。</div>
+                <div class="row g-3">
+                    <div class="col-md-3"><div class="border rounded-4 p-3 bg-light-subtle h-100"><div class="d-flex justify-content-between mb-2"><span>锁定车辆数</span><strong id="lockedVehicles">0</strong></div></div></div>
+                    <div class="col-md-3"><div class="border rounded-4 p-3 bg-light-subtle h-100"><div class="d-flex justify-content-between mb-2"><span>总盈余量</span><strong id="totalSurplus">0</strong></div></div></div>
+                    <div class="col-md-3"><div class="border rounded-4 p-3 bg-light-subtle h-100"><div class="d-flex justify-content-between mb-2"><span>总短缺量</span><strong id="totalShortageMirror">0</strong></div></div></div>
+                    <div class="col-md-3"><div class="border rounded-4 p-3 bg-light-subtle h-100"><div class="d-flex justify-content-between mb-2"><span>调度建议数</span><strong id="suggestionCount">0</strong></div></div></div>
                 </div>
             </div>
         </div>
 
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5><i class="bi bi-list-check"></i> 调度建议列表</h5>
-                <span class="small">仅真实调度输出</span>
-            </div>
-            <div class="card-body suggestion-stack" id="suggestionsBox">
-                <div class="empty-state">暂无调度建议</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-9">
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5><i class="bi bi-map"></i> 62 站点实时调度地图</h5>
@@ -198,6 +111,91 @@
             </div>
             <div class="card-body p-0">
                 <div id="dispatchCampusMap" style="height: 560px; width: 100%;"></div>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-xl-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="bi bi-list-check"></i> 调度建议列表</h5>
+                        <span class="small">展示可人工确认的建议；10 辆及以上任务由系统自动实施</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="small fw-semibold text-secondary mb-2">当前轮调度建议</div>
+                            <div class="suggestion-stack" id="suggestionsBox"><div class="empty-state">暂无调度建议</div></div>
+                        </div>
+                        <div>
+                            <div class="small fw-semibold text-secondary mb-2">上一轮刷新后生成的建议</div>
+                            <div class="suggestion-stack" id="previousSuggestionsBox"><div class="empty-state">暂无上一轮建议</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-8">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="bi bi-clipboard2-data"></i> 调度任务列表</h5>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="soft-card p-3 mb-3">
+                            <div class="row g-3 small">
+                                <div class="col-lg-6">
+                                    <div class="fw-semibold mb-2">任务状态说明</div>
+                                    <div class="text-secondary">待处理：任务已生成，尚未开始执行。</div>
+                                    <div class="text-secondary">进行中：任务已被系统自动实施或运维人员已开始执行。</div>
+                                    <div class="text-secondary">已完成：调度任务已执行完毕并结束。</div>
+                                    <div class="text-secondary">已取消：任务被人工删除、判定不合理或停止执行。</div>
+                                </div>
+                                <div class="col-lg-6">
+                                    <div class="fw-semibold mb-2">优先级划分规则</div>
+                                    <div class="text-secondary">高：调运量大于等于 20 辆，属于高影响工单。</div>
+                                    <div class="text-secondary">中：调运量 10-19 辆，属于常规调度工单。</div>
+                                    <div class="text-secondary">低：调运量小于 10 辆，属于低强度工单或边缘建议。</div>
+                                    <div class="text-secondary">说明：系统自动实施通常针对较大调运量任务，人工任务仍可按实际情况调整。</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-lg-4">
+                                <div class="border rounded-4 p-3 h-100">
+                                    <h6 class="mb-3"><i class="bi bi-plus-circle"></i> 手动生成调度任务</h6>
+                                    <form method="post" action="{% url 'operation_management:manual_dispatch_create' %}">
+                                        {% csrf_token %}
+                                        <div class="mb-2"><label class="form-label">起点站</label><select name="from_station_id" class="form-select form-select-sm" id="inlineFromStation" required></select></div>
+                                        <div class="mb-2"><label class="form-label">终点站</label><select name="to_station_id" class="form-select form-select-sm" id="inlineToStation" required></select></div>
+                                        <div class="d-flex justify-content-between align-items-center small text-secondary mb-2">
+                                            <span>当前起点车辆数：<strong id="selectedFromStationCount">--</strong></span>
+                                            <span>当前终点车辆数：<strong id="selectedToStationCount">--</strong></span>
+                                        </div>
+                                        <div class="mb-2"><label class="form-label">调运量</label><input type="number" name="dispatch_count" class="form-control form-control-sm" min="1" required></div>
+                                        <div class="mb-2"><label class="form-label">调度说明</label><textarea name="reason" class="form-control form-control-sm" rows="3" placeholder="可选"></textarea></div>
+                                        <button type="submit" class="btn btn-primary btn-sm w-100">创建手动调度任务</button>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="col-lg-8">
+                                <div class="border rounded-4 p-3 h-100">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                                        <div class="d-flex gap-2 flex-wrap">
+                                            <select id="taskStatusFilter" class="form-select form-select-sm" style="width:auto;min-width:120px;"><option value="all">全部状态</option><option value="pending">待处理</option><option value="in_progress">进行中</option><option value="completed">已完成</option><option value="cancelled">已取消</option></select>
+                                            <select id="taskPriorityFilter" class="form-select form-select-sm" style="width:auto;min-width:120px;"><option value="all">全部优先级</option><option value="high">高</option><option value="medium">中</option><option value="low">低</option></select>
+                                            <input type="text" id="taskSearchInput" class="form-control form-control-sm" style="width:auto;min-width:180px;" placeholder="搜索任务">
+                                        </div>
+                                        <button id="taskRefreshBtn" class="btn btn-outline-primary btn-sm" type="button">刷新任务</button>
+                                    </div>
+                                    <div class="table-responsive task-table-wrap">
+                                        <table class="table table-striped table-hover mb-0">
+                                            <thead class="table-light sticky-top"><tr><th>任务编号</th><th>类型</th><th>来源</th><th>起点</th><th>终点</th><th>调运量</th><th>状态</th><th>操作</th></tr></thead>
+                                            <tbody id="inlineTaskTableBody"><tr><td colspan="8" class="text-center text-muted py-4">暂无任务数据</td></tr></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -211,7 +209,7 @@
             </div>
             <div class="card-body p-0">
                 <div id="dispatchTableView">
-                    <div class="table-responsive" style="max-height: 480px; overflow:auto;">
+                    <div class="table-responsive" style="max-height:480px; overflow:auto;">
                         <table class="table table-striped table-hover mb-0">
                             <thead class="table-light sticky-top">
                                 <tr>
@@ -228,12 +226,66 @@
                     </div>
                 </div>
                 <div id="dispatchChartView" style="display:none;">
-                    <div id="dispatchBarChart" style="height: 480px;"></div>
+                    <div id="dispatchBarChart" style="height:480px;"></div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="suggestionDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-lightbulb"></i> 调度建议详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3" id="suggestionDetailBody"></div>
+                <div class="soft-card p-3 mt-3">
+                    <div class="section-note">建议说明</div>
+                    <div id="suggestionDetailReason" class="small text-secondary">--</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary" id="confirmApplySuggestionBtn">实施该建议</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="taskDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-card-list"></i> 调度任务详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3" id="taskDetailBody"></div>
+                <div class="soft-card p-3 mt-3">
+                    <div class="section-note">任务说明</div>
+                    <div id="taskDetailReason" class="small text-secondary">--</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteTaskModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">确认删除任务</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button></div>
+            <div class="modal-body"><p class="mb-2">将删除待处理调度任务 <strong id="deleteTaskIdText">#--</strong>。</p><p class="mb-0 text-secondary small">删除后无法恢复，请确认操作。</p></div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button><button type="button" class="btn btn-danger" id="confirmDeleteTaskBtn">确认删除</button></div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -242,290 +294,396 @@
     const initialSnapshot = JSON.parse('{{ snapshot_payload|escapejs }}');
     let refreshSeconds = Number({{ settings_obj.dashboard_refresh_seconds|default:10 }}) || 10;
     const dispatchBarChart = echarts.init(document.getElementById('dispatchBarChart'));
-    const campusCenter = [39.909689, 119.528179];
-    const campusPolygon = [
-        [39.920629,119.521485],[39.913288,119.512037],[39.904006,119.520750],[39.903988,119.531455],
-        [39.903443,119.533285],[39.908277,119.536368],[39.908118,119.536776],[39.903018,119.533517],
-        [39.900294,119.536559],[39.904718,119.543316],[39.905225,119.542436],[39.904929,119.542311],
-        [39.906239,119.541106],[39.907806,119.538698],[39.908501,119.539165],[39.908276,119.540099],
-        [39.909035,119.540612],[39.909597,119.540300],[39.910539,119.542110],[39.911097,119.541805],
-        [39.911088,119.542946],[39.911532,119.543930],[39.911932,119.543499],[39.911774,119.542036],
-        [39.912606,119.541808],[39.912437,119.539552],[39.908497,119.537055],[39.908610,119.536559],
-        [39.910460,119.537806],[39.913813,119.529450]
-    ];
-
-    const dispatchCampusMap = L.map('dispatchCampusMap').setView(campusCenter, 15);
+    const dispatchCampusMap = L.map('dispatchCampusMap').setView([39.909689, 119.528179], 15);
     const stationLayer = L.layerGroup().addTo(dispatchCampusMap);
     const markerRegistry = {};
     let dispatchRefreshController = null;
     let currentRows = [];
     let currentSuggestions = [];
+    let currentVisibleSuggestions = [];
+    let previousVisibleSuggestions = [];
+    let implementedSuggestionKeys = new Set();
+    let currentMetrics = initialSnapshot.metrics || {};
     let sortState = { key: 'station_id', direction: 'asc' };
     let selectedStationId = null;
     let activeView = 'table';
+    let pendingDeleteForm = null;
+    let pendingSuggestion = null;
     const refreshState = { previousRows: [] };
+    const suggestionDetailModal = new bootstrap.Modal(document.getElementById('suggestionDetailModal'));
+    const taskDetailModal = new bootstrap.Modal(document.getElementById('taskDetailModal'));
+    const deleteTaskModal = new bootstrap.Modal(document.getElementById('deleteTaskModal'));
 
-    L.tileLayer('https://webrd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
-        maxZoom: 18
-    }).addTo(dispatchCampusMap);
-    L.polygon(campusPolygon, { color: '#1890FF', weight: 2, fillOpacity: 0.08 }).addTo(dispatchCampusMap);
-
-    function markerColor(row) {
-        if (row.current_state_group === 'scarce') return '#dc2626';
-        if (row.current_state_group === 'saturated') return '#f59e0b';
-        return '#16a34a';
+    function currentTasks(){ return window.__TASKS_CACHE__ || []; }
+    function getCsrfToken(){ const m = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/); return m ? m[1] : ''; }
+    function suggestionKey(item){
+        return `${item.from_station_id || ''}-${item.to_station_id || ''}-${Number(item.count || 0)}`;
+    }
+    function markSuggestionImplemented(item){
+        implementedSuggestionKeys.add(suggestionKey(item));
+    }
+    function suggestionStatusLabel(item){
+        return implementedSuggestionKeys.has(suggestionKey(item)) ? '已实施' : (Number(item.count || 0) >= 10 ? '系统将自动实施' : '人工确认后实施');
+    }
+    function suggestionActionLabel(item){
+        return implementedSuggestionKeys.has(suggestionKey(item)) ? '查看实施结果' : '查看详细';
+    }
+    function renderSuggestionList(containerId, suggestions, emptyHtml){
+        const container = document.getElementById(containerId);
+        container.innerHTML = suggestions.length ? suggestions.map(item => `
+            <div class="suggestion-card ${implementedSuggestionKeys.has(suggestionKey(item)) ? 'border border-success-subtle bg-success-subtle' : ''}">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <strong>调运 ${item.count} 辆</strong>
+                    <span class="status-chip">${suggestionStatusLabel(item)}</span>
+                </div>
+                <div class="fw-semibold">${item.from} → ${item.to}</div>
+                <div class="section-note mt-2">来源站点盈余 ${Number(item.from_surplus || 0).toFixed(0)} · 目标站点短缺 ${Number(item.to_shortage || 0).toFixed(0)} · 调度距离 ${Math.round(Number(item.distance_cost || 0) * 1000)} 米</div>
+                <div class="d-flex gap-2 mt-3 justify-content-end">
+                    <button type="button" class="btn btn-sm btn-outline-primary js-suggestion-detail" data-suggestion-key="${suggestionKey(item)}" data-suggestion-source="${containerId}">${suggestionActionLabel(item)}</button>
+                </div>
+            </div>
+        `).join('') : emptyHtml;
     }
 
-    function markerSize(row) {
-        return Math.round(36 + Math.min(24, Number(row.count || 0) * 0.35));
+    L.tileLayer('https://webrd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', { maxZoom: 18 }).addTo(dispatchCampusMap);
+
+    function markerColor(row){ if (row.current_state_group==='scarce') return '#dc2626'; if (row.current_state_group==='saturated') return '#f59e0b'; return '#16a34a'; }
+    function markerSize(row){ return Math.round(36 + Math.min(24, Number(row.count || 0) * 0.35)); }
+    function markerFontSize(size){ return size >= 50 ? 16 : 13; }
+    function stationStatus(row){ if (row.current_state_group==='scarce') return { label: row.current_state_label || '稀少', rank: 0, badge: 'danger' }; if (row.current_state_group==='saturated') return { label: row.current_state_label || '盈余', rank: 2, badge: 'warning' }; return { label: row.current_state_label || '适中', rank: 1, badge: 'success' }; }
+    function ensureChineseStatus(status){
+        const mapping = { available: '可用', ridden: '骑行中', faulty: '故障', locked: '锁定', in_transit: '调度在途', dispatching: '调度在途', normal: '正常' };
+        return mapping[status] || status || '--';
     }
-
-    function markerFontSize(size) {
-        return size >= 50 ? 16 : 13;
+    function stationPhotoUrl(stationId){
+        const normalized = Number(stationId) || 0;
+        return `/static/images/stations/site_${normalized}.jpg`;
     }
-
-    function stationStatus(row) {
-        if (row.current_state_group === 'scarce') return { label: row.current_state_label || '稀少', rank: 0, badge: 'danger' };
-        if (row.current_state_group === 'saturated') return { label: row.current_state_label || '盈余', rank: 2, badge: 'warning' };
-        return { label: row.current_state_label || '适中', rank: 1, badge: 'success' };
+    function stationPhotoFallbackAttr(){
+        return `this.onerror=null;this.src='/static/images/stations/site_default.jpg';`;
     }
+    function compareRows(a,b){ const d = sortState.direction === 'asc' ? 1 : -1; let left = a[sortState.key], right = b[sortState.key]; if (sortState.key === 'status_rank') { left = stationStatus(a).rank; right = stationStatus(b).rank; } if (typeof left === 'string') return left.localeCompare(right, 'zh-Hans-CN') * d; return ((left || 0) - (right || 0)) * d; }
+    function sortedRows(){ return currentRows.slice().sort(compareRows); }
 
-    function compareRows(a, b) {
-        const direction = sortState.direction === 'asc' ? 1 : -1;
-        let left = a[sortState.key];
-        let right = b[sortState.key];
-        if (sortState.key === 'status_rank') {
-            left = stationStatus(a).rank;
-            right = stationStatus(b).rank;
-        }
-        if (typeof left === 'string') {
-            return left.localeCompare(right, 'zh-Hans-CN') * direction;
-        }
-        return ((left || 0) - (right || 0)) * direction;
-    }
-
-    function sortedRows() {
-        return currentRows.slice().sort(compareRows);
-    }
-
-    function focusStation(stationId) {
-        selectedStationId = stationId;
-        const marker = markerRegistry[stationId];
-        const row = currentRows.find(item => item.station_id === stationId);
-        if (marker && row) {
-            dispatchCampusMap.setView([row.lat, row.lng], 16, { animate: true });
-            marker.openPopup();
-            renderMarkers(currentRows);
-            renderDataView();
-        }
-    }
-
-    function renderMarkers(rows) {
-        const previousMap = new Map(refreshState.previousRows.map(item => [item.station_id, item]));
-        stationLayer.clearLayers();
-        Object.keys(markerRegistry).forEach(key => delete markerRegistry[key]);
-
+    function renderMarkers(rows){
+        const prev = new Map(refreshState.previousRows.map(item => [item.station_id, item]));
+        stationLayer.clearLayers(); Object.keys(markerRegistry).forEach(k => delete markerRegistry[k]);
         rows.forEach(row => {
-            const previous = previousMap.get(row.station_id);
+            const previous = prev.get(row.station_id);
             const changed = !previous || previous.count !== row.count || previous.gap !== row.gap || previous.t_plus_1_gap !== row.t_plus_1_gap;
+            const delta = previous ? Number(row.count || 0) - Number(previous.count || 0) : 0;
             const size = markerSize(row);
-            const isActive = selectedStationId === row.station_id;
-            const icon = L.divIcon({
-                className: '',
-                html: `
-                    <div class="station-marker ${isActive ? 'is-active' : ''} ${changed ? 'is-updated' : ''}" style="width:${size}px;height:${size}px;background:${markerColor(row)};font-size:${markerFontSize(size)}px;">
-                        ${row.count}
-                    </div>
-                `,
-                iconSize: [size, size],
-                iconAnchor: [size / 2, size / 2]
-            });
+            const deltaLabel = delta > 0 ? `+${delta}` : (delta < 0 ? `${delta}` : '');
+            const photoUrl = stationPhotoUrl(row.station_id);
+            const icon = L.divIcon({ className:'', html:`<div class="station-marker ${selectedStationId===row.station_id ? 'is-active':''} ${changed ? 'is-updated':''}" style="width:${size}px;height:${size}px;background:${markerColor(row)};font-size:${markerFontSize(size)}px;position:relative;">
+                <span>${row.count}</span>
+                ${deltaLabel ? `<span class="station-delta-badge ${delta > 0 ? 'delta-up' : 'delta-down'}">${deltaLabel}</span>` : ''}
+            </div>`, iconSize:[size,size], iconAnchor:[size/2,size/2] });
             const shortageIndicator = Number(row.t_plus_1_gap || 0);
             const shortageLabel = shortageIndicator > 0 ? `缺少 ${shortageIndicator.toFixed(0)} 辆` : (shortageIndicator < 0 ? `盈余 ${Math.abs(shortageIndicator).toFixed(0)} 辆` : '基本平衡');
-            const popupHtml = `
-                <strong>${row.name}</strong><br>
-                当前库存：${row.count}<br>
-                需求：${Math.round(Number(row.demand || 0))}<br>
-                供需缺口：${Math.round(Number(row.gap || 0))}<br>
-                T+1 车辆变化：${Math.round(Number(row.t_plus_1_net_flow || 0))}<br>
-                预测缺少/盈余：${shortageLabel}<br>
-                当前状态：${row.current_state_label || '--'}<br>
-                T+1 状态：${row.t_plus_1_state_label || '--'}<br>
-                预测库存：${Math.round(Number(row.predicted_inventory_t1 || 0))}
-            `;
-            const marker = L.marker([row.lat, row.lng], { icon }).bindPopup(popupHtml);
-            marker.on('click', function () {
-                selectedStationId = row.station_id;
-                renderMarkers(currentRows);
-                renderDataView();
-            });
-            marker.addTo(stationLayer);
-            markerRegistry[row.station_id] = marker;
+            const popupHtml = `<div style="min-width:280px;max-width:320px;"><div class="d-flex gap-3 align-items-start"><img src="${photoUrl}" alt="${row.name}" onerror="${stationPhotoFallbackAttr()}" style="width:120px;height:78px;object-fit:cover;border-radius:12px;border:1px solid rgba(148,163,184,.35);"><div><strong>${row.name}</strong><div class="small text-secondary mt-1">站点编号：${row.station_id}</div><div class="small text-secondary">当前库存：${row.count}</div><div class="small text-secondary">供需缺口：${Math.round(Number(row.gap || 0))}</div><div class="small text-secondary">T+1 车辆变化：${Math.round(Number(row.t_plus_1_net_flow || 0))}</div></div></div><hr class="my-2"><div class="small">预测缺少/盈余：${shortageLabel}<br>当前状态：${row.current_state_label || '--'}<br>T+1 状态：${row.t_plus_1_state_label || '--'}<br>预测库存：${Math.round(Number(row.predicted_inventory_t1 || 0))}</div></div>`;
+            const marker = L.marker([row.lat, row.lng], { icon }).bindPopup(popupHtml, { maxWidth: 340 });
+            marker.on('click', function(){ selectedStationId = row.station_id; renderMarkers(currentRows); renderDataView(); });
+            marker.addTo(stationLayer); markerRegistry[row.station_id] = marker;
         });
     }
 
-    function renderTable(rows) {
-        const previousMap = new Map(refreshState.previousRows.map(item => [item.station_id, item]));
+    function renderTable(rows){
+        const prev = new Map(refreshState.previousRows.map(item => [item.station_id, item]));
         document.getElementById('dispatchTableBody').innerHTML = rows.map(item => {
             const status = stationStatus(item);
-            const previous = previousMap.get(item.station_id);
+            const previous = prev.get(item.station_id);
             const changed = !previous || previous.count !== item.count || previous.gap !== item.gap;
             const gapValue = Number(item.t_plus_1_gap || 0);
             const gapLabel = gapValue > 0 ? '缺少 ' + gapValue.toFixed(0) : (gapValue < 0 ? '盈余 ' + Math.abs(gapValue).toFixed(0) : '平衡');
-            return '<tr class="' + (selectedStationId === item.station_id ? 'dispatch-row-active' : '') + ' ' + (changed ? 'dispatch-row-updated' : '') + '" data-station-id="' + item.station_id + '">'
-                + '<td>' + item.name + '</td>'
-                + '<td class="text-center">' + item.count + '</td>'
-                + '<td class="text-center">' + gapValue.toFixed(0) + '</td>'
-                + '<td class="text-center"><span class="badge bg-' + status.badge + '">' + status.label + '</span></td>'
-                + '<td class="text-center">' + Math.round(Number(item.t_plus_1_net_flow || 0)) + '</td>'
-                + '<td class="text-center">' + gapLabel + '</td>'
-                + '</tr>';
+            return `<tr class="${selectedStationId===item.station_id ? 'dispatch-row-active':''} ${changed ? 'dispatch-row-updated':''}" data-station-id="${item.station_id}"><td>${item.name}</td><td class="text-center">${item.count}</td><td class="text-center">${gapValue.toFixed(0)}</td><td class="text-center"><span class="badge bg-${status.badge}">${status.label}</span></td><td class="text-center">${Math.round(Number(item.t_plus_1_net_flow || 0))}</td><td class="text-center">${gapLabel}</td></tr>`;
         }).join('');
-
-        document.querySelectorAll('#dispatchTableBody tr').forEach(function (row) {
-            row.addEventListener('click', function () {
-                focusStation(Number(this.dataset.stationId));
-            });
-        });
+        document.querySelectorAll('#dispatchTableBody tr').forEach(row => row.addEventListener('click', function(){ selectedStationId = Number(this.dataset.stationId); const marker = markerRegistry[selectedStationId]; const rowData = currentRows.find(item => item.station_id === selectedStationId); if (marker && rowData) { dispatchCampusMap.setView([rowData.lat, rowData.lng], 16, { animate:true }); marker.openPopup(); renderMarkers(currentRows); renderTable(sortedRows()); } }));
     }
 
-    function renderChart(rows) {
-        dispatchBarChart.setOption({
-            tooltip: { trigger: 'axis' },
-            legend: { data: ['当前库存', 'T+1 缺口', 'T+1 车辆变化'] },
-            grid: { left: 54, right: 18, top: 28, bottom: 110 },
-            xAxis: {
-                type: 'category',
-                data: rows.map(item => item.name),
-                axisLabel: { rotate: 45, interval: 0 }
-            },
-            yAxis: [
-                { type: 'value', name: '车辆数 / 缺口' },
-                { type: 'value', name: '变化量' }
-            ],
-            series: [
-                { name: '当前库存', type: 'bar', data: rows.map(item => item.count), itemStyle: { color: '#4f46e5' } },
-                { name: 'T+1 缺口', type: 'bar', data: rows.map(item => Math.round(Number(item.t_plus_1_gap || 0))), itemStyle: { color: '#0f766e' } },
-                { name: 'T+1 车辆变化', type: 'line', smooth: true, yAxisIndex: 1, data: rows.map(item => Math.round(Number(item.t_plus_1_net_flow || 0))), itemStyle: { color: '#dc2626' } }
-            ]
-        });
+    function renderChart(rows){
+        dispatchBarChart.setOption({ tooltip:{ trigger:'axis' }, legend:{ data:['当前库存','T+1 缺口','T+1 车辆变化'] }, grid:{ left:54, right:18, top:28, bottom:110 }, xAxis:{ type:'category', data: rows.map(item=>item.name), axisLabel:{ rotate:45, interval:0 } }, yAxis:[{ type:'value', name:'车辆数 / 缺口' }, { type:'value', name:'变化量' }], series:[{ name:'当前库存', type:'bar', data: rows.map(item=>item.count), itemStyle:{ color:'#4f46e5' } }, { name:'T+1 缺口', type:'bar', data: rows.map(item=>Math.round(Number(item.t_plus_1_gap || 0))), itemStyle:{ color:'#0f766e' } }, { name:'T+1 车辆变化', type:'line', smooth:true, yAxisIndex:1, data: rows.map(item=>Math.round(Number(item.t_plus_1_net_flow || 0))), itemStyle:{ color:'#dc2626' } }] });
     }
+    function renderDataView(){ const rows = sortedRows(); renderTable(rows); renderChart(rows); }
+    function toggleView(view){ activeView = view; document.getElementById('dispatchTableView').style.display = view === 'table' ? 'block' : 'none'; document.getElementById('dispatchChartView').style.display = view === 'chart' ? 'block' : 'none'; document.getElementById('tableViewBtn').className = view === 'table' ? 'btn btn-light active' : 'btn btn-outline-light'; document.getElementById('chartViewBtn').className = view === 'chart' ? 'btn btn-light active' : 'btn btn-outline-light'; if (view === 'chart') dispatchBarChart.resize(); }
 
-    function renderDataView() {
-        const rows = sortedRows();
-        renderTable(rows);
-        renderChart(rows);
-    }
-
-    function toggleView(view) {
-        activeView = view;
-        document.getElementById('dispatchTableView').style.display = view === 'table' ? 'block' : 'none';
-        document.getElementById('dispatchChartView').style.display = view === 'chart' ? 'block' : 'none';
-        document.getElementById('tableViewBtn').className = view === 'table' ? 'btn btn-light active' : 'btn btn-outline-light';
-        document.getElementById('chartViewBtn').className = view === 'chart' ? 'btn btn-light active' : 'btn btn-outline-light';
-        if (view === 'chart') dispatchBarChart.resize();
-    }
-
-    function renderSuggestions(suggestions, metrics) {
+    function renderSuggestions(suggestions, metrics){
         const totalGap = Number(metrics?.current_gap_total || 0);
         const shortage = Number(metrics?.total_shortage || 0);
-        const surplus = Number(metrics?.total_surplus || 0);
-        const hasAction = suggestions.length > 0;
-        const emptyText = hasAction ? '' : (Math.abs(totalGap) >= 1 ? '当前存在明显供需差异，但未生成匹配到的调度建议，请检查阈值或输入数据。' : '当前供需基本平衡，无需调度');
-        document.getElementById('suggestionsBox').innerHTML = hasAction
-            ? suggestions.map(item => `
-                <div class="suggestion-card">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <strong>调运 ${item.count} 辆</strong>
-                        <span class="status-chip">真实调度建议</span>
-                    </div>
-                    <div class="fw-semibold">${item.from} → ${item.to}</div>
-                    <div class="section-note mt-2">来源站点盈余 ${Number(item.from_surplus || 0).toFixed(0)} · 目标站点短缺 ${Number(item.to_shortage || 0).toFixed(0)} · 调度距离 ${Math.round(Number(item.distance_cost || 0) * 1000)} 米</div>
-                </div>
-            `).join('')
-            : `<div class="empty-state">${emptyText}<br>总短缺量：${shortage} · 总盈余量：${surplus} · 当前全局缺口：${totalGap.toFixed(0)}</div>`;
+        let surplus = Number(metrics?.total_surplus || 0);
+        const dispatchThreshold = Number(metrics?.dispatch_threshold || 5);
+        const threshold = Math.max(5, dispatchThreshold);
+        let filtered = (suggestions || []).filter(item => Number(item.count || 0) >= threshold);
+        const surplusRows = currentRows.filter(row => Number(row.gap || 0) <= -threshold);
+        const deficitRows = currentRows.filter(row => Number(row.gap || 0) >= threshold);
+        if (surplusRows.length) surplus = Math.max(surplus, surplusRows.length);
+        if (!filtered.length && surplusRows.length && deficitRows.length) {
+            const source = surplusRows[0];
+            const target = deficitRows[0];
+            const count = Math.min(Math.abs(Math.round(Number(source.gap || 0))), Math.abs(Math.round(Number(target.gap || 0))));
+            if (count >= threshold) {
+                filtered = [{
+                    from: source.name,
+                    to: target.name,
+                    count,
+                    from_surplus: Math.abs(Math.round(Number(source.gap || 0))),
+                    to_shortage: Math.abs(Math.round(Number(target.gap || 0))),
+                    distance_cost: 0,
+                    from_station_id: source.station_id,
+                    to_station_id: target.station_id,
+                }];
+            }
+        }
+        currentVisibleSuggestions = filtered.slice();
+        document.getElementById('suggestionCount').textContent = filtered.length;
+        const proximityNote = '系统已自动过滤调度起点和终点距离过近的站点，不建议进行近距离重复调度。';
+        const emptyText = filtered.length ? '' : (Math.abs(totalGap) >= threshold ? `当前存在供需差异，但建议量未超过阈值 ${threshold} 辆，因此暂不生成调度建议。<br>${proximityNote}` : `当前供需基本平衡，无需调度。<br>${proximityNote}`);
+        renderSuggestionList('suggestionsBox', currentVisibleSuggestions, `<div class="empty-state">${emptyText}<br>总短缺量：${shortage} · 总盈余量：${surplus} · 当前全局缺口：${totalGap.toFixed(0)}</div>`);
+        renderSuggestionList('previousSuggestionsBox', previousVisibleSuggestions, '<div class="empty-state">暂无上一轮建议</div>');
     }
 
-    function renderSnapshot(snapshot) {
-        refreshState.previousRows = currentRows.slice();
-        currentRows = (snapshot.data || []).map(item => ({ ...item, status_rank: stationStatus(item).rank }));
-        currentSuggestions = snapshot.suggestions || [];
-        const metrics = snapshot.metrics || {};
+    function taskStatusText(status) {
+        return ({ pending: '待处理', in_progress: '进行中', completed: '已完成', cancelled: '已取消' }[status] || '未知');
+    }
 
+    function taskTypeText(type) {
+        return ({
+            manual_dispatch: '手动调度任务',
+            vehicle_dispatch: '自动调度任务',
+            vehicle_fault_report: '故障上报任务',
+            maintenance_work_order: '运维工单',
+        }[type] || '其他任务');
+    }
+
+    function taskSourceText(type) {
+        return ({
+            manual_dispatch: '手动生成',
+            vehicle_dispatch: '自动生成',
+            vehicle_fault_report: '故障上报',
+            maintenance_work_order: '运维生成',
+        }[type] || '系统生成');
+    }
+
+    function renderStationSelects() {
+        const fromSelect = document.getElementById('inlineFromStation');
+        const toSelect = document.getElementById('inlineToStation');
+        if (!fromSelect || !toSelect) return;
+        const rows = currentRows.length ? currentRows : (initialSnapshot.data || []);
+        const prevFrom = fromSelect.value;
+        const prevTo = toSelect.value;
+        const options = rows.map(row => `<option value="${row.station_id}">${row.name}</option>`).join('');
+        fromSelect.innerHTML = `<option value="">请选择起点站</option>${options}`;
+        toSelect.innerHTML = `<option value="">请选择终点站</option>${options}`;
+        if (prevFrom) fromSelect.value = prevFrom;
+        if (prevTo) toSelect.value = prevTo;
+        updateSelectedStationCounts();
+    }
+
+    function updateSelectedStationCounts() {
+        const fromSelect = document.getElementById('inlineFromStation');
+        const toSelect = document.getElementById('inlineToStation');
+        const fromCountEl = document.getElementById('selectedFromStationCount');
+        const toCountEl = document.getElementById('selectedToStationCount');
+        if (!fromSelect || !toSelect || !fromCountEl || !toCountEl) return;
+        const fromRow = currentRows.find(row => String(row.station_id) === String(fromSelect.value));
+        const toRow = currentRows.find(row => String(row.station_id) === String(toSelect.value));
+        fromCountEl.textContent = fromRow ? Number(fromRow.count || 0) : '--';
+        toCountEl.textContent = toRow ? Number(toRow.count || 0) : '--';
+    }
+
+    function renderTaskTable(){
+        const tasks = currentTasks();
+        const statusFilter = document.getElementById('taskStatusFilter')?.value || 'all';
+        const priorityFilter = document.getElementById('taskPriorityFilter')?.value || 'all';
+        const searchText = (document.getElementById('taskSearchInput')?.value || '').trim().toLowerCase();
+        const visibleTasks = tasks.filter(task => {
+            const status = task.status || '';
+            const matchesStatus = statusFilter === 'all' || status === statusFilter;
+            const matchesPriority = priorityFilter === 'all' || task.priority === priorityFilter;
+            const matchesSearch = !searchText || `${task.id} ${task.start_location} ${task.end_location} ${task.task_type}`.toLowerCase().includes(searchText);
+            return matchesStatus && matchesPriority && matchesSearch;
+        });
+        const body = document.getElementById('inlineTaskTableBody');
+        body.innerHTML = visibleTasks.length ? visibleTasks.map(task => {
+            const deletable = task.status === 'pending' || task.status === 'in_progress';
+            const sourceBadge = `<span class="badge ${task.task_type === 'manual_dispatch' ? 'bg-primary' : task.task_type === 'vehicle_dispatch' ? 'bg-success' : 'bg-secondary'}">${task.source_label || taskSourceText(task.task_type)}</span>`;
+            const typeLabel = taskTypeText(task.task_type);
+            const statusLabel = task.status_label || taskStatusText(task.status);
+            const statusClass = task.status === 'pending' ? 'bg-warning text-dark' : task.status === 'in_progress' ? 'bg-primary' : task.status === 'completed' ? 'bg-success' : task.status === 'cancelled' ? 'bg-danger' : 'bg-secondary';
+            return `<tr data-status="${task.status}" data-priority="${task.priority}" data-search="${task.start_location} ${task.end_location} ${task.task_type}"><td>${task.id || '--'}</td><td>${typeLabel}</td><td>${sourceBadge}</td><td>${task.start_location || '--'}</td><td>${task.end_location || '--'}</td><td>${Number(task.dispatch_count || 0)} 辆</td><td><span class="badge ${statusClass}">${statusLabel}</span></td><td><div class="d-flex gap-2 flex-wrap justify-content-end"><button type="button" class="btn btn-sm btn-primary js-open-task-detail" data-task-id="${task.id}">详情</button>${deletable ? `<button type="button" class="btn btn-sm btn-outline-danger js-open-delete-modal" data-task-id="${task.id}">删除</button>` : ''}</div></td></tr>`;
+        }).join('') : '<tr><td colspan="8" class="text-center text-muted py-4">暂无任务数据</td></tr>';
+    }
+
+    function renderSnapshot(snapshot){
+        refreshState.previousRows = currentRows.slice();
+        const nextSuggestions = snapshot.suggestions || [];
+        previousVisibleSuggestions = currentVisibleSuggestions.slice();
+        currentRows = (snapshot.data || []).map(item => ({ ...item, status_rank: stationStatus(item).rank }));
+        currentSuggestions = nextSuggestions;
+        const metrics = snapshot.metrics || {};
+        currentMetrics = metrics;
         window.BSDPUI.animateNumber(document.getElementById('parkingSpotCount'), currentRows.length);
         window.BSDPUI.animateNumber(document.getElementById('shortageCount'), currentRows.filter(item => item.current_state_group === 'scarce').length);
         window.BSDPUI.animateNumber(document.getElementById('surplusCount'), currentRows.filter(item => item.current_state_group === 'saturated').length);
-        window.BSDPUI.animateNumber(document.getElementById('globalTotal'), metrics.global_vehicle_total || 1200);
+        window.BSDPUI.animateNumber(document.getElementById('globalTotal'), metrics.global_vehicle_total || 0);
         window.BSDPUI.animateNumber(document.getElementById('dispatchableVehicles'), metrics.dispatchable_vehicles || 0);
         window.BSDPUI.animateNumber(document.getElementById('lockedVehicles'), metrics.locked_vehicles || 0);
         window.BSDPUI.animateNumber(document.getElementById('totalSurplus'), metrics.total_surplus || 0);
         window.BSDPUI.animateNumber(document.getElementById('totalShortage'), metrics.total_shortage || 0);
         window.BSDPUI.animateNumber(document.getElementById('totalShortageMirror'), metrics.total_shortage || 0);
         window.BSDPUI.animateNumber(document.getElementById('currentGapTotal'), metrics.current_gap_total || 0, { decimals: 0 });
-
         document.getElementById('predictTime').textContent = window.BSDPUI.formatDateTime(snapshot.generated_at);
-        if (metrics.refresh_seconds) {
-            refreshSeconds = Number(metrics.refresh_seconds) || refreshSeconds;
-            if (dispatchRefreshController) {
-                dispatchRefreshController.setIntervalSeconds(refreshSeconds);
-            }
-        }
+        if (metrics.refresh_seconds) { refreshSeconds = Number(metrics.refresh_seconds) || refreshSeconds; if (dispatchRefreshController) dispatchRefreshController.setIntervalSeconds(refreshSeconds); }
         document.getElementById('dispatchRefreshLabel').textContent = '数据来源：实时快照服务 + T+1 车辆变化';
-
-        renderSuggestions(currentSuggestions, metrics);
-        renderMarkers(currentRows);
-        renderDataView();
-        toggleView(activeView);
+        renderStationSelects();
+        renderMarkers(currentRows); renderDataView(); renderSuggestions(currentSuggestions, metrics); renderTaskTable(); toggleView(activeView);
     }
 
-    async function refreshSnapshot() {
+    async function refreshSnapshot(){
         try {
-            const response = await fetch('{% url "operation_management:get_realtime_parking_data" %}', { cache: 'no-store' });
-            const payload = await response.json();
-            if (payload.success) {
-                renderSnapshot({
-                    generated_at: payload.current_time,
-                    data: payload.data,
-                    suggestions: payload.suggestions,
-                    metrics: payload.metrics
-                });
+            const snapshotResp = await fetch('{% url "operation_management:get_realtime_parking_data" %}', { cache: 'no-store' });
+            const snapshotPayload = await snapshotResp.json();
+            if (snapshotPayload.success) {
+                renderSnapshot({ generated_at: snapshotPayload.current_time, data: snapshotPayload.data, suggestions: snapshotPayload.suggestions, metrics: snapshotPayload.metrics });
             }
-        } catch (error) {
-            console.error('Dispatch heatmap refresh failed:', error);
-            document.getElementById('dispatchRefreshLabel').textContent = '刷新失败，正在保留上一批真实快照';
-        }
+        } catch (error) { console.error('Dispatch heatmap refresh failed:', error); document.getElementById('dispatchRefreshLabel').textContent = '刷新失败，正在保留上一批真实快照'; }
     }
 
-    document.querySelectorAll('.sortable').forEach(function (node) {
-        node.addEventListener('click', function () {
-            const key = node.dataset.sort;
-            if (sortState.key === key) {
-                sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
-            } else {
-                sortState = { key, direction: key === 'name' ? 'asc' : 'desc' };
-            }
-            renderDataView();
+    document.querySelectorAll('.sortable').forEach(node => node.addEventListener('click', function(){ const key = node.dataset.sort; sortState = sortState.key === key ? { key, direction: sortState.direction === 'asc' ? 'desc' : 'asc' } : { key, direction: key === 'name' ? 'asc' : 'desc' }; renderDataView(); }));
+    document.getElementById('taskStatusFilter').addEventListener('change', renderTaskTable);
+    document.getElementById('taskPriorityFilter').addEventListener('change', renderTaskTable);
+    document.getElementById('taskSearchInput').addEventListener('input', renderTaskTable);
+    document.getElementById('inlineFromStation').addEventListener('change', updateSelectedStationCounts);
+    document.getElementById('inlineToStation').addEventListener('change', updateSelectedStationCounts);
+    document.getElementById('taskRefreshBtn').addEventListener('click', () => {
+        const previousSelections = {
+            from: document.getElementById('inlineFromStation')?.value || '',
+            to: document.getElementById('inlineToStation')?.value || '',
+        };
+        refreshSnapshot().finally(() => {
+            const fromSelect = document.getElementById('inlineFromStation');
+            const toSelect = document.getElementById('inlineToStation');
+            if (fromSelect && previousSelections.from) fromSelect.value = previousSelections.from;
+            if (toSelect && previousSelections.to) toSelect.value = previousSelections.to;
         });
     });
+    document.getElementById('tableViewBtn').addEventListener('click', () => toggleView('table'));
+    document.getElementById('chartViewBtn').addEventListener('click', () => toggleView('chart'));
+    document.getElementById('refreshBtn').addEventListener('click', () => dispatchRefreshController && dispatchRefreshController.triggerNow());
 
-    document.getElementById('tableViewBtn').addEventListener('click', function () { toggleView('table'); });
-    document.getElementById('chartViewBtn').addEventListener('click', function () { toggleView('chart'); });
-    document.getElementById('refreshBtn').addEventListener('click', function () {
-        if (dispatchRefreshController) dispatchRefreshController.triggerNow();
+    function openSuggestionDetail(item){
+        pendingSuggestion = item;
+        const implemented = implementedSuggestionKeys.has(suggestionKey(item));
+        document.getElementById('suggestionDetailBody').innerHTML = `
+            <div class="col-md-6"><div class="mini-card"><div class="label">来源站点</div><div class="value">${item.from || '--'}</div></div></div>
+            <div class="col-md-6"><div class="mini-card"><div class="label">目标站点</div><div class="value">${item.to || '--'}</div></div></div>
+            <div class="col-md-4"><div class="mini-card"><div class="label">建议调运量</div><div class="value">${Number(item.count || 0)} 辆</div></div></div>
+            <div class="col-md-4"><div class="mini-card"><div class="label">来源盈余</div><div class="value">${Number(item.from_surplus || 0).toFixed(0)} 辆</div></div></div>
+            <div class="col-md-4"><div class="mini-card"><div class="label">目标短缺</div><div class="value">${Number(item.to_shortage || 0).toFixed(0)} 辆</div></div></div>
+            <div class="col-md-6"><div class="mini-card"><div class="label">站点编号</div><div class="value">${item.from_station_id || '--'} → ${item.to_station_id || '--'}</div></div></div>
+            <div class="col-md-6"><div class="mini-card"><div class="label">调度距离</div><div class="value">${Math.round(Number(item.distance_cost || 0) * 1000)} 米</div></div></div>
+            <div class="col-md-12"><div class="mini-card"><div class="label">实施状态</div><div class="value">${implemented ? '已在本轮刷新中实施' : '待实施'}</div></div></div>
+        `;
+        document.getElementById('suggestionDetailReason').textContent = item.reason || '系统根据当前快照、供需缺口与 T+1 预测结果自动生成该建议。';
+        const applyBtn = document.getElementById('confirmApplySuggestionBtn');
+        applyBtn.disabled = implemented;
+        applyBtn.textContent = implemented ? '该建议已实施' : '实施该建议';
+        suggestionDetailModal.show();
+    }
+
+    function openTaskDetail(taskId){
+        const task = currentTasks().find(item => String(item.id) === String(taskId));
+        if (!task) return;
+        document.getElementById('taskDetailBody').innerHTML = `
+            <div class="col-md-6"><div class="mini-card"><div class="label">任务编号</div><div class="value">${task.id || '--'}</div></div></div>
+            <div class="col-md-6"><div class="mini-card"><div class="label">任务类型</div><div class="value">${taskTypeText(task.task_type)}</div></div></div>
+            <div class="col-md-6"><div class="mini-card"><div class="label">起点站</div><div class="value">${task.start_location || '--'}</div></div></div>
+            <div class="col-md-6"><div class="mini-card"><div class="label">终点站</div><div class="value">${task.end_location || '--'}</div></div></div>
+            <div class="col-md-4"><div class="mini-card"><div class="label">调运量</div><div class="value">${Number(task.dispatch_count || 0)} 辆</div></div></div>
+            <div class="col-md-4"><div class="mini-card"><div class="label">任务状态</div><div class="value">${task.status_label || taskStatusText(task.status)}</div></div></div>
+            <div class="col-md-4"><div class="mini-card"><div class="label">优先级</div><div class="value">${task.priority || '--'}</div></div></div>
+            <div class="col-md-6"><div class="mini-card"><div class="label">来源</div><div class="value">${task.source_label || '--'}</div></div></div>
+            <div class="col-md-6"><div class="mini-card"><div class="label">创建时间</div><div class="value">${task.created_at ? window.BSDPUI.formatDateTime(task.created_at) : '--'}</div></div></div>
+            <div class="col-md-6"><div class="mini-card"><div class="label">预测缺口</div><div class="value">${task.predicted_gap != null ? Number(task.predicted_gap).toFixed(2) : '--'}</div></div></div>
+            <div class="col-md-6"><div class="mini-card"><div class="label">距离成本</div><div class="value">${task.distance_cost != null ? Number(task.distance_cost).toFixed(6) : '--'}</div></div></div>
+        `;
+        document.getElementById('taskDetailReason').textContent = task.reason || '暂无说明';
+        taskDetailModal.show();
+    }
+
+    async function applySuggestion(item){
+        try {
+            const formData = new FormData();
+            formData.append('from_station_id', item.from_station_id || '');
+            formData.append('to_station_id', item.to_station_id || '');
+            formData.append('dispatch_count', item.count || '');
+            formData.append('reason', item.reason || '根据调度建议自动实施');
+            const response = await fetch('{% url "operation_management:manual_dispatch_create" %}', {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCsrfToken() },
+                body: formData
+            });
+            const payload = await response.json();
+            if (!response.ok || !payload.success) throw new Error(payload.error || '实施失败');
+            markSuggestionImplemented(item);
+            renderSuggestions(currentSuggestions, currentMetrics || {});
+            if (payload.task) {
+                window.__TASKS_CACHE__ = [payload.task, ...currentTasks().filter(task => String(task.id) !== String(payload.task.id))];
+                renderTaskTable();
+            }
+            openSuggestionDetail(item);
+        } catch (error) {
+            alert(error.message || '实施失败');
+        }
+    }
+
+    async function deleteTaskById(taskId){
+        try {
+            const response = await fetch(`/operation/tasks/${taskId}/delete/`, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCsrfToken() }
+            });
+            const payload = await response.json();
+            if (!response.ok || !payload.success) throw new Error(payload.error || '删除失败');
+            window.__TASKS_CACHE__ = currentTasks().filter(task => String(task.id) !== String(taskId));
+            renderTaskTable();
+            deleteTaskModal.hide();
+            await refreshSnapshot();
+        } catch (error) {
+            alert(error.message || '删除失败');
+        }
+    }
+
+    document.addEventListener('click', function(event){
+        const detailBtn = event.target.closest('.js-suggestion-detail');
+        if (detailBtn) {
+            const key = detailBtn.dataset.suggestionKey || '';
+            const source = detailBtn.dataset.suggestionSource || 'suggestionsBox';
+            const pool = source === 'previousSuggestionsBox'
+                ? (previousVisibleSuggestions || [])
+                : (currentVisibleSuggestions || []);
+            const item = pool.find(entry => suggestionKey(entry) === key)
+                || (currentVisibleSuggestions || []).find(entry => suggestionKey(entry) === key)
+                || (previousVisibleSuggestions || []).find(entry => suggestionKey(entry) === key);
+            if (item) openSuggestionDetail(item);
+            return;
+        }
+        const taskDetailBtn = event.target.closest('.js-open-task-detail');
+        if (taskDetailBtn) {
+            openTaskDetail(taskDetailBtn.dataset.taskId || '');
+            return;
+        }
+        const deleteBtn = event.target.closest('.js-open-delete-modal');
+        if (deleteBtn) { pendingDeleteForm = null; document.getElementById('deleteTaskIdText').textContent = '#' + (deleteBtn.dataset.taskId || '--'); document.getElementById('confirmDeleteTaskBtn').dataset.taskId = deleteBtn.dataset.taskId || ''; deleteTaskModal.show(); }
     });
+    document.getElementById('confirmApplySuggestionBtn').addEventListener('click', function(){ if (pendingSuggestion) applySuggestion(pendingSuggestion); });
+    document.getElementById('confirmDeleteTaskBtn').addEventListener('click', function(){ const taskId = this.dataset.taskId || ''; if (taskId) deleteTaskById(taskId); });
 
+    window.__TASKS_CACHE__ = initialSnapshot.tasks || [];
     renderSnapshot(initialSnapshot);
-    dispatchRefreshController = window.BSDPUI.createRefreshController({
-        countdownElement: document.getElementById('dispatchRefreshCountdown'),
-        progressBar: document.getElementById('dispatchRefreshBar'),
-        alignToInterval: false,
-        intervalSeconds: refreshSeconds,
-        onRefresh: refreshSnapshot
-    });
+    dispatchRefreshController = window.BSDPUI.createRefreshController({ countdownElement: document.getElementById('dispatchRefreshCountdown'), progressBar: document.getElementById('dispatchRefreshBar'), alignToInterval: false, intervalSeconds: refreshSeconds, onRefresh: refreshSnapshot });
     dispatchRefreshController.start();
-    window.addEventListener('resize', function () {
-        dispatchBarChart.resize();
-        dispatchCampusMap.invalidateSize();
-    });
+    setTimeout(refreshSnapshot, 300);
+    window.addEventListener('resize', function(){ dispatchBarChart.resize(); dispatchCampusMap.invalidateSize(); });
 </script>
 {% endblock %}

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}车辆详情 - 基于深度学习的城市共享单车调度需求预测与运维管理平台{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <h2 class="mb-0"><i class="bi bi-bicycle"></i> 车辆 {{ vehicle.id }} 详情</h2>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="{% url 'operation_management:station_list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> 返回运维管理</a>
+                <a href="{% url 'operation_management:vehicle_management' %}{% if back_query %}?{{ back_query }}{% endif %}" class="btn btn-outline-primary">返回车辆列表</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white"><h5 class="mb-0">当前状态</h5></div>
+                <div class="card-body">
+                    <p><strong>车辆编号：</strong>{{ vehicle.id }}</p>
+                    <p><strong>状态：</strong>{{ normalized_status }}</p>
+                    <p><strong>当前站点：</strong>{{ vehicle.parking_spot.spot_name|default:"-" }}</p>
+                    <p><strong>纬度：</strong>{{ vehicle.latitude|floatformat:6 }}</p>
+                    <p><strong>经度：</strong>{{ vehicle.longitude|floatformat:6 }}</p>
+                    <p class="mb-0"><strong>最后上报时间：</strong>{{ vehicle.update_time|date:"Y-m-d H:i:s" }}</p>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header bg-primary text-white"><h5 class="mb-0">运维操作</h5></div>
+                <div class="card-body">
+                    <form method="post" class="mb-3">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="report_fault">
+                        <div class="mb-2">
+                            <label class="form-label">故障说明</label>
+                            <textarea class="form-control" name="description" rows="3" placeholder="填写故障现象，提交后自动生成待维修工单"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-danger w-100">标记故障并生成工单</button>
+                    </form>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="create_work_order">
+                        <div class="mb-2">
+                            <label class="form-label">工单说明</label>
+                            <textarea class="form-control" name="description" rows="3" placeholder="填写运维处理说明"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">创建运维工单</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white"><h5 class="mb-0">最近 10 次站点变更记录</h5></div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>变更时间</th>
+                                    <th>前一站点</th>
+                                    <th>当前站点</th>
+                                    <th>变更前状态</th>
+                                    <th>变更后状态</th>
+                                    <th>变更原因</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in history_rows %}
+                                <tr>
+                                    <td>{{ row.changed_at|date:"Y-m-d H:i:s" }}</td>
+                                    <td>{{ row.previous_station.spot_name|default:"-" }}</td>
+                                    <td>{{ row.current_station.spot_name|default:"-" }}</td>
+                                    <td>{{ row.previous_status|default:"-" }}</td>
+                                    <td>{{ row.current_status|default:"-" }}</td>
+                                    <td>{{ row.change_reason|default:"-" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="6" class="text-center">暂无轨迹记录</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,362 @@
+"""
+BSDP项目 - 基于真实Capital Bikeshare数据集的快速实验
+使用本地真实数据集，减少训练时间以快速获取结果
+"""
+
+import os
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+from datetime import datetime
+from sklearn.preprocessing import MinMaxScaler, LabelEncoder
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+import warnings
+warnings.filterwarnings('ignore')
+
+# 设置日志
+log_file = "quick_experiment_log.txt"
+def log(message):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_msg = f"[{timestamp}] {message}"
+    print(log_msg)
+    with open(log_file, "a", encoding="utf-8") as f:
+        f.write(log_msg + "\n")
+
+# 设置随机种子
+np.random.seed(42)
+tf.random.set_seed(42)
+
+# 数据路径
+DATASET_DIR = r"E:\develop\BSDP-Bike Sharing Demand Prediction Based on LSTM Model\BSDP\bike_demand_research\dataset"
+RIDE_DATA_PATH = os.path.join(DATASET_DIR, "daily_rent_detail.csv")
+WEATHER_DATA_PATH = os.path.join(DATASET_DIR, "weather.csv")
+
+def quick_load_and_preprocess():
+    """快速加载和预处理数据（使用采样）"""
+    log("=" * 60)
+    log("【真实数据读取报告】")
+    log("=" * 60)
+    
+    # 读取骑行数据（只读取需要的列，减少内存使用）
+    log(f"读取骑行订单数据...")
+    ride_df = pd.read_csv(RIDE_DATA_PATH, usecols=['started_at', 'ended_at', 'start_station_id', 'end_station_id'])
+    log(f"原始骑行数据量: {len(ride_df):,} 条记录")
+    log(f"数据时间范围: {ride_df['started_at'].min()} 至 {ride_df['started_at'].max()}")
+    log(f"包含停车点数量: {ride_df['start_station_id'].nunique()} 个")
+    
+    # 读取气象数据
+    weather_df = pd.read_csv(WEATHER_DATA_PATH, usecols=['datetime', 'temp', 'humidity', 'windspeed', 'precip'])
+    log(f"\n气象数据量: {len(weather_df):,} 条记录")
+    
+    # 转换时间格式
+    ride_df['started_at'] = pd.to_datetime(ride_df['started_at'], format='mixed')
+    ride_df['ended_at'] = pd.to_datetime(ride_df['ended_at'], format='mixed')
+    weather_df['datetime'] = pd.to_datetime(weather_df['datetime'])
+    
+    # 筛选2022-2023年数据
+    start_date = pd.Timestamp('2022-01-01')
+    end_date = pd.Timestamp('2023-12-31 23:59:59')
+    
+    ride_df = ride_df[(ride_df['started_at'] >= start_date) & (ride_df['started_at'] <= end_date)]
+    weather_df = weather_df[(weather_df['datetime'] >= start_date) & (weather_df['datetime'] <= end_date)]
+    
+    log(f"\n筛选后骑行数据量: {len(ride_df):,} 条记录 (2022-2023年)")
+    
+    # 按小时粒度聚合
+    log("\n【目标数据聚合】")
+    ride_df['start_hour'] = ride_df['started_at'].dt.floor('h')
+    ride_df['end_hour'] = ride_df['ended_at'].dt.floor('h')
+    
+    # 借车量 D_t
+    D_t = ride_df.groupby(['start_station_id', 'start_hour']).size().reset_index(name='D_t')
+    D_t.rename(columns={'start_station_id': 'station_id', 'start_hour': 'hour'}, inplace=True)
+    
+    # 还车量 R_t
+    R_t = ride_df.groupby(['end_station_id', 'end_hour']).size().reset_index(name='R_t')
+    R_t.rename(columns={'end_station_id': 'station_id', 'end_hour': 'hour'}, inplace=True)
+    
+    # 合并
+    flow_df = pd.merge(D_t, R_t, on=['station_id', 'hour'], how='outer')
+    flow_df['D_t'] = flow_df['D_t'].fillna(0)
+    flow_df['R_t'] = flow_df['R_t'].fillna(0)
+    flow_df['F_t'] = flow_df['R_t'] - flow_df['D_t']
+    
+    # 累计停车辆
+    flow_df = flow_df.sort_values(['station_id', 'hour'])
+    flow_df['S_t'] = flow_df.groupby('station_id')['F_t'].cumsum()
+    
+    log(f"借车量聚合: {len(D_t):,} 条记录")
+    log(f"还车量聚合: {len(R_t):,} 条记录")
+    log(f"净流量统计: 均值={flow_df['F_t'].mean():.2f}, 标准差={flow_df['F_t'].std():.2f}")
+    
+    # 异常值处理
+    q99 = flow_df['S_t'].quantile(0.99)
+    flow_df = flow_df[flow_df['S_t'] >= 0]
+    flow_df = flow_df[abs(flow_df['F_t']) <= 0.8 * q99]
+    
+    log(f"\n预处理后有效样本数: {len(flow_df):,} 条")
+    log(f"有效停车点数量: {flow_df['station_id'].nunique()} 个")
+    
+    # 合并气象数据
+    weather_df['date'] = weather_df['datetime'].dt.date
+    flow_df['date'] = flow_df['hour'].dt.date
+    weather_df['is_rain'] = (weather_df['precip'] > 0).astype(int)
+    flow_df = pd.merge(flow_df, weather_df[['date', 'temp', 'humidity', 'windspeed', 'is_rain']], 
+                       on='date', how='left')
+    flow_df[['temp', 'humidity', 'windspeed']] = flow_df[['temp', 'humidity', 'windspeed']].interpolate()
+    flow_df['is_rain'] = flow_df['is_rain'].fillna(0)
+    
+    return flow_df
+
+def quick_feature_engineering(flow_df):
+    """快速特征工程"""
+    log("\n" + "=" * 60)
+    log("【特征工程】")
+    log("=" * 60)
+    
+    # 时间特征
+    flow_df['hour_of_day'] = flow_df['hour'].dt.hour
+    flow_df['day_of_week'] = flow_df['hour'].dt.weekday
+    flow_df['is_weekday'] = (flow_df['day_of_week'] < 5).astype(int)
+    flow_df['is_peak_hour'] = (((flow_df['hour_of_day'] >= 7) & (flow_df['hour_of_day'] <= 9)) | 
+                               ((flow_df['hour_of_day'] >= 17) & (flow_df['hour_of_day'] <= 19))).astype(int)
+    
+    # 历史时序特征
+    flow_df = flow_df.sort_values(['station_id', 'hour'])
+    flow_df['F_t_mean_24h'] = flow_df.groupby('station_id')['F_t'].transform(
+        lambda x: x.rolling(window=24, min_periods=1).mean())
+    flow_df['F_t_max_24h'] = flow_df.groupby('station_id')['F_t'].transform(
+        lambda x: x.rolling(window=24, min_periods=1).max())
+    flow_df['F_t_std_24h'] = flow_df.groupby('station_id')['F_t'].transform(
+        lambda x: x.rolling(window=24, min_periods=1).std()).fillna(0)
+    flow_df['F_t_lag_24h'] = flow_df.groupby('station_id')['F_t'].shift(24).fillna(0)
+    
+    # 位置特征编码
+    le = LabelEncoder()
+    flow_df['station_id_encoded'] = le.fit_transform(flow_df['station_id'].astype(str))
+    
+    # 特征归一化
+    feature_cols = [
+        'station_id_encoded', 'hour_of_day', 'day_of_week', 'is_weekday', 'is_peak_hour',
+        'F_t_mean_24h', 'F_t_max_24h', 'F_t_std_24h', 'F_t_lag_24h',
+        'temp', 'humidity', 'windspeed', 'is_rain'
+    ]
+    
+    scaler = MinMaxScaler()
+    flow_df[feature_cols] = scaler.fit_transform(flow_df[feature_cols])
+    
+    log(f"特征工程完成: 共 {len(feature_cols)} 个特征")
+    log(f"有效停车点: {len(le.classes_)} 个")
+    
+    return flow_df, feature_cols, le, scaler
+
+def quick_build_sequences(df, window_size=24):
+    """快速构建序列（采样部分数据）"""
+    X, y = [], []
+    
+    feature_cols = [
+        'station_id_encoded', 'hour_of_day', 'day_of_week', 'is_weekday', 'is_peak_hour',
+        'F_t_mean_24h', 'F_t_max_24h', 'F_t_std_24h', 'F_t_lag_24h',
+        'temp', 'humidity', 'windspeed', 'is_rain'
+    ]
+    
+    df = df.sort_values(['station_id', 'hour'])
+    
+    # 对每个停车点采样，限制样本数量
+    for station_id in df['station_id'].unique():
+        station_data = df[df['station_id'] == station_id].copy()
+        
+        if len(station_data) < window_size + 1:
+            continue
+        
+        values = station_data[feature_cols].values
+        targets = station_data['F_t'].values
+        
+        # 每隔几个样本取一个，减少数据量
+        step = max(1, len(station_data) // 1000)  # 每个停车点最多约1000个样本
+        
+        for i in range(window_size, len(station_data), step):
+            X.append(values[i-window_size:i])
+            y.append(targets[i])
+    
+    return np.array(X), np.array(y)
+
+def quick_split_by_time(df):
+    """按时间划分数据集"""
+    log("\n【数据集划分】")
+    
+    train_end = pd.Timestamp('2023-06-30 23:59:59')
+    val_end = pd.Timestamp('2023-09-30 23:59:59')
+    
+    train_df = df[df['hour'] <= train_end]
+    val_df = df[(df['hour'] > train_end) & (df['hour'] <= val_end)]
+    test_df = df[df['hour'] > val_end]
+    
+    log(f"训练集: {len(train_df):,} 条")
+    log(f"验证集: {len(val_df):,} 条")
+    log(f"测试集: {len(test_df):,} 条")
+    
+    return train_df, val_df, test_df
+
+def build_bp(input_shape):
+    model = tf.keras.Sequential([
+        tf.keras.layers.Flatten(input_shape=input_shape),
+        tf.keras.layers.Dense(128, activation='relu'),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Dropout(0.3),
+        tf.keras.layers.Dense(64, activation='relu'),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Dropout(0.3),
+        tf.keras.layers.Dense(32, activation='relu'),
+        tf.keras.layers.Dense(1)
+    ])
+    model.compile(optimizer=tf.keras.optimizers.AdamW(learning_rate=1e-3), loss='mse', metrics=['mae'])
+    return model
+
+def build_basic_lstm(input_shape):
+    model = tf.keras.Sequential([
+        tf.keras.layers.LSTM(64, input_shape=input_shape, dropout=0.2),
+        tf.keras.layers.Dense(1)
+    ])
+    model.compile(optimizer=tf.keras.optimizers.AdamW(learning_rate=1e-3), loss='mse', metrics=['mae'])
+    return model
+
+def build_improved_lstm(input_shape):
+    model = tf.keras.Sequential([
+        tf.keras.layers.LSTM(64, return_sequences=True, input_shape=input_shape, dropout=0.2),
+        tf.keras.layers.LSTM(32, dropout=0.2),
+        tf.keras.layers.Dense(1)
+    ])
+    model.compile(optimizer=tf.keras.optimizers.AdamW(learning_rate=1e-3, weight_decay=1e-4), loss='mse', metrics=['mae'])
+    return model
+
+def quick_train_model(model, X_train, y_train, X_val, y_val, model_name, epochs=15, batch_size=64):
+    """快速训练模型"""
+    log(f"\n训练 {model_name}...")
+    
+    early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
+    
+    history = model.fit(
+        X_train, y_train,
+        validation_data=(X_val, y_val),
+        epochs=epochs,
+        batch_size=batch_size,
+        callbacks=[early_stopping],
+        verbose=1
+    )
+    
+    return model, history
+
+def evaluate_model(model, X_test, y_test, model_name):
+    """评估模型"""
+    log(f"\n评估 {model_name}...")
+    
+    y_pred = model.predict(X_test, verbose=0).flatten()
+    
+    mae = mean_absolute_error(y_test, y_pred)
+    rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+    r2 = r2_score(y_test, y_pred)
+    
+    log(f"{model_name} - MAE: {mae:.4f}, RMSE: {rmse:.4f}, R²: {r2:.4f}")
+    
+    return mae, rmse, r2
+
+def quick_ablation_experiment(train_df, val_df, test_df, window_sizes=[12, 24, 48, 72]):
+    """快速消融实验"""
+    log("\n" + "=" * 60)
+    log("【滚动窗口消融实验】")
+    log("=" * 60)
+    
+    results = {}
+    
+    for window_size in window_sizes:
+        log(f"\n窗口大小: {window_size}h")
+        
+        X_train, y_train = quick_build_sequences(train_df, window_size)
+        X_val, y_val = quick_build_sequences(val_df, window_size)
+        X_test, y_test = quick_build_sequences(test_df, window_size)
+        
+        if len(X_train) == 0 or len(X_test) == 0:
+            continue
+        
+        log(f"序列数据: 训练{len(X_train)}, 验证{len(X_val)}, 测试{len(X_test)}")
+        
+        model = build_improved_lstm((window_size, X_train.shape[2]))
+        model, _ = quick_train_model(model, X_train, y_train, X_val, y_val, 
+                                     f"改进LSTM-{window_size}h", epochs=10, batch_size=64)
+        mae, rmse, r2 = evaluate_model(model, X_test, y_test, f"改进LSTM-{window_size}h")
+        
+        results[window_size] = {'mae': mae, 'rmse': rmse, 'r2': r2}
+    
+    return results
+
+def main():
+    log("\n" + "=" * 80)
+    log("BSDP项目 - 基于真实Capital Bikeshare数据集的快速实验")
+    log("=" * 80)
+    
+    # 1. 加载和预处理数据
+    flow_df = quick_load_and_preprocess()
+    
+    # 2. 特征工程
+    flow_df, feature_cols, le, scaler = quick_feature_engineering(flow_df)
+    
+    # 3. 划分数据集
+    train_df, val_df, test_df = quick_split_by_time(flow_df)
+    
+    # 4. 构建序列数据
+    window_size = 24
+    log(f"\n构建 {window_size}h 窗口序列数据...")
+    X_train, y_train = quick_build_sequences(train_df, window_size)
+    X_val, y_val = quick_build_sequences(val_df, window_size)
+    X_test, y_test = quick_build_sequences(test_df, window_size)
+    
+    log(f"序列数据形状 - 训练: {X_train.shape}, 验证: {X_val.shape}, 测试: {X_test.shape}")
+    
+    # 5. 核心对照实验
+    log("\n" + "=" * 60)
+    log("【核心对照实验】")
+    log("=" * 60)
+    
+    # BP神经网络
+    bp_model = build_bp((window_size, X_train.shape[2]))
+    bp_model, _ = quick_train_model(bp_model, X_train, y_train, X_val, y_val, "BP神经网络")
+    bp_results = evaluate_model(bp_model, X_test, y_test, "BP神经网络")
+    
+    # 基础LSTM
+    basic_lstm_model = build_basic_lstm((window_size, X_train.shape[2]))
+    basic_lstm_model, _ = quick_train_model(basic_lstm_model, X_train, y_train, X_val, y_val, "基础LSTM")
+    basic_lstm_results = evaluate_model(basic_lstm_model, X_test, y_test, "基础LSTM")
+    
+    # 改进LSTM
+    improved_lstm_model = build_improved_lstm((window_size, X_train.shape[2]))
+    improved_lstm_model, _ = quick_train_model(improved_lstm_model, X_train, y_train, X_val, y_val, "改进LSTM")
+    improved_lstm_results = evaluate_model(improved_lstm_model, X_test, y_test, "改进LSTM")
+    
+    # 6. 消融实验
+    ablation_results = quick_ablation_experiment(train_df, val_df, test_df)
+    
+    # 7. 输出结果
+    log("\n" + "=" * 80)
+    log("【实验结果汇总】")
+    log("=" * 80)
+    
+    log("\n核心对照实验结果表:")
+    log(f"{'模型':<20} {'MAE':<12} {'RMSE':<12} {'R²':<12}")
+    log("-" * 56)
+    log(f"{'BP神经网络':<20} {bp_results[0]:<12.4f} {bp_results[1]:<12.4f} {bp_results[2]:<12.4f}")
+    log(f"{'基础LSTM':<20} {basic_lstm_results[0]:<12.4f} {basic_lstm_results[1]:<12.4f} {basic_lstm_results[2]:<12.4f}")
+    log(f"{'改进LSTM':<20} {improved_lstm_results[0]:<12.4f} {improved_lstm_results[1]:<12.4f} {improved_lstm_results[2]:<12.4f}")
+    
+    log("\n滚动窗口消融实验结果表:")
+    log(f"{'窗口大小':<12} {'MAE':<12} {'RMSE':<12} {'R²':<12}")
+    log("-" * 48)
+    for window_size, metrics in sorted(ablation_results.items()):
+        log(f"{f'{window_size}h':<12} {metrics['mae']:<12.4f} {metrics['rmse']:<12.4f} {metrics['r2']:<12.4f}")
+    
+    log("\n" + "=" * 80)
+    log("实验完成！")
+    log("=" * 80)
+
+if __name__ == "__main__":
+    main()

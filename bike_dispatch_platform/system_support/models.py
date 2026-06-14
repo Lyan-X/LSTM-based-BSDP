@@ -120,7 +120,7 @@ class RegionFeature(models.Model):
 
 
 class SystemSetting(models.Model):
-    """Singleton runtime settings for 基于深度学习的城市共享单车调度需求预测与运维管理平台."""
+    """Singleton runtime settings for 基于深度学习的校园共享单车调度需求预测与运维管理平台."""
 
     dashboard_refresh_seconds = models.PositiveIntegerField(default=10, verbose_name="仪表盘刷新秒数")
     demand_warning_threshold = models.PositiveIntegerField(default=15, verbose_name="供需预警阈值")

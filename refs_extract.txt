@@ -1,0 +1,2331 @@
+================================================================================
+3901326E70F248C73C96BCE4426A5861.pdf
+＼渊螋愀
+Y43321 28 中图分类号：TP273
+论文编号：10357Q21301164
+墨短次学
+城市出租车调度的需求预测模型
+与优化算法研究
+作者姓名
+专业学位类别
+专业学位领域
+指导教师
+朱博豪
+工程硕士
+计算机技术
+项小书
+万方数据
+
+中图分类号：TP273
+论文编号：10357Q21301l“
+专业硕士学位论文
+城市出租车调度的需求预测模型
+与优化算法研究
+作者姓名
+专业学位类别
+专业学位领域
+指导教师
+朱博豪
+工程硕士
+计算机技术
+项小书
+万方数据
+
+Research
+on demand forecasting models and optim娩ation al901．ithms
+for urban taxi dispatching A
+Disse似ion Subrnitted forⅡ1e De胖e of Master Candidate：Zmu
+Bohao Supervisor：
+)【iangⅪaoshu 
+万方数据
+
+
+
+================================================================================
+applsci-12-01161-v2.pdf
+/gid00030/gid00035/gid00032/gid00030/gid00038/gid00001/gid00033/gid00042/gid00045/gid00001
+/gid00048/gid00043/gid00031/gid00028/gid00047/gid00032/gid00046
+Citation: Ma, X.; Yin, Y.; Jin, Y.; He,
+M.; Zhu, M. Short-Term Prediction of
+Bike-Sharing Demand Using
+Multi-Source Data: A Spatial-
+Temporal Graph Attentional LSTM
+Approach. Appl. Sci. 2022, 12, 1161.
+https://doi.org/10.3390/app12031161
+Academic Editor: Paolo Delle Site
+Received: 1 December 2021
+Accepted: 20 January 2022
+Published: 23 January 2022
+Publisher’s Note: MDPI stays neutral
+with regard to jurisdictional claims in
+published maps and institutional afﬁl-
+iations.
+Copyright: © 2022 by the authors.
+Licensee MDPI, Basel, Switzerland.
+This article is an open access article
+distributed under the terms and
+conditions of the Creative Commons
+Attribution (CC BY) license (https://
+creativecommons.org/licenses/by/
+4.0/).
+applied  
+sciences 
+Article
+Short-Term Prediction of Bike-Sharing Demand Using
+Multi-Source Data: A Spatial-Temporal Graph Attentional
+LSTM Approach
+Xinwei Ma 1
+ , Yurui Yin 1, Yuchuan Jin 2, Mingjia He 3 and Minqing Zhu 4,*
+1 School of Civil and Transportation Engineering, Hebei University of Technology, Tianjin 300401, China;
+xinweima@hebut.edu.cn (X.M.); Y18832000826@163.com (Y.Y.)
+2 School of Architecture and the Built Environment, Royal Institute of Technology (KTH),
+11428 Stockholm, Sweden; yuchuanj@kth.se
+3 School of Transportation, Southeast University, Dongnandaxue Road 2, Nanjing 211189, China;
+213163416@seu.edu.cn
+4 School of Architecture and Art Design, Hebei University of Technology, Tianjin 300401, China
+* Correspondence: 2018005@hebut.edu.cn
+Abstract: As a convenient, economical, and eco-friendly travel mode, bike-sharing greatly improved
+urban mobility. However, it is often very difﬁcult to achieve a balanced utilization of shared bikes
+due to the asymmetric spatio-temporal user demand distribution and the insufﬁcient numbers of
+shared bikes, docks, or parking areas. If we can predict the short-run bike-sharing demand, it will
+help operating agencies rebalance bike-sharing systems in a timely and efﬁcient way. Compared to
+the statistical methods, deep learning methods can automatically learn the relationship between the
+inputs and outputs, requiring less assumptions and achieving higher accuracy. This study proposes
+a Spatial-Temporal Graph Attentional Long Short-Term Memory (STGA-LSTM) neural network
+framework to predict short-run bike-sharing demand at a station level using multi-source data sets.
+These data sets include historical bike-sharing trip data, historical weather data, users’ personal
+information, and land-use data. The proposed model can extract spatio-temporal information of
+bike-sharing systems and predict the short-term bike-sharing rental and return demand. We use a
+Graph Convolutional Network (GCN) to mine spatial information and adopt a Long Short-Term
+Memory (LSTM) network to mine temporal information. The attention mechanism is focused on both
+temporal and spatial dimensions to enhance the ability of learning temporal information in LSTM and
+spatial information in GCN. Results indicate that the proposed model is the most accurate compared
+with several baseline models, the attention mechanism can help improve the model performance, and
+models that include exogenous variables perform better than the models that only consider historical
+trip data. The proposed short-term prediction model can be used to help bike-sharing users better
+choose routes and to help operators implement dynamic redistribution strategies.
+Keywords: bike-sharing; demand prediction; Graph Convolutional Network (GCN); Long Short-
+Term Memory (LSTM); attent ion mechanism
+1. Introduction
+As an economical, convenient, and eco-friendly travel mode, bike-sharing systems
+have grown dramatically worldwide during the last decade [ 1]. The systems can help
+relieve air pollution and trafﬁc congestion, and bring health beneﬁts by involving more
+physical activities [2]. A bike-sharing system is an access/egress mode service for public
+transport. It supports multimodal transport connections and increases the reachable areas
+of public transit [3]. By March 2021, 2012 bike-sharing programs have been put in operation
+and 300 others are under construction around the world [4].
+Bike-sharing systems can be categorized into the following two types: a docked bike-
+sharing system and dockless bike-sharing system [5]. The docked bike-sharing system has
+Appl. Sci. 2022, 12, 1161. https://doi.org/10.3390/app12031161 https://www.mdpi.com/journal/applsci
+Appl. Sci. 2022, 12, 1161 2 of 18
+stationary docking stations for users to rent and return bikes. For the dockless bike-sharing
+system, riders can use mobile phone applications (APPs) to rent and return bikes in the
+designated physical or electric-fencing areas [6,7].
+These two bike-sharing systems help promote urban mobility. However, because
+user demand distribution is asymmetric from a spatial and temporal perspective, shared
+bike distribution is unbalanced. In order to better satisfy user demand and assist oper-
+ators in scheduling the optimal routes and rebalancing the timetable, it is necessary to
+accurately predict the short-run bike-sharing demand in advance to improve the efﬁcacy
+of bike-sharing systems [8]. Users could better plan travel strategies and change the ori-
+gins/destinations in advance, which will eventually help balance the systems without
+rebalancing the shared bikes. Furthermore, short-term predictive models could also be
+applied to design a dynamic redistribution strategy and better balance the shared bikes
+distribution between saturated and non-saturated stations/regions [9].
+Previous studies mainly focus on the predictions of shared-bike usage at the city
+level [10], station cluster level [11], and station/grid level [10]. Although the bike-sharing
+usage aggregating at the city level and cluster level does simplify the problem, it neglects
+the characteristics of and interactions among stations and fails to extract spatial effects
+under ﬁne-grained content. Therefore, the generated prediction models are unsatisfactorily
+reliable [10,12]. Therefore, accurate station-level demand prediction for docked bike-
+sharing and the TAZ/grid-level demand prediction for dockless bike-sharing will be better
+for operators of bike-sharing systems to rebalance the imbalanced supply of shared bikes
+and recommend stations to passengers [13]. Classical spatial regression includes spatial
+effects in the demand prediction process; however, it can be limited by assumptions,
+accuracy, and computer power. The Spatial-Temporal Graph Attentional Long Short-Term
+Memory (STGA-LSTM) neural network model proposed in this study incorporates spatial
+and temporal usage patterns to predict the short-run demand for docked shared bikes.
+Moreover, the attention mechanism is useful to improve the accuracy and interpretability
+of a deep-learning neural network [14]. As far as we know, it is one of the ﬁrst efforts to
+integrate the GC-LSTM model with the attention mechanism for the prediction of short-term
+bike-sharing demand, and this method can be generalized for the demand prediction of
+both docked and dockless bike-sharing systems. To facilitate the training and testing of the
+proposed model, this paper uses smart card data of docked bike-sharing provided by the
+Nanjing public bicycle company, points of interest (POIs) data obtained by calling the Amap
+API [15], road network data downloaded from OpenStreetMap [16], and historical hourly
+weather data extracted from Weather Underground [17]. By comparing the proposed model
+with the leading prediction methods, it is shown that the proposed method is effective in
+predicting the short-run demand for shared bikes.
+The study makes contributions mainly in the following aspects:
+• A novel GC-LSTM model with spatio-temporal attentional matrices is proposed to
+predict the short-term demand for bike-sharing rental and return at the station level.
+• Exogenous factors (e.g., weather information, POIs data, and users’ personal informa-
+tion) are considered in the prediction model.
+• Comprehensive performance comparisons are performed based on real-world datasets.
+The sections of this paper are constructed as follows. In Section 2, the literature on
+the prediction models for short-term demand of shared bikes is reviewed. In Section 3, the
+framework of the novel GC-LSTM model and each component are illustrated. Section 4
+conducts experiments and discusses the results. The ﬁnal section concludes this paper and
+proposes future research directions.
+2. Literature Review
+Short-run bike-sharing prediction assists system operators in daily operations and im-
+proves the system reliability and accessibility [18]. During the past decades, how to predict the
+short-term demand of bike-sharing has been widely studied. The methods for bike-sharing
+prediction can be divided into parametric methods and non-parametric methods.
+Appl. Sci. 2022, 12, 1161 3 of 18
+The parametric methods usually regard bike-sharing demand prediction as a time-
+series issue from multi-source and heterogeneous data [ 19]. Auto-Regressive Moving
+Average (ARMA) model-based models were adopted to predict the short-term bike-sharing
+demand. Kaltenbrunner et al. [ 20] applied an ARMA model to predict available shared
+bikes for stations with a some minutes/hours horizon window ahead. Yoon et al. [21] pro-
+posed a modiﬁed Auto-Regressive Integrated Moving Average (ARIMA) model to forecast
+the number of available shared bikes for each station considering temporal factors of and in-
+teractions among stations. Gallop et al. [22] applied a Seasonal Auto-Regressive Integrated
+Moving Average (SARIMA) model to analyze bike-sharing demand using hourly bike usage
+and the corresponding weather data. They found that weather-related factors, especially
+temperature and rain, signiﬁcantly impacted bike-sharing usage. Previous ARMA-based
+models can use temporal information to predict the bike-sharing demand. However, these
+models cannot well extract the heterogeneous correlations among stations [3].
+The non-parametric methods include machine learning approaches and deep learning
+approaches. Using machine learning methods, several researchers worked to establish
+nonlinear prediction model based on massive bike-sharing historical trip data. A few
+studies adopted Random Forest [23], Bayesian network [24], Gradient Boosted Tree [25],
+and Artiﬁcial Neural Networks (ANN) [26] to predict the bike-sharing demand at each
+station at any given time period in the future, without including the spatial or temporal
+correlations between stations.
+In addition, recent studies used deep learning methods to predict the short-term
+station-level bike-sharing demand. Wang and Kim [ 27] applied Long Short-Term Mem-
+ory (LSTM) neural networks and Gated Recurrent Unit (GRU) to predict the short-term
+availability of shared bikes at docking stations using historical data within one month.
+Chen et al. [ 28] proposed the Recurrent Neural Network (RNN) to predict both rental
+and return demand for every station in the system using time, weather, and station data.
+Zhang et al. [29] adopted the LSTM model to predict the short-term bike-sharing usage by
+considering the correlation between bike-sharing users and public transport passengers. To
+extract spatial-temporal dependencies, some studies combined both network structures
+and put forward a Convolutional LSTM network (Conv-LSTM). For example, Du et al. [12]
+combined irregular CNN and LSTM units and used historical passenger ﬂows and external
+factors such as weather, trafﬁc control, and social activities to explore the characteristic of
+spatial-temporal trafﬁc ﬂows and predict hourly road trafﬁc ﬂows. Ai et al. [ 30] proposed a
+Conv-LSTM model and predicted the dockless bike-sharing systems distribution within
+a short-run period by considering spatial-temporal variables. Xu et al. [31] constructe
+
+================================================================================
+College of Computer Science Researcher Provides New Data on Machine Learning (Sh (1).pdf
+Citation: Shi, Y.; Zhang, L.; Lu, S.;
+Liu, Q. Short-Term Demand
+Prediction of Shared Bikes Based on
+LSTM Network. Electronics 2023, 12,
+1381. https://doi.org/10.3390/
+electronics12061381
+Academic Editor: Felipe Jiménez
+Received: 11 January 2023
+Revised: 26 February 2023
+Accepted: 6 March 2023
+Published: 14 March 2023
+Copyright: © 2023 by the authors.
+Licensee MDPI, Basel, Switzerland.
+This article is an open access article
+distributed under the terms and
+conditions of the Creative Commons
+Attribution (CC BY) license (https://
+creativecommons.org/licenses/by/
+4.0/).
+electronics
+Article
+Short-Term Demand Prediction of Shared Bikes Based on
+LSTM Network
+Yi Shi 1,*
+ , Liumei Zhang 1
+ , Shengnan Lu 1 and Qiao Liu 2
+1 College of Computer Science, Xi’an Shiyou University, Xi’an 710065, China
+2 School of Cyber Engineering, Xidian University, Xi’an 710071, China
+* Correspondence: 200301@xsyu.edu.cn
+Abstract: Shared transportation is widely used in current urban trafﬁc. As a representative mode of
+transport, shared bikes have strong mobility and timeliness, so it is particularly critical to accurately
+predict the number of bikes used in an area every hour. In this paper, London bike-sharing data are
+selected as a data set to primarily analyze the impact of meteorological elements and time factors on
+bike-sharing demand. At the same time, it is important to use LSTM neural network models and
+popular machine learning models to predict demand for shared bikes at an hourly level. Through
+data analysis and visualization, the major elements affecting the bike-sharing demand are found to
+include humidity, peak hours, temperature, and other elements. The root mean squared error of the
+LSTM model is 314.17, the R2 score is as high as 0.922, and the error is small in comparison to other
+machine learning models. Through the evaluation indicators, it can be seen that the LSTM model
+has the smallest error between the prediction results and the true values of the compared machine
+learning methods, and the change trend of the model prediction result curve is basically consistent
+with the actual result curve.
+Keywords: shared bikes; transport; LSTM network; demand forecast; data analysis
+1. Introduction
+With the increasing attention on environmental protection in different countries, envi-
+ronmentally friendly, pollution-free, and energy-saving transportation methods have been
+widely used and developed; shared transportation is one such method. Within the ﬁeld
+of shared transportation, shared bikes are a popular mode of transportation in different
+cities that effectively solves the problem of commuting the last kilometer of a trip [ 1,2].
+Originating in the Netherlands, the bike-sharing model became popular around the world
+in the mid-1990s. According to statistics, at least 535 cities in 49 countries have set up
+bike-sharing schemes. Therefore, it is an urgent problem to quickly and precisely predict
+the bike-sharing demand at a speciﬁc time and place by analyzing the data to reasonably
+determine the number of required bikes and plan their arrangement [3–5].
+At present, the research status of bike-sharing demand forecasting is as follows. It was
+indicated by Matton et al. that meteorological conditions such as temperature, wind speed,
+and precipitation are the major components affecting the demand for shared bikes [ 6].
+Faghih et al. suggested that time-related factors, including weekends, weekdays and peak
+hours, are the key variables affecting bike-sharing demand [ 7]. Bacciu et al. applied an
+SVM model and a random forest model in traditional machine learning algorithms for bike-
+sharing prediction but did not describe in detail how to predict bicycle usage changes over
+a short period of time [8]. Bajari et al. used several popular machine learning models for
+demand forecasting, among which the random forest model and stacking model obtained
+better prediction results. The ordinary least square linear model, the binary classiﬁcation
+model, and the multi-classiﬁcation logit model are the main methods applied to bike-
+sharing demand forecasting. These empirical models require a large number of observations
+Electronics 2023, 12, 1381. https://doi.org/10.3390/electronics12061381 https://www.mdpi.com/journal/electronics
+Electronics 2023, 12, 1381 2 of 15
+and have obvious limitations, and the regression relationships generated do not match
+the actual demand situation well [ 9]. Cao et al. used support vector machine, extreme
+random tree, random forest, and other methods to perform short-term demand prediction
+of shared bicycles, and the extreme random tree obtained better results [10]. To predict the
+hourly demand of bike sharing more accurately, the trend in algorithm usage has shifted
+away from machine learning algorithms toward deep learning algorithms. The BP neural
+network has good adaptability; this network can solve the nonlinear problem by learning
+the data set itself, but it has a drawback in that the trained model is prone to local extremes
+when making predictions [11]. Gao X et al. chose rental data in the Washington area of the
+United States as a research object and proposed a time-based model and a hybrid method
+combining a backpropagation network and a genetic fuzzy c-means algorithm. The genetic
+algorithm provided better classiﬁcation performance for the training data. The trained
+backpropagation network predictor was used to predict rental demand in the future [12].
+Recurrent neural networks (RNN) are mainly applied to process sequence type data and are
+now widely used to process continuous sequence data for prediction [13,14]. However, due
+to imperfect processing of historical information, problems such as gradient disappearance
+and gradient explosion can easily occur in practical applications [ 15]. To overcome the
+shortcomings of the RNN model, the long short-term memory (LSTM) model emerged,
+and has been widely used in the study of sequence prediction problems so far and has
+achieved good prediction results [16–19].
+Compared with previous forecasting methods, the innovation of the demand forecasting
+method used in this paper is as follows. (1) In the aforementioned related work, only one
+method is mainly used to predict demand for bicycles. In this paper, multiple machine
+learning methods and LSTM deep learning methods are used to predict demand, and the
+prediction effects and associated indicators of different methods are compared. (2) Compared
+with other related works, this paper introduces big data machine learning and deep learn-
+ing methods into the “hourly” short-term demand prediction of the bike-sharing industry ,
+which improves the prediction efficiency of the industry’s immediate demand so as to assist
+enterprises in real-time scheduling and enhance the overall utilization level of bike resources.
+The paper introduces an LSTM network algorithm to the shared transportation indus-
+try to predict the demand of bicycle sharing at the “hourly” level, improve the efﬁciency of
+immediate demand prediction, and help companies plan in real-time and determine the
+overall utilization of bicycle resources.
+The rest of paper is organized as follows. In Section 2, the principles of the proposed
+method, data prepossessing, and inﬂuencing factors analysis are introduced. The details of
+the proposed model and the results are introduced in Section 3. In Section 4, future research
+directions are mainly discussed. Finally, in the conclusions section, the main signiﬁcance of
+this study is expounded.
+2. Theory and Methods
+In general, public transportation methods exhibit a strong time dependency. Bike
+sharing is an important part of public transportation, and the short-time demand for bike
+sharing is also strongly inﬂuenced by the time. Usually, this demand pattern varies over
+time and has a certain pattern. Similarly, weather factor conditions have a signiﬁcant
+impact on the short-time demand of shared bikes [20–22]. Therefore, in order to make bike-
+sharing planning timelier and more accurate, the following prediction model is applied in
+this paper.
+2.1. Predictive Models Based on Machine Learning
+2.1.1. XGBoost
+XGBoost is a machine learning algorithm implemented in a gradient boosting framework
+and is efficient, flexible, and portable. The XGBoost algorithm is a combination of several
+known decision tree models with low prediction accuracy levels that combine to build a model
+with higher accuracy . The model is improved iteratively , with each iteration generating a tree
+Electronics 2023, 12, 1381 3 of 15
+that fits the residuals of the previous tree. For regression problems, XGBoost is an efficient
+implementation of the gradient boosting algorithm. It balances speed and efficiency , and this
+algorithm has shown excellent performance in major competition tasks since its release in
+2015 [23].
+2.1.2. Bagging
+The full name of bagging is bootstrap aggregation, where bootstrap means that the
+training samples of the base learner are obtained by bootstrap sampling of the original data.
+For regression problems, aggregation means using simple averaging to obtain the ﬁnal
+model output by arithmetically averaging the regression results obtained from the base
+learner. This algorithm is the most famous representative of parallel integrated learning
+methods. Repolho et al. used the bagging method algorithm in air transport demand
+forecasting and obtained better results compared to SARIMA and other methods [24].
+2.1.3. Random Forest
+Random forest is a model that uses multiple CART trees to train the samples of the
+training set and then performs regression prediction on the samples of the test set. It
+consists of several decision trees, and these decision trees are not related to each other.
+When using the random forest model to predict the demand for shared bicycles, each
+decision tree in the random forest appears each time a new sample is input, one regression
+prediction is made for each sample, and ﬁnally, all regression results are averaged to create
+the ﬁnal model prediction [25,26].
+2.1.4. Light Gradient Boosting (LightGBM)
+LightGBM is an evolutionary version of the GBDT model [27]. LightGBM similar to
+XGBoost is in principle, but it is faster to train, consumes less memory, supports parallel
+learning, and can handle large amounts of data. The basic idea of LightGBM is to ﬁrst
+discretize continuous ﬂoating-point feature values into k integers while constructing a
+histogram of width k. When constructing a decision tree for selecting features and feature
+splitting points, it is necessary to iterate through k discrete values to ﬁnd the best splitting
+point. More importantly, LightGBM sets a maximum depth limit for the leaf growth strategy
+to keep the model efﬁcient while preventing overﬁtting. Lu et al. applied this algorithm to
+obtain good results in dynamic bike-sharing distribution prediction [28,29].
+2.1.5. Stacking Model
+Stacking is the most popular method in the ﬁeld of model fusion in recent years. It is
+not only one of the most common fusion methods used by competition champion teams,
+but also one of the solutions considered for practical applications of artiﬁcial intelligence
+in industry. As a strong learner fusion method, stacking combines the three advantages
+of good model effect, strong interpretation ability, and applicability to complex data and
+is one of the most practical pioneer methods in the ﬁeld of fusion. According to Wolpert,
+model stacking can derive the bias in the model on a speciﬁc data set so that the bias in the
+meta-learner can be corrected [30].
+2.2. Predictive Models Based on LSTM
+LSTM was ﬁrst described by Hochreiter et al. It was developed in 1997 and based
+on improvements to RNN networks [31]. The difference between LSTM neural networks
+and RNN is that it not only adds a storage unit that preserves previous information, but
+it also trains the data through a back propagation algorithm, eliminating the problem of
+the disappearance of the gradient, and the loss of long-te
+
+================================================================================
+College of Computer Science Researcher Provides New Data on Machine Learning (Sh.pdf
+Citation: Shi, Y.; Zhang, L.; Lu, S.;
+Liu, Q. Short-Term Demand
+Prediction of Shared Bikes Based on
+LSTM Network. Electronics 2023, 12,
+1381. https://doi.org/10.3390/
+electronics12061381
+Academic Editor: Felipe Jiménez
+Received: 11 January 2023
+Revised: 26 February 2023
+Accepted: 6 March 2023
+Published: 14 March 2023
+Copyright: © 2023 by the authors.
+Licensee MDPI, Basel, Switzerland.
+This article is an open access article
+distributed under the terms and
+conditions of the Creative Commons
+Attribution (CC BY) license (https://
+creativecommons.org/licenses/by/
+4.0/).
+electronics
+Article
+Short-Term Demand Prediction of Shared Bikes Based on
+LSTM Network
+Yi Shi 1,*
+ , Liumei Zhang 1
+ , Shengnan Lu 1 and Qiao Liu 2
+1 College of Computer Science, Xi’an Shiyou University, Xi’an 710065, China
+2 School of Cyber Engineering, Xidian University, Xi’an 710071, China
+* Correspondence: 200301@xsyu.edu.cn
+Abstract: Shared transportation is widely used in current urban trafﬁc. As a representative mode of
+transport, shared bikes have strong mobility and timeliness, so it is particularly critical to accurately
+predict the number of bikes used in an area every hour. In this paper, London bike-sharing data are
+selected as a data set to primarily analyze the impact of meteorological elements and time factors on
+bike-sharing demand. At the same time, it is important to use LSTM neural network models and
+popular machine learning models to predict demand for shared bikes at an hourly level. Through
+data analysis and visualization, the major elements affecting the bike-sharing demand are found to
+include humidity, peak hours, temperature, and other elements. The root mean squared error of the
+LSTM model is 314.17, the R2 score is as high as 0.922, and the error is small in comparison to other
+machine learning models. Through the evaluation indicators, it can be seen that the LSTM model
+has the smallest error between the prediction results and the true values of the compared machine
+learning methods, and the change trend of the model prediction result curve is basically consistent
+with the actual result curve.
+Keywords: shared bikes; transport; LSTM network; demand forecast; data analysis
+1. Introduction
+With the increasing attention on environmental protection in different countries, envi-
+ronmentally friendly, pollution-free, and energy-saving transportation methods have been
+widely used and developed; shared transportation is one such method. Within the ﬁeld
+of shared transportation, shared bikes are a popular mode of transportation in different
+cities that effectively solves the problem of commuting the last kilometer of a trip [ 1,2].
+Originating in the Netherlands, the bike-sharing model became popular around the world
+in the mid-1990s. According to statistics, at least 535 cities in 49 countries have set up
+bike-sharing schemes. Therefore, it is an urgent problem to quickly and precisely predict
+the bike-sharing demand at a speciﬁc time and place by analyzing the data to reasonably
+determine the number of required bikes and plan their arrangement [3–5].
+At present, the research status of bike-sharing demand forecasting is as follows. It was
+indicated by Matton et al. that meteorological conditions such as temperature, wind speed,
+and precipitation are the major components affecting the demand for shared bikes [ 6].
+Faghih et al. suggested that time-related factors, including weekends, weekdays and peak
+hours, are the key variables affecting bike-sharing demand [ 7]. Bacciu et al. applied an
+SVM model and a random forest model in traditional machine learning algorithms for bike-
+sharing prediction but did not describe in detail how to predict bicycle usage changes over
+a short period of time [8]. Bajari et al. used several popular machine learning models for
+demand forecasting, among which the random forest model and stacking model obtained
+better prediction results. The ordinary least square linear model, the binary classiﬁcation
+model, and the multi-classiﬁcation logit model are the main methods applied to bike-
+sharing demand forecasting. These empirical models require a large number of observations
+Electronics 2023, 12, 1381. https://doi.org/10.3390/electronics12061381 https://www.mdpi.com/journal/electronics
+Electronics 2023, 12, 1381 2 of 15
+and have obvious limitations, and the regression relationships generated do not match
+the actual demand situation well [ 9]. Cao et al. used support vector machine, extreme
+random tree, random forest, and other methods to perform short-term demand prediction
+of shared bicycles, and the extreme random tree obtained better results [10]. To predict the
+hourly demand of bike sharing more accurately, the trend in algorithm usage has shifted
+away from machine learning algorithms toward deep learning algorithms. The BP neural
+network has good adaptability; this network can solve the nonlinear problem by learning
+the data set itself, but it has a drawback in that the trained model is prone to local extremes
+when making predictions [11]. Gao X et al. chose rental data in the Washington area of the
+United States as a research object and proposed a time-based model and a hybrid method
+combining a backpropagation network and a genetic fuzzy c-means algorithm. The genetic
+algorithm provided better classiﬁcation performance for the training data. The trained
+backpropagation network predictor was used to predict rental demand in the future [12].
+Recurrent neural networks (RNN) are mainly applied to process sequence type data and are
+now widely used to process continuous sequence data for prediction [13,14]. However, due
+to imperfect processing of historical information, problems such as gradient disappearance
+and gradient explosion can easily occur in practical applications [ 15]. To overcome the
+shortcomings of the RNN model, the long short-term memory (LSTM) model emerged,
+and has been widely used in the study of sequence prediction problems so far and has
+achieved good prediction results [16–19].
+Compared with previous forecasting methods, the innovation of the demand forecasting
+method used in this paper is as follows. (1) In the aforementioned related work, only one
+method is mainly used to predict demand for bicycles. In this paper, multiple machine
+learning methods and LSTM deep learning methods are used to predict demand, and the
+prediction effects and associated indicators of different methods are compared. (2) Compared
+with other related works, this paper introduces big data machine learning and deep learn-
+ing methods into the “hourly” short-term demand prediction of the bike-sharing industry ,
+which improves the prediction efficiency of the industry’s immediate demand so as to assist
+enterprises in real-time scheduling and enhance the overall utilization level of bike resources.
+The paper introduces an LSTM network algorithm to the shared transportation indus-
+try to predict the demand of bicycle sharing at the “hourly” level, improve the efﬁciency of
+immediate demand prediction, and help companies plan in real-time and determine the
+overall utilization of bicycle resources.
+The rest of paper is organized as follows. In Section 2, the principles of the proposed
+method, data prepossessing, and inﬂuencing factors analysis are introduced. The details of
+the proposed model and the results are introduced in Section 3. In Section 4, future research
+directions are mainly discussed. Finally, in the conclusions section, the main signiﬁcance of
+this study is expounded.
+2. Theory and Methods
+In general, public transportation methods exhibit a strong time dependency. Bike
+sharing is an important part of public transportation, and the short-time demand for bike
+sharing is also strongly inﬂuenced by the time. Usually, this demand pattern varies over
+time and has a certain pattern. Similarly, weather factor conditions have a signiﬁcant
+impact on the short-time demand of shared bikes [20–22]. Therefore, in order to make bike-
+sharing planning timelier and more accurate, the following prediction model is applied in
+this paper.
+2.1. Predictive Models Based on Machine Learning
+2.1.1. XGBoost
+XGBoost is a machine learning algorithm implemented in a gradient boosting framework
+and is efficient, flexible, and portable. The XGBoost algorithm is a combination of several
+known decision tree models with low prediction accuracy levels that combine to build a model
+with higher accuracy . The model is improved iteratively , with each iteration generating a tree
+Electronics 2023, 12, 1381 3 of 15
+that fits the residuals of the previous tree. For regression problems, XGBoost is an efficient
+implementation of the gradient boosting algorithm. It balances speed and efficiency , and this
+algorithm has shown excellent performance in major competition tasks since its release in
+2015 [23].
+2.1.2. Bagging
+The full name of bagging is bootstrap aggregation, where bootstrap means that the
+training samples of the base learner are obtained by bootstrap sampling of the original data.
+For regression problems, aggregation means using simple averaging to obtain the ﬁnal
+model output by arithmetically averaging the regression results obtained from the base
+learner. This algorithm is the most famous representative of parallel integrated learning
+methods. Repolho et al. used the bagging method algorithm in air transport demand
+forecasting and obtained better results compared to SARIMA and other methods [24].
+2.1.3. Random Forest
+Random forest is a model that uses multiple CART trees to train the samples of the
+training set and then performs regression prediction on the samples of the test set. It
+consists of several decision trees, and these decision trees are not related to each other.
+When using the random forest model to predict the demand for shared bicycles, each
+decision tree in the random forest appears each time a new sample is input, one regression
+prediction is made for each sample, and ﬁnally, all regression results are averaged to create
+the ﬁnal model prediction [25,26].
+2.1.4. Light Gradient Boosting (LightGBM)
+LightGBM is an evolutionary version of the GBDT model [27]. LightGBM similar to
+XGBoost is in principle, but it is faster to train, consumes less memory, supports parallel
+learning, and can handle large amounts of data. The basic idea of LightGBM is to ﬁrst
+discretize continuous ﬂoating-point feature values into k integers while constructing a
+histogram of width k. When constructing a decision tree for selecting features and feature
+splitting points, it is necessary to iterate through k discrete values to ﬁnd the best splitting
+point. More importantly, LightGBM sets a maximum depth limit for the leaf growth strategy
+to keep the model efﬁcient while preventing overﬁtting. Lu et al. applied this algorithm to
+obtain good results in dynamic bike-sharing distribution prediction [28,29].
+2.1.5. Stacking Model
+Stacking is the most popular method in the ﬁeld of model fusion in recent years. It is
+not only one of the most common fusion methods used by competition champion teams,
+but also one of the solutions considered for practical applications of artiﬁcial intelligence
+in industry. As a strong learner fusion method, stacking combines the three advantages
+of good model effect, strong interpretation ability, and applicability to complex data and
+is one of the most practical pioneer methods in the ﬁeld of fusion. According to Wolpert,
+model stacking can derive the bias in the model on a speciﬁc data set so that the bias in the
+meta-learner can be corrected [30].
+2.2. Predictive Models Based on LSTM
+LSTM was ﬁrst described by Hochreiter et al. It was developed in 1997 and based
+on improvements to RNN networks [31]. The difference between LSTM neural networks
+and RNN is that it not only adds a storage unit that preserves previous information, but
+it also trains the data through a back propagation algorithm, eliminating the problem of
+the disappearance of the gradient, and the loss of long-te
+
+================================================================================
+Optimized Demand Forecasting for Bike Sharing Stations Through Multi Method Fusi.pdf
+ 
+VOLUME XX, 2017 1 
+Date of publication xxxx 00, 0000, date of current version xxxx 00, 0000. 
+Digital Object Identifier 10.1109/ACCESS.2024.Doi Number 
+Optimized Demand Forecasting for Bike-Sharing Stations through Multi-Method 
+Fusion and Gated Graph Convolutional Neural Networks 
+Hebin Guo1, Kexin Li1, and Yutong Rou1 
+1 School of Civil Engineering and Transport, Beihua University, Jilin, Jilin, 132000, China  
+Corresponding author: Kexin Li (e-mail: likenefu@126.com). 
+This work was supported in part by the Science and Technology Research Project of Jilin Provincial Education Department under Grant 
+JJKH20220057KJ. 
+ABSTRACT This study presents an innovative approach to hourly demand forecasting for bike -sharing 
+systems using a multi-attribute, edge-weighted, Gated Graph Convolutional Network (GGCN). It addresses 
+the challenge of imbalanced bike borrowing and returning demands across stations, aiming to enhance station 
+utilization rates. The proposed model employs GGCNs to capture spatial relationships between stations and 
+incorporates both current and historical data via a gating mechanism to account for temporal depe ndencies. 
+By integrating three key edge -weight attributes—stations distance, travel duration, and correlation—into a 
+multi-attribute graph framework, the model significantly improves predictive accuracy for user travel patterns. 
+Additionally, user characteristics are included as node features, enabling a more comprehensive analysis. The 
+study utilizes the 2020 dataset from Jersey City's bike -sharing system, starting with the application of the 
+Isolation Forest algorithm to detect and filter anomalous data p oints. A detailed analysis of the temporal, 
+spatial, and user -related factors is conducted to examine how these features interact and shape demand 
+patterns in the bike-sharing network. The dataset is segmented by season to account for seasonal variations. 
+The results demonstrate that the multi -attribute, edge -weighted GGCN outperforms baseline and single -
+attribute models, achieving a Mean Absolute Error (MAE) of 0.521 and Mean Squared Error (MSE) of 0.918 
+for spring and autumn, and an MAE of 0.307 and MSE of 0.608 for summer and winter. 
+INDEX TERMS 
+Gated Graph Convolutional Neural Network, Traveler Features, Multi-Feature Edge Weight, 
+Demand Prediction.  
+I. INTRODUCTION 
+Urbanization has exacerbated traffic congestion, particularly 
+when addressing the critical "last mile" challenge[1],[2], a gap 
+in urban mobility that often burdens public transit and limits 
+accessibility. Solving this issue is essential for improving 
+urban mobility and quality of life. Bike-sharing systems, with 
+their eco-friendly, cost-effective, and convenient nature, have 
+emerged as a key solution for short -distance trips. These 
+systems alleviate pressure on public transit, promote green 
+travel, and enhance the overall efficiency of urban traffic 
+networks[3],[4]. During peak hours, bike-sharing reduces the 
+dependence on mass transit systems, helping to ease road 
+congestion. Moreover, the flexibility of bike -sharing—
+offering personalized trip start and end points — overcomes 
+certain limitations of public transport and further optimizes 
+urban transportation efficiency[5], [3]. As an important 
+complement to public transit, bike-sharing systems contribute 
+significantly to urban sustainability goals, helping cities 
+transition toward cleaner, more accessible mobility 
+solutions[6]. However, operational challenges, such as 
+imbalanced bike demand across stations, can hinder efficiency 
+and negatively affect user satisfaction. Accurate demand 
+forecasting is crucial for optimizing the management of bike-
+sharing systems and improving the user experience[7]. 
+Demand forecasting in bike -sharing systems, particularly 
+with a focus on spatial factors, can be categorized into three 
+levels: regional, cluster, and station [8],[9]. Regional 
+forecasting typically employs deep learning techniques, such 
+as Convolutional Neural Networks (CNNs) or Recurrent 
+Neural Networks (RNNs), to model spatiotemporal dynamics 
+across large city areas, estimating the overall volume of bike 
+transactions within each region[10]. Cluster-level forecasting, 
+on the other hand, leverages clustering methods to group 
+stations with similar usage patterns and applies machine 
+learning techniques to predict demand for each 
+cluster[11],[12]. While both regional and cluster -level 
+approaches simplify model complexity and efficiently handle 
+large datasets, station -level forecasting is critical for 
+operational precision. It provides granular insights tailored to 
+the specific needs of users and operators. 
+However, traditional machine learning models often 
+struggle to address the irregularities of urban geography, 
+which deviates from Euclidean space. The emergence of 
+Graph Neural Networks (GNNs), designed to handle non-
+This article has been accepted for publication in IEEE Access. This is the author's version which has not been fully edited and 
+content may change prior to final publication. Citation information: DOI 10.1109/ACCESS.2024.3501572
+This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/
+ Author Name: Preparation of Papers for IEEE Access (February 2017) 
+2 VOLUME XX, 2017 
+Euclidean spaces, has shifted the focus toward station- level 
+demand prediction[13]. GNNs are particularly effective at 
+modeling complex spatial interactions but face challenges 
+when dealing with dynamic graph structures, especially in 
+real-time forecasting scenarios [14],[15]. As data volume 
+increases, maintaining model generalization while avoiding 
+overfitting on complex, graph-structured data becomes more 
+difficult, particularly when dealing with limited data or high-
+dimensional features[16]. 
+The primary objective of this research is to enhance the 
+accuracy of hourly predictions for bike borrowing and 
+returning demands at stations by developing a novel model 
+that utilizes multi-feature edge weights within Gated Graph 
+Convolutional Neural Networ ks (GCNNs). This model 
+leverages GCNNs to capture the intricate spatial 
+interrelationships between stations, while employing gating 
+mechanisms to integrate historical and real -time data, 
+effectively addressing temporal dependencies in time 
+series[17]. A key innovation is the incorporation of a multi-
+feature edge weight system, which accounts for factors such 
+as stations distance, travel
+ duration, and correlations between 
+stations. Moreover, the study extends beyond traditional 
+analyses by incorporating traveler characteristics, such as age, 
+gender, and user category — factors that have been 
+underexplored in prior research. Utilizing a comprehensive 
+dataset of bike-sharing trips from Jersey City over the course 
+of a year, the data is segmented into four distinct seasons to 
+account for seasonal variations in bike usage. 
+The main contributions of this study are as follows:  
+1) Proposing a predictive model based on a gated graph 
+convolutional neural network that integrates multi -
+feature edge weights. This model effectively 
+addresses spatial and temporal dependencies in bike-
+sharing demand prediction. 
+2) Incorporating user personal characteristics into the 
+bike-sharing demand prediction model for the first 
+time, thereby enhancing the prediction accuracy and 
+practicality of the model. 
+3) Conducting experiments on the bike -sharing station 
+borrowing and returning demand dataset from Jersey 
+City in 2020 and analyzing the differential impact of 
+seasonal factors on travel demand. 
+The remaining sections of this paper are organized as 
+follows. Section Literature review provides a literature review 
+of related studies on bike-sharing demand prediction. Section 
+Methodology presents the theoretical methods and research 
+framework used in this study. Section Dependency conducts a 
+dependency analysis of bike -sharing from the temporal, 
+spatial, and traveler perspectives.  Section Model validation 
+and analysis carries out model validation and comparative 
+analysis. Finally, section Conclusions concludes the paper. 
+II. LITERATURE REVIEW 
+In the field of bike -sharing demand prediction, there is a 
+growing consensus that spatial factors play a critical role in 
+forecasting accuracy. Numerous studies have highlighted the 
+dominant influence of spatial elements compared to other 
+predictive variables[18]. The granularity of spatial data has led 
+to a tripartite classification in the literature: macro -regional, 
+cluster-based, and micro -station-level forecasting 
+paradigms[18],[19]. 
+A. REGION-LEVEL BIKE-SHARING DEMAND 
+PREDICTION 
+At the regional level, demand prediction focuses on estimating 
+bicycle usage across larger urban areas, such as districts or 
+clusters of blocks[20],[21]. This approach typically employs 
+Geographic Information Systems (GIS) to define these regions 
+and analyzes historical usage data within those boundaries. To 
+improve predictive accuracy, demographic and commercial 
+metrics are often integrated into the anal ysis[22]. Methods 
+commonly used include time series models, such as ARIMA, 
+alongside deep learning frameworks like Convolutional 
+Neural Networks (CNNs) and Recurrent Neural Networks 
+(RNNs). These models incorporate a wide range of variables, 
+including weather conditions, temporal patterns, and 
+extraordinary events, to provide a comprehensive projection 
+of regional demand[23]. 
+While regional forecasting offers policymakers a broad 
+understanding of consumption trends, aiding in urban 
+planning and resource allocation, it often favors simpler data 
+models that emphasize general trends over detailed 
+insights[24]. Although effective at identifying large -scale 
+patterns, this approach may overlook localized fluctuations in 
+demand that require swift operational adjustments. Focusing 
+on broader geographic areas can lead to an oversimplification 
+of intra-regional demand variations, potentially limiting the 
+model’s ability to capture the nuanced diversity of demand. As 
+a result, such models may lack the granularity needed for 
+precise operational adjustments and may respond more slowly 
+to unexpected events. 
+B. CLUSTER-LEVEL BIKE-SHARING DEMAND 
+PREDICTION 
+Cluster-level demand forecasting in bike -sharing systems 
+groups nearby stations or regions that exhibit similar user 
+behaviors and geographic characteristics [25]. This method 
+seeks to identify zones or station clusters that share common 
+demand profiles. Clustering algorithms, such as K-means or 
+hierarchical clustering, are employed to segment areas or 
+stations with analogous demand patterns [26]. Once these 
+clusters are established, predictive models— such as Random 
+Forests or Gradient Boosting Machines (GBM)— are applied 
+to forecast demand based on the distinct characteristics of each 
+cluster[27]. A hybrid approach is often used, where clustering 
+is followed by specific forecasting techniques, such as time 
+series or regression models, to improve precision within the 
+This article has been accepted for publication in IEEE Access. This is the author's version which has not been fully edited and 
+content may change prior to final publication. Citation information: DOI 10.1109/ACCESS.2024.3501572
+This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/
+ Author Name: Preparation of Papers for IEEE Access (February 2017) 
+2 VOLUME XX, 2017 
+defined clusters[28],[29]. This two -step strategy allows for 
+both broad categorization and fine-grained demand estimation 
+at the local level. 
+Cluster analysis enhances the identification of demand 
+patterns with greater accuracy, enabling more targeted 
+operational strategies and resource allocation[30]. However, 
+cluster-based forecasting comes with its own set of challenges. 
+It requires sophisticat
+
+================================================================================
+Predicting travel demand of a bike sharing system using graph convolutional neur.pdf
+Vol.:(0123456789)
+Public Transport (2025) 17:281–317
+https://doi.org/10.1007/s12469-024-00371-w
+CASE STUDY AND APPLICATION
+Predicting travel demand of a bike sharing system using 
+graph convolutional neural networks
+Ali Behroozi1 · Ali Edrisi1
+Accepted: 23 September 2024 / Published online: 12 November 2024 
+© The Author(s), under exclusive licence to Springer-Verlag GmbH Germany, part of Springer Nature 2024
+Abstract
+Public transportation systems play a crucial role in daily commutes, business opera-
+tions, and leisure activities, emphasizing the need for effective management to meet 
+public demands. One approach to achieve this goal is by predicting demand at the 
+station level. Bike-sharing systems, as a form of transit service, contribute to the 
+reduction of air and noise pollution, as well as traffic congestion. This study focuses 
+on predicting travel demand within a bike-sharing system. A novel hybrid deep 
+learning model called the gate graph convolutional neural network is introduced. 
+This model enables prediction of the travel demand at station level. By integrating 
+trajectory data, weather data, access data, and leveraging gate graph convolution 
+networks, the accuracy of travel demand forecasting is significantly improved. The 
+Chicago city bike-sharing system is chosen as the case study. In this investigation, 
+the proposed model is compared to the base models used in previous literature to 
+evaluate their performance, demonstrating that the main model exhibits better per -
+formance than the base models. By utilizing this framework, transportation planners 
+can make informed decisions on resource allocation and rebalancing management.
+Keywords Demand modeling · Machine learning · Graph convolutional neural 
+network · Accessibility · Bike-sharing
+1 Introduction
+Cities are getting larger due to factors such as population growth, economic oppor -
+tunities, infrastructure developments, congestion effects, urbanization, and gov -
+ernment policies. By 2050, it is forecast that 70% of the world’s population would 
+reside in cities (Wang et  al. 2022). This progress of urbanization has engendered 
+ * Ali Edrisi 
+ edrisi@kntu.ac.ir
+ Ali Behroozi 
+ Ali.Behroozi@email.kntu.ac.ir
+1 Faculty of Civil Engineering, K. N. Toosi University of Technology, Tehran, Iran
+282 A. Behroozi, A. Edrisi 
+significant challenges in short-term demand forecasting for public transportation 
+systems.
+The emergence of novel technological advancements has provided the ability to 
+utilize vast reserves of big data, such as information gathered from public transit 
+cards, to identify and fully comprehend travel patterns, including demand profiles 
+(Ke et  al. 2019), temporal distribution (Yildirimoglu and Geroliminis 2013), and 
+spatial and other pattern analyses (Ma et al. 2013; Lahoorpoor et al. 2019). Travel 
+demand and mobility patterns are the most critical factors in transport planning and 
+operation optimization problems, which further affect the effectiveness, dependabil-
+ity, and appeal of public transit services.
+The bike-sharing system is a transit service that can be utilized for short com-
+mutes, occasional outings, and leisure visits. This mode of transport has shown 
+numerous advantages at the individual, municipal, and regional levels. The produc-
+tion of a car emits far more CO 2 and uses significantly more energy than a bicycle, 
+and the same is true for bike trips versus automobile trips (Shaheen and Lipman 
+2007; Weiss et al. 2015). In terms of local advantages, bike trips reduce air and noise 
+pollution, traffic congestion, and the need for parking spaces (Sælensminde 2004). 
+In response to the COVID-19 pandemic, many cities had provided bike lanes to 
+increase social distancing and to avoid buses and subways. In addition, bike sharing 
+has the potential to enhance urban mobility as a sustainable mode of transportation.
+One of the challenges in improving the performance of bike-sharing systems 
+is predicting travel demand. Addressing this problem will enhance rebalancing 
+schemes by accurately predicting travel demand, which is influenced by a range of 
+spatial and temporal parameters. These parameters include demographics, activity 
+locations, network topology, time of day, weather conditions, and more. Integrat-
+ing all these factors into a single model demands not only comprehensive data but 
+also advanced modeling techniques. With the availability of large data and machine 
+learning techniques, new methods have been developed to predict travel demand 
+including long short-term memory (LSTM), gated recurrent unit (GRU), convolu-
+tional neural network (CNN), and graph convolutional neural network (GCNN).
+LSTM and GRU are powerful recurrent neural network methods for forecasting 
+time series, particularly effective when dealing with datasets exhibiting long-term 
+trends, as they allow for learning a large number of parameters. Therefore, they are 
+able to obtain temporal features and the trend of traffic flow. CNN extracts spatial 
+correlation using regular (Euclidean) data, and each grid in the network is treated 
+as a node, with neighbors determined by the size of the filter. It takes the weighted 
+average of the grid values of the node and its neighbors; however, it has shortcom-
+ings in large-scale travel demand forecasting. By abstracting the network into a 
+graph (e.g., bike-sharing stations as the vertices and bike-sharing lines as the edges), 
+GCNN can be used to effectively capture the irregular spatiotemporal dependencies. 
+In comparison to traditional approaches, using GCNNs for traffic prediction may 
+provide improved accuracy and scalability.
+To summarize, oversimplified schemes and models cannot accurately predict the 
+travel demand of bike-sharing systems, and also research in the past has focused 
+on building demand prediction models for each station separately without consider -
+ing hidden correlations between stations in order to improve the performance of the 
+283
+Predicting travel demand of a bike sharing system using graph…
+model (Faghih-Imani et al. 2014; Rixey 2013; Yang et al. 2016). To bridge this gap, 
+this study proposes a gate graph neural network deep learning method and considers 
+various spatiotemporal features such as weather conditions, historical demand, and 
+access. This research assumes that the graph is changed at each time step due to the 
+dynamic nature of traffic. The model is tested for the Chicago bike-sharing system 
+and compared against a classic econometric model (OLS), as well as other machine 
+learning (SVR, XGBoost) and deep learning models (GCN, MLP, LSTM, CNN). In 
+addition, various types of graph convolutional neural networks with attention mech-
+anisms and integration with temporal methods are explored.
+The remainder of this paper is structured as follows. A brief historical back -
+ground refers to the models and parameters that have been employed in forecast-
+ing travel demand. This context provides insight into the established approaches 
+and factors considered in previous research related to predicting travel demand in 
+Sect.  2. In Sect.  3 definitions of primary concepts and methods will be given. In 
+Sect.  4, we provide a brief overview of the case study and explain variables such as 
+bike share transactions, weather conditions, and demographic statistics. The results 
+of the statistical experiments are provided in Sect.  5. Finally, the concluding remarks 
+are discussed in Sect. 6.
+2  Literature review
+The primary challenge in forecasting bike sharing lies in the intricacies associated 
+with spatial and temporal modeling. First, the distribution of demand across vari-
+ous locations is significantly imbalanced. Second, demand peaks during the morn-
+ing and evening rush hours as a result of a higher volume of commuters. However, 
+this temporal pattern is not consistently observed spatially during weekends and 
+holidays, and dependencies on external factors like social events or weather further 
+complicate demand prediction. Third, the intricate spatial and temporal depend-
+encies undergo changes with alterations in bike share systems or the influences of 
+adjacent regions (Jiang 2022; Luo et al. 2021).
+Several demand models for different transport modes have been established in 
+the literature. These models can be categorized as econometric models, data-driven 
+machine learning models and recently deep learning techniques to estimate the 
+demand between any origin–destination (OD) pair.
+Dominant econometric and statistical models include the classical four-step 
+model (i.e., trip generation, trip distribution, modal split, and traffic assignment), the 
+historical average, and the auto-regressive integrated moving average model (Amini 
+et al. 2016; Pan et al. 2012).
+Recently, investigations have shown an increase in the popularity of machine 
+learning in the field of travel demand modeling. Recent studies have demonstrated 
+that machine learning can significantly improve predictions of travel mode choice 
+at the individual level when compared to traditional logit models (Xie et al. 2003; 
+Hagenauer and Helbich 2017; Cheng et al. 2019). Support vector regression, ran-
+dom forest, and gradient boosting decision trees are examples of machine learn-
+ing models for travel demand forecasting; researchers have attempted to forecast 
+
+
+================================================================================
+qy_Real-Time Forecasting of Dockless Scooter-Sharing Demand  A Spatio-Temporal M.pdf
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 24, NO. 8, AUGUST 2023 8507
+Real-Time Forecasting of Dockless Scooter-Sharing
+Demand: A Spatio-Temporal Multi-Graph
+Transformer Approach
+Yiming Xu
+ , Xilei Zhao
+ , Xiaojian Zhang, and Mudit Paliwal
+Abstract— Accurately forecasting the real-time travel demand
+for dockless scooter-sharing is crucial for the planning and oper-
+ations of transportation systems. Deep learning models provide
+researchers with powerful tools to achieve this task, but research
+in this area is still lacking. This paper thus proposes a novel
+deep learning architecture named Spatio-Temporal Multi-Graph
+Transformer (STMGT) to forecast the real-time spatiotemporal
+dockless scooter-sharing demand. The proposed model uses a
+graph convolutional network (GCN) based on adjacency graph,
+functional similarity graph, demographic similarity graph, and
+transportation supply similarity graph to attach spatial depen-
+dency to temporal input (i.e., historical demand). The output of
+GCN is subsequently processed with weather condition informa-
+tion by the Transformer to capture temporal dependency. Then,
+a convolutional layer is used to generate the final prediction. The
+proposed model is evaluated for two real-world case studies in
+Washington, D.C. and Austin, TX, respectively, and the results
+show that for both case studies, STMGT significantly outperforms
+all the selected benchmark models, and the most important model
+component is the weather information. The proposed model can
+help micromobility operators develop optimal vehicle rebalancing
+schemes and guide cities to better manage dockless scooter-
+sharing operations.
+Index Terms— Dockless scooter-sharing, transformer, deep
+learning, demand forecasting, shared micromobility.
+I. I NTRODUCTION
+S
+HARED
+micromobility refers to small, single-passenger
+transportation modes rented for short-term use, such
+as dockless bike-sharing and scooter-sharing. Shared micro-
+mobility is flexible, convenient, affordable, environmentally
+friendly, and fun to use, making it especially attractive to
+serve short-distance trips and offer a potential solution to
+the “first mile/last mile” problem that has long troubled
+public transit. Among all the shared micromobility options,
+Manuscript received 16 November 2021; revised 19 May 2022,
+23 September 2022, and 16 November 2022; accepted 13 January 2023. Date
+of publication 31 January 2023; date of current version 2 August 2023. This
+work was supported in part by the U.S. Department of Transportation through
+the Southeastern Transportation Research, Innovation, Development and Edu-
+cation (STRIDE) Region 4 University Transportation Center under Grant
+69A3551747104 and in part by the University of Florida Artificial Intelligence
+Research Catalyst Fund. The Associate Editor for this article was W. Wei.
+(Corresponding author: Xilei Zhao.)
+Yiming Xu, Xilei Zhao, and Xiaojian Zhang are with the Department of
+Civil and Coastal Engineering, University of Florida, Gainesville, FL 32611
+USA (e-mail: xilei.zhao@essie.ufl.edu).
+Mudit Paliwal was with the Department of Industrial and Systems Engi-
+neering, University of Florida, Gainesville, FL 32611 USA. He is now with
+WR Berkley, Greenwich, CT 06830 USA.
+Digital Object Identifier 10.1109/TITS.2023.3239309
+dockless scooter-sharing is growing at the fastest pace [1].
+In 2019, people in the U.S. took 86 million trips on dockless
+scooter-sharing systems, contributing to an over 100% increase
+from 2018 [1]. While dockless scooter-sharing as a travel
+mode can greatly enhance urban mobility, it is faced with
+two major operational challenges. First, the trip origin and
+destination demands of dockless scooter-sharing are spatially
+and temporally unbalanced [2], [3], [4]. Since urban areas have
+limited parking spaces for scooters, unbalanced trip demand
+would lead to the gathering of scooters in certain places and
+spilling out of the parking space, thus blocking sidewalks
+and causing safety issues. The gathering of scooters should
+be anticipated so that the redundant scooters are removed in
+time to mitigate the adverse effects. In light of this, accurate
+spatiotemporal dockless scooter-sharing demand predictions
+are essential for generating optimal vehicle rebalancing strate-
+gies [5] and removing the redundant scooters. Second, the
+scooters need to be recharged when they are at low power
+level. To accomplish this, the operators collect these low-
+power-level vehicles, recharge them, and then drop them
+off at specific locations [6]. In this case, accurate dockless
+scooter-sharing demand predictions are essential to determine
+the optimal scooter drop-off locations.
+Although some recent studies (e.g., [2], [7], [8]) have
+examined the spatiotemporal usage patterns of dock-
+less scooter-sharing in different cities, few studies shed
+light on the highly-accurate real-time spatiotemporal dock-
+less scooter-sharing demand prediction. Additionally, most
+real-time shared micromobility demand forecasting studies
+are focused on station-based (i.e., docked) bike-sharing [9],
+[10], [11], [12]. Based on models such as recurrent neural
+network (RNN), convolutional neural network (CNN), and
+graph convolutional network (GCN), these studies abstracted
+the stations into nodes in a graph and assigned the demand
+to these nodes. Although these models achieved a decent
+prediction performance for station-based bike-sharing demand
+forecasting, applying these models to dockless scooter-sharing
+demand forecasting can be challenging since there are no
+parking stations for dockless scooter-sharing. The station-
+based bike-sharing trips can only take place at the stations,
+while dockless scooter-sharing trips can happen at any place
+where no scooter parking restrictions exist. The origin and
+destination demand of station-based bike-sharing is concen-
+trated in the stations, while the spatial distribution of dockless
+1558-0016 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Harvard University SEAS. Downloaded on March 08,2026 at 16:21:36 UTC from IEEE Xplore.  Restrictions apply. 
+8508 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 24, NO. 8, AUGUST 2023
+scooter-sharing demand is more scattered. There is a pressing
+need to study spatiotemporal demand forecasting for dockless
+scooter-sharing services.
+In this paper, we propose a graph-based deep learning model
+named Spatio-Temporal Multi-Graph Transformer (STMGT)
+to deal with the real-time dockless scooter-sharing demand
+forecasting problem. The proposed model simultaneously
+captures spatial and temporal dependency to achieve high
+prediction performance. Four graphs representing the spa-
+tial correlations (i.e., spatial adjacency, functional similarity,
+demographic similarity, and transportation supply similarity)
+are first constructed. Then we use a GCN module based on
+the four graphs to attach the spatial dependency to the input
+time series data (i.e., historical demand). After that, a sequence
+of Transformer blocks is used to process the output of the
+GCN module and the weather condition information to capture
+temporal dependency. At last, a 1 × 1 convolutional layer is
+used to generate the final prediction. The proposed architecture
+which utilizes Transformer and multi-graph GCN significantly
+outperforms the state-of-the-art benchmark models for two
+separate case studies (Washington, D.C. and Austin, TX).
+Particularly, the input graphs are specifically designed for the
+dockless scooter-sharing demand forecasting problem using
+transportation domain knowledge. The major contributions
+of this study are two-fold: 1) we propose a novel deep
+learning framework that effectively integrates Transformer and
+multi-graph GCN to deal with an important but rarely studied
+problem (i.e., real-time dockless scooter-sharing demand fore-
+casting); and 2) we appropriately incorporate comprehensive
+transportation domain knowledge (i.e., including a number of
+new features associated with dockless scooter-sharing demand)
+in the deep learning model to achieve a high prediction
+accuracy.
+The remainder of this paper is structured as follows.
+Section II reviews existing literature related to this study.
+Section III formally defines the research problem and describes
+the proposed method from the overall model architecture to its
+specific components. Section IV presents case studies in Wash-
+ington, D.C. and Austin, TX, and compares the performance of
+the proposed model with several benchmark models. Section V
+concludes the paper by summarizing findings, identifying
+limitations, and suggesting future work.
+II. L ITERATURE REVIEW
+A. Deep-Learning-Based Travel Demand Forecasting Models
+The travel demand forecasting problem has been intensively
+studied by researchers in the past several decades. A number of
+forecasting models have been proposed to tackle this problem.
+These models can be roughly categorized into three categories:
+the statistical models, the classical machine learning models,
+and the deep learning models. In this section, we focus on the
+deep learning models.
+The deep learning methods have provided researchers with
+powerful tools to deal with travel demand prediction problems,
+such as taxi demand prediction [13], [14], [15], ride-hailing
+demand prediction [16], ridesourcing demand prediction [17],
+and bike-sharing demand prediction [10], [11], [18]. Since
+the demand varies spatially and temporally, different deep
+learning methods were used to capture spatial dependency
+and temporal dependency in these studies, and the results
+showed that these deep learning methods outperformed the
+classical machine learning models (e.g., random forest and
+gradient boosting decision tree) and the statistical models (e.g.,
+linear regression and ARIMA). In these demand prediction
+tasks, the convolutional neural networks (CNNs) and graph
+convolutional networks (GCNs) are usually used to capture the
+spatial dependency, and the recurrent neural networks (RNNs)
+such as gated recurrent unit (GRU) and long short-term mem-
+ory (LSTM) models are usually used to capture the temporal
+dependency [9], [12]. Some studies also combined these two
+kinds of neural networks into a spatiotemporal model to cap-
+ture spatial and temporal dependency simultaneously, and the
+results showed that the spatiotemporal models have better per-
+formance than the single CNN or RNN models [15], [16], [19],
+[20], [21]. However, these convolution-based recurrent mod-
+els suffer from time-consuming training process and limited
+scalability for modeling long sequences [22], [23]. Based on
+attention mechanism and encoder-decoder structure, attention-
+based models such as Transformer [24] and Informer [25]
+can efficiently capture long-range temporal dependency from
+sequential data. Researchers have combined Transformer
+with spatial models (e.g., GCNs) to solve traffic flow
+forecasting problems [22], [23] and ride-hailing demand fore-
+casting problems [26]. However, studies on applying Trans-
+former to micromobility demand forecasting problems are
+lacking.
+Given the effectiveness of deep learning methods on demand
+forecasting tasks, different kinds of deep learning models have
+been applied for shared micromobility demand prediction in
+previous studies, including the RNN models [9], [12] and
+the spatiotemporal models [10], [13]. Although some of these
+models can capture spatial and temporal dependency, they only
+consider the geographical adjacency relationships between
+zones when extracting spatial dependency. Many spatial fac-
+tors, such as the zonal functionality and demographic and
+built environment characteristics (e.g., population density) that
+are highly related to passenger trip demand [7], [27] are
+omitted in these models. In addition, the usage of shared
+micromobility is sensitive to weather conditions [28], [29],
+
+
+================================================================================
+The Impact of Weather on Shared Bikes.pdf
+Academic Editor: Rui Araújo
+Received: 30 July 2025
+Revised: 25 August 2025
+Accepted: 2 September 2025
+Published: 8 September 2025
+Citation: Liu, P .; Pan, Z.; Fan, Z.;
+Wang, X. The Impact of Weather on
+Shared Bikes. Appl. Sci. 2025, 15, 9834.
+https://doi.org/10.3390/
+app15179834
+Copyright: © 2025 by the authors.
+Licensee MDPI, Basel, Switzerland.
+This article is an open access article
+distributed under the terms and
+conditions of the Creative Commons
+Attribution (CC BY) license
+(https://creativecommons.org/
+licenses/by/4.0/).
+Article
+The Impact of Weather on Shared Bikes
+Peng Liu 1,*
+ , Zhicheng Pan 1,2 , Zhenlong Fan 1,2 and Xiaoxia Wang 2,*
+1 School of Future Transportation, Guangzhou Maritime University, Guangzhou 510725, China;
+zhi-cheng666@139.com (Z.P .); 2112109024@mail2.gdut.edu.cn (Z.F.)
+2 School of Civil and Transportation Engineering, Guangdong University of Technology,
+Guangzhou 510006, China
+* Correspondence: liupeng@gzmtu.edu.cn (P .L.); wxx@gdut.edu.cn (X.W.); Tel.: +86-18925088199 (P .L.);
++86-13360561637 (X.W.)
+Abstract
+This article explores the impact of weather and environment on shared bicycles. Using
+a random forest model combined with explanatory machine learning methods, the rela-
+tionship, threshold effect, and interaction effect between weather factors and the transfer
+volume of shared bicycles at subway stations are analyzed. Research has shown that using
+the RF+IML method to study the impact of weather variables on shared bicycle transfer
+volume is feasible. There is a significant nonlinear relationship between various weather
+factors and shared bicycle transfers. Temperature, humidity, and rainfall have specific
+activation and threshold effects on the number of shared bicycle transfers. When humidity
+is below 60%, the variation in transfer volume remains relatively stable; however, once
+it exceeds 60%, the transfer volume drops sharply. When the temperature exceeds 17 ◦C,
+its impact tends to reach saturation. Similarly, when rainfall reaches around 20 mm, its
+adverse effect also approaches the threshold. Temperature is the most important factor
+affecting the prediction of shared bicycle transfer volume, with temperature, cold weather,
+and cold forecasts contributing over 35% to the total effect. The interaction effect between
+temperature and other weather factors accounts for 22% of the total effect.
+Keywords: green mobility; shared bikes; transfer volume; interaction effect; interpretable
+random forest model
+1. Introduction
+With the increasing urban population and the escalating issue of traffic congestion,
+shared bikes have emerged as a crucial solution to enhance travel efficiency and alleviate
+traffic pressure [1]. Shared bikes not only reduce the travel volume of private cars and
+enhance the attractiveness of public transportation but also effectively decrease motor
+vehicle emissions and energy consumption [2], playing a positive role in improving urban
+environmental quality and addressing climate change [3]. Additionally, as a flexible and
+convenient mode of short-distance travel, shared bikes serve as an important choice for
+transferring to the subway. The combined use of shared bikes and subways has become
+a significant mode of transportation for commuters. Typically, individuals opt for shared
+bike rides to reach subway stations in close proximity, followed by subway rides to stations
+near their destinations. During this journey, shared bikes play the role of the starting point
+for travel activities. When commuters arrive near their destinations from subway stations,
+shared bikes serve as the “last mile” solution, providing quick and convenient transfer
+services [4,5], acting as the endpoint for travel activities. Presently, the combined use of
+Appl. Sci. 2025, 15, 9834 https://doi.org/10.3390/app15179834
+Appl. Sci. 2025, 15, 9834 2 of 22
+shared bikes and subways is widely adopted in densely populated major cities [6]. acting as
+the endpoint for travel activities. Presently, the combined use of shared bikes and subways
+is widely adopted in densely populated major cities [6]. For instance, in the total shared
+bike travel volume in Shanghai, China, 51% of shared bike travel occurs near subway
+stations [5,7].
+However, shared bike travel is exposed to external environmental conditions and is
+susceptible to factors such as temperature, rainfall, and air pollution [8,9]. Previous studies
+have shown that in the Washington, D.C. area, shared bike trips decrease by 15% to 30%
+on rainy days [10]. Therefore, compared to private cars and conventional public transit,
+shared bikes are more sensitive to weather changes [11]. Despite the increased flexibility
+of shared bikes compared to private bikes, for example, allowing on-the-spot parking
+in rainy weather [8,11], the use of shared bikes still faces certain obstacles. There exists
+a complex relationship between shared bike travel and weather factors, making shared
+bike users more vulnerable to the effects of weather changes. Previous studies indicate
+that [12], compared to driving and using public transportation, shared bike travel is more
+sensitive to weather variations. Therefore, gaining a deeper understanding of the impact
+of weather conditions on shared bike travel and the extent of this impact is crucial for
+grasping the usage patterns of shared bikes under different weather conditions, promoting
+the combined use of shared bikes and subways, alleviating urban traffic congestion, and
+reducing carbon emissions.
+While existing studies have explored the impact of weather on bike travel [ 13–15],
+research on the influence of weather on shared bike travel is relatively limited, with even
+fewer studies focusing on the impact of weather on shared bike transfer volume. In this
+study, a buffer zone is established centered around subway stations, treating the buffer
+zone as an area for parking shared bikes when transferring to the subway. The number of
+shared bike orders ending their journeys within the boundary of this buffer zone is defined
+as the shared bike transfer volume, serving as the subject of investigation in this study.
+By integrating data from multiple sources, including subway route information, station
+geographic data, meteorological data, and air quality index, we conduct a comprehensive
+study on the impact of weather on the combined use of shared bikes and subways. This
+extends the scope of previous research on shared bike travel behavior.
+It is noteworthy that many studies on the impact of weather on shared bike trans-
+fers commonly employ traditional parameter models and linear assumptions. Although
+these studies can indicate the influence of weather on shared bike transfers, the tradi-
+tional parameter models and linear models often generate biased estimates and inaccurate
+interpretations due to the neglect of nonlinear effects and interactions among relevant
+weather factors [12,16]. For instance, there may be an interaction between humidity and
+temperature, where changes in humidity can enhance or diminish the impact of tempera-
+ture. Additionally, the relationship between temperature and shared bike transfer volume
+may exhibit nonlinear characteristics with certain thresholds [13,17]. To comprehensively
+explore the nonlinear effects of weather on shared bike transfers, this study uses the K-
+Means clustering analysis method to construct a research framework that includes basic
+weather variables, virtual weather variables, and weather forecast variables. Based on this
+framework, a Random Forest model is employed to investigate the impact of weather on
+shared bikes trips near subway stations, while interpretable machine learning methods
+are used to further analyze the effects of weather interactions, revealing the mechanisms
+through which weather factors influence shared bikes trips, and provide a reference for
+urban shared bikes trip planning.
+Appl. Sci. 2025, 15, 9834 3 of 22
+2. Literature
+2.1. Combined Travel Between Shared Bikes and Subway
+Shared bikes, serving as a short-distance travel solution for addressing the “last mile”
+problem in urban transportation, naturally complement long-distance commuting modes
+such as the subway. Consequently, numerous studies have explored the integrated use
+of shared bikes and subway systems. Noland et al. [ 18] found that shared bike stations
+near subway stations have higher utilization rates, emphasizing the comprehensive use of
+shared bikes and subways. Guo et al. [ 19] using subway daily passenger volume as the
+independent variable and employing negative binomial regression, identified a positive
+correlation between subway passenger volume and the volume of shared bike travel. Some
+literature has constructed a fusion evaluation index for subways and shared bikes, utilizing
+a generalized additive model to investigate the correlation between this index and land
+use, social demographics, road design, and transportation facilities [20]. Zhan et al. [21]
+extracted shared bike data near subway stations and employed local cumulative effect maps
+to analyze factors related to the integrated use of shared bikes and subways, identifying
+subway passenger flow and bike density around the service area as the most crucial factors
+promoting shared bike use near subway stations. Yan et al. [22] extracted data on dockless
+shared bikes near Shanghai Subway Line 9, visually analyzing the differences in usage
+patterns of dockless shared bikes around subways on weekdays and weekends, revealing
+characteristics of dockless shared bike service areas around subways. Data from the
+Nanjing Subway in China indicated that the coverage area of subway stations determines
+the demand for the integrated use of shared bikes and subways. Subway stations with
+higher density reduce the potential for integrated use since shared bikes can be replaced
+by walking as a connection to the subway [23]. In summary, in recent years, the combined
+use of shared bikes and subways has shown a rapid growth trend in many regions and
+has gradually become one of the key directions for the future development of bike-sharing
+systems. Therefore, it is of great significance to investigate the key factors influencing
+commuters’ choices to adopt the combined use of shared bikes and subways.
+2.2. The Impact of Weather on the Use of Shared Bikes
+Previous research has revealed that weather factors significantly impact the use of
+shared bikes, leading to several scenarios: commuters opting for alternative transportation
+modes to avoid the effects of weather, delaying their departure until unfavorable weather
+conditions pass, or choosing not to travel to avoid weather impacts [ 24]. Therefore, it is
+crucial to incorporate weather factors into the impact system of shared bike travel. This
+can be achieved by collecting shared bike road count or order data, along with meteo-
+rological data, and conducting modeling and analysis from both temporal and spatial
+perspectives [25,26], to explore the impact of weather factors on shared bike travel behavior.
+El-Assi et al. [27] constructed an autoregressive moving average model to estimate shared
+bike travel volume, finding that warmer weather leads to higher shared bike utilization
+rates, while rainfall, low temperatures, and humidity decrease utilization rates. Addi-
+tionally, Wessel studied the influence of predicted weather conditions on cycling volume,
+revealing that even during rainless periods, predicted rainfall reduces cycling volume by
+3.6% [28]. Gebhart and Nolan analyzed shared bike data and discovered that shared bike
+travelers embarking on journeys farther from subway stations are more susceptible to the
+impact of rain and low temperatures compared to those starting journeys closer to subway
+stations [10]. At present, the combined use of shared bikes and subways has become an
+important component of shared mobility systems. Existing studies on such multimodal
+travel mainly focus on the influence of built environment factors on the integration of
+shared b
+
+================================================================================
+北京市共享单车出行的时空规律与需求预测研究.pdf
+第 22 卷 第 1 期
+2022 年 2 月
+交通运输系统工程与信息
+Journal of Transportation Systems Engineering and Information Technology
+V ol. 22 No. 1
+February 2022
+文 章 编 号 ： 1 0 09 - 6744 ( 2022 ) 01 - 0332 - 07 中 图 分 类 号 ： U 484 文 献 标 志 码 ： A
+DOI: 10 . 16097 /j.cnki. 1009 - 6744 . 2022 . 01 . 035
+北京市共享单车出行的时空规律与需求预测研究
+孙启鹏
+a,b,c,d
+， 曾开邦
+a,b,c,d
+， 张锴琦
+* a,b,c,d
+， 杨艺琛
+b,c,d,e
+， 张士行
+a,b,c,d
+( 长安大学 ， a. 经济与管理学院 ； b. 陕西高校青年创新团队 “ 未来交通与区域发展创新团队 ” ； c. 长安大学
+综合运输经济管理中心 ； d. 陕西高校新型智库 “ 综合运输发展研究中心 ” ； e. 信息工程学院 ， 西安 710054 )
+摘要 ： 基于北京市摩拜单车的工作日骑行数据 ， 利用非负矩阵分解算法 (NMF) 从时间和空间两
+个维度深入探究共享单车的出行规律 ， 并构建逆序群体稳定性指标 (RPSI) 改善 k 值选择过程 。 利
+用得到的出行规律 ， 运用 MA TLAB 构建基于非负矩阵分解算法的 BP 神经网络预测模型 ， 对共享
+单车的出行需求进行预测 ， 并分别与 BP 神经网络预测模型和长短期记忆 (LSTM) 神经网络预测模
+型的结果进行对比 。 研究结果表明 ， 共享单车可分为 5 种基本的出行模式 ， 每个区域的出行都可
+以由这 5 种出行模式的线性组合来表达 ， 其中的系数代表了每一种出行模式的强度和随时间变动
+情况 。 依据这 5 种出行模式的时间特征和空间特征 ， 分别确定其出行含义 ： 通勤出行中居住地到
+地铁站的出行 ； 通勤出行中地铁站到工作地点的最后一公里连接 ； 居民其他的非通勤出行行为 ，
+如休闲娱乐活动等 ； 回程通勤出行中从工作地点到地铁站 ； 回程通勤出行中从地铁站到居住区的
+最后一公里连接 。 最后 ， 模型预测结果的对比分析显示 ， 本文构建的基于非负矩阵分解算法的 BP
+神经网络预测模型不管是在预测精度还是实际操作便捷性上都优于其他两种预测模型 。
+关键词 ： 城市交通 ； 非负矩阵分解算法 ； 出行模式 ； 需求预测 ； 共享单车
+Spatiotemporal Travel Patterns and Demand Prediction of Shared
+Bikes in Beijing
+SUN Qi-peng
+a,b,c,d
+, ZENG Kai-bang
+a,b,c,d
+, ZHANG Kai-qi
+* a,b,c,d
+,
+Y ANG Yi-chen
+b,c,d,e
+, ZHANG Shi-hang
+a,b,c,d
+(a. School of Economics and Management; b. Y outh Innovation Team of Shaanxi Universities; c. Integrated Transportation
+Economics and Management Center of Chang'an University; d. Integrated Transport Development Research Center, the New Style
+Think Tank of Shaanxi Universities; e. School of Information Engineering, Chang'an University, Xi'an 710054 , China)
+Abstract:Abstract: Using the Mobike data on workdays in Beijing, this study explores the patterns of bike- sharing behavior
+through the non-negative matrix factorization(NMF) algorithm from the spatial and temporal dimensions. A reverse
+population stability index was proposed to improve the selection of the k- value. Then, based on the revealed travel
+patterns information, the BP neural network prediction model with a non- negative matrix factorization (NMF)
+algorithm was built by MA TLAB to predict the travel demand of shared bikes. The prediction results were compared
+with other two prediction models, i.e., the BP neural network model without NMF and the long and short term memory
+(LSTM) neural network model. Results show that the share of bicycle travel can be divided into five basic travel
+patterns, and the travel demand in each area can be represented by a linear combination of these five travel patterns.
+The coefficients represent the intensity and temporal fluctuation of each travel pattern. Based on the spatial and
+temporal characteristics, the five travel patterns can be regarded as cycling from residences to subway stations in
+commuting travel, cycling from subway stations to workplaces in commuting travel, non- commuting travel such as
+shopping or recreational travel, cycling from workplaces to subway stations in commuting travel and cycling from
+收稿日期 ： 2021 - 09 - 30 修回日期 ： 2021 - 11 - 08 录用日期 ： 2021 - 11 - 23
+基金项目 ： 中央高校基本科研业务费专项资金 /Fundamental Research Funds for the Central Universities of Ministry of Education
+of China( 300102238401 ， 300102238655 ， 300102230611 ) 。
+作者简介 ： 孙启鹏 ( 1976 - ) ， 男 ， 陕西安康人 ， 教授 ， 博士 。 * 通信作者 ： kaiqizhang@chd.edu.cn
+ChaoXing
+第 22 卷 第 1 期 北京市共享单车出行的时空规律与需求预测研究
+subway stations to residences in commuting travel. The results also show that the NMF-based BP neural network model
+proposed in this study is superior to the other two prediction models in both prediction accuracy and practical
+operational convenience.
+Keywords:Keywords: urban traffic; non-negative matrix factorization algorithm; travel pattern; demand prediction; bike-sharing
+0 引言
+共享单车近年来的迅速发展 ， 极大地方便了居
+民 “ 最后一公里 ” 出行 ， 且能缓解城市交通耗能
+[ 1 ]
+， 保
+护环境
+[ 2 ]
+， 但同时也产生了新的挑战 ， 如过量投放造
+成资源浪费 ， 占用人行道 、 地铁站出入口等基础设
+施
+[ 3 ]
+， 影响居民的日常出行和市容市貌等 。 为应对
+这些挑战 ， 学者们在政府规制 、 出行规律 、 需求预
+测 、 调度优化等多个方面进行探索 。 江南
+[ 4 ]
+探讨了
+政府监管对共享单车用户的机会主义行为的调节
+机制 。 付学梅等
+[ 5 ]
+根据用户在一天中的骑行开始时
+间对用户进行归类 ， 并基于赫希曼指数揭示了用户
+骑行的时间规律 。 焦志伦等
+[ 6 ]
+基于旧金山湾区的共
+享单车数据 ， 发现随机森林与迭代决策树对共享单
+车即时需求预测的效果要优于传统回归模型 。 李
+兴华等
+[ 7 ]
+构建了双层规划模型提高共享单车动态调
+度的有效性 ， 更好地平衡供需 。 高楹等
+[ 8 ]
+则将共享
+单车的出行时空特征和其空间调度相结合 ， 在分析
+不同日期和时段共享单车源 、 汇点分布和土地利用
+性质的基础上 ， 设计相应的空间调度模型和算法 ，
+有效减少单车积压或不足 ， 提高其利用效率 。
+考虑出行规律有助于提高调度效率 ， 本质在于
+其能提供更准确的时空需求预测 ， 给了调度模型更
+准确的数据和参数输入 。 因此 ， 本文尝试将出行规
+律和需求预测结合起来 ， 首先利用非负矩阵分解算
+法找到共享单车的出行规律 ， 再把得到的出行规律
+与 BP 神经网络相结合 ， 以此来准确预测共享单车
+的需求 ， 从而为共享单车投放管理 、 调度优化等方
+面提供有效指导 。
+1 数据与方法
+1 . 1 数据来源及结构
+本文数据源于 2017 年摩拜公司举行的摩拜杯
+算法挑战赛 ， 数据集包含了北京市 5 月 10 日 、 11 日 、
+12 日 、 15 日 、 16 日 、 18 日 、 19 日 ( 均在周内工作日 ) 共
+2484561 条共享单车骑行数据 。 数据包含 7 个数据
+字段 ： 订单 ID ， 用户 ID ， 车辆 ID ， 车辆类别 ， 骑行开
+始时间以及骑行的起点和终点 。 其中起终点为 7
+位 数 的 Geohash 编 码 ， 代 表 约 1 5 2 m × 1 5 2 m 的 空
+间 ， 具体如表 1 所示 。
+表 1 数据示例
+Table 1 Data example
+orderid
+1893973
+userid
+451147
+bikeid
+210617
+biketype
+2
+starttime
+2017 - 05 - 12 22 : 16 : 50
+geohashed_start_loc
+wx 4 snhx
+geohashed_end_loc
+wx 4 snhj
+1 . 2 非负矩阵分解算法
+初始的出行矩阵过于庞大 ， 需要将其近似分解
+为低秩的矩阵形式 ， 以从中约简出可理解的出行模
+式 。 矩 阵 方 法 很 多 ， 如 主 成 分 分 析 (Principal
+Components Analysis, PCA) 、 独 立 成 分 分 析
+(Independent Components Analysis, ICA) 、 奇异值分
+解 (Singular V alue Decomposition, SVD) 、 矢量量化
+(V ector Quantization, VQ) 等 ， 但应用这些分解方法
+得到的低秩矩阵中的元素都可能产生负值
+[ 9 ]
+。 由于
+本文将区域内的总出行视为是由不同的出行模式
+( 如通勤出行 、 休闲出行 ) 复合而成 ， 降维后的矩阵一
+旦出现负值将无法对应现实意义 ( 出行量无法为
+负 ) ， 所以需要对分解后的矩阵进行非负约束 ， 因
+此 ， 本文尝试以实际出行数据为依托 ， 以非负矩阵
+分解算法 (Non-negative Matrix Factorization, NMF)
+拆解出主要的出行模式 ， 将各区域在各个时段内的
+总出行表示为不同出行模式的线性组合 。
+以 i ∈ m 表示每个 Geohash 码对应的网格区域 ，
+m 为总网格数量 ， t ∈ [ 1 , 2 4 ] 表示一天 24 h 。 区域 i
+某一天中的出行量以向量 V
+i
+∈ R
+1 × t
++
+表示 ， 并将其分
+解 为 W 和 H 两 个 矩 阵 的 乘 积 ， 其 中
+W = ( )W
+1
+, ⋯ , W
+i
+, ⋯ , W
+m
+′
+， W
+i
+= ( )w
+i 1
+, w
+i 2
+, ⋯ , w
+i k
+为各区
+域 i 共享单车出行的 k 种模式 ( 出行量 ) ， 又称基矩
+阵 ， 代表每个网格中 k 种出行模式的规模大小 ；
+H = ( )H
+1
+, ⋯ , H
+t
+, ⋯ , H
+2 4
+， H
+t
+= ( )h
+1 t
+, h
+2 t
+, ⋯ , h
+k t
+′
+表示这 k
+种模式在各时段 t 的权重 ， 又称系数矩阵 。 另外 ，
+矩 阵 H 也 可 分 解 为 H = ( )H
+1
+, ⋯ , H
+j
+, ⋯ , H
+k
+′
+，
+333
+ChaoXing
+交通运输系统工程与信息 2022 年 2 月
+H
+j
+= ( )h
+j 1
+, h
+j 2
+, ⋯ , h
+j 2 4
+表示第 j 种模式在 1 d 各时段出
+行量的相对变化情况 。
+V ≈ W H =
+■
+■
+■
+■
+■
+■
+■
+■
+w
+1 1
+⋯ w
+1 k
+⋮ ⋮
+w
+m 1
+⋯ w
+m k
+×
+■
+■
+■
+■
+■
+■
+■
+■
+h
+1 , 1
+⋯ h
+1 , 2 4
+⋮ ⋮
+h
+k , 1
+⋯ h
+k , 2 4
+( 1 )
+由于难以求得精确解 ， 故式 ( 1 ) 中是约等号 。 可
+以通过 NMF 算法使得分解结果 W 和 H 的乘积同
+原始出行时空矩阵 V 尽可能近似 ， 具体分解算法步
+骤如下 。
+Step 1 设定非负矩阵分解的最大可接受误差
+ε = 1 0
+- 5
+。
+Step 2 随机生成基矩阵 W 和系数矩阵 H 。
+Step 3 计 算 W H 与 原 矩 阵 V 的 误 差 ， 即 以
+Frobenius 范数定义的欧氏距离为
+‖ ‖V - W H
+2
+F
+= ∑
+i = 1
+m
+∑
+t = 1
+2 4
+[ ]V
+i t
+- ( )W H
+i t
+2
+( 2 )
+Step 4 若分解误差大于设定误差 ε ， 则按以下
+规则依次更新系数矩阵 H 和基矩阵 W ， 并返回
+Step 3 。
+H
+j + 1
+i t
+= H
+j
+i t
+■
+■
+■
+■
+■
+■( )W
+j
+′
+× V
+i t
+■
+■
+■
+■
+■
+■( )W
+j
+′
+× W
+j
+× H
+j
+i t
+( 3 )
+W
+j + 1
+i t
+= W
+j
+i t
+■
+■
+■
+■
+■
+■( )H
+j
+′
+× V
+i t
+■
+■
+■
+■
+■
+■( )H
+j
+′
+× H
+j
+× W
+j
+i t
+( 4 )
+式中 ： j 为迭代次数 。
+Step 5 若分解误差小于 ε ， 则计算结束 。
+1 . 3 基于逆序群体稳定性指标的 k 值选取
+k 值代表了共享单车出行模式的种类 ， 需要进
+行严谨设定 。 由于 NMF 的目标是使原始矩阵与分
+解后矩阵乘积间的误差尽量小 ， 所以当选取的 k 值
+越接近原始矩阵的维数时 ， 式 ( 2 ) 定义的 Frobenius
+范数 ( 分解误差 ) 越小 。 同时 ， 由于 k 值代表了共享
+单车出行的 k 种不同模式 ， 其取值应大于 1 ， 但 k 值
+过大则丧失了以聚类模式简约现实以理解出行行
+为的目的 ， 因此本文设定其最大值为 10 。 分别计算
+k = [ ]k
+m i n
+= 2 , k
+m a x
+= 1 0 时最终 NMF 分解结果下 F 范
+数的变化情况 ， 常用手肘法来选择最佳 k 值 ， 即
+F
+′
+k + 1
+= F
+k
+- F
+k + 1
+( 5 )
+式中 ： F
+k
+为选取 k 种出行模式时的 F 范数 ； F
+′
+k + 1
+为
+k 值增加 1 时的 F 范数的降低量 。 根据手肘法的规
+定 ， 当 F
+′
+k + 1
+趋于稳定时 ， 即是最优的 k 值 。 但是由
+于无法保证 F
+′
+k + 1
+会随着 k 值单调骤减然后趋于稳
+定 ， 即可能不存在明显的手肘 ， 而且对 7 d 的原始出
+行矩阵 V 分别进行 NMF 分解不一定得到一致的 k
+值 ， 故需要更加严谨的定量化方法衡量 F
+′
+k + 1
+的稳定
+性 以 确 定 合 理 的 k 值 。 群 体 稳 定 性 指 标
+(Population Stability Index, PSI) 常用于测度两样本
+间的分布差异 ， 其本质是计算样本 A ( 实际分布 、 参
+照分布 ) 与样本 B ( 预期分布 、 目标分布 ) 间的双向
+KL 散度 ( 即相对熵 ) 之和
+[ 10 ]
+， 即
+S = ∑
+i
+n
+A
+i
+⋅ l n ( )A
+i
+B
+i
++ ∑
+i
+n
+B
+i
+⋅ l n ( )B
+i
+A
+i
+=
+∑
+i
+n
+( )A
+i
+- B
+i
+⋅ l n ( )A
+i
+B
+i
+( 6 )
+式中 ： S 为 PSI 取值 ； A
+i
+与 B
+i
+分别为样本 A 、 B 在
+第 i 个分布区间内 ( 对连续分布 ) 或第 i 个离散点上
+( 对离散分布 ) 的样本占比 ； n 为分布区间或离散点
+总数 。 因此 ， 可以考虑以 PSI 依次逆序 ( 从 i = k
+m a x
+到
+i = k ) 测 度 不 同 k 值 情 况 下 F
+′
+k + 1
+的 实 际 值 分 布
+( F
+′
+k + 1
+, F
+′
+k + 2
+, ⋯ , F
+′
+k
+m a x
+) 与均匀分布 ( 恒稳定状态 ) 间的差
+异程度 S
+k + 1
+， 其值越小表明 F
+′
+k + 1
+分布越均匀稳定 。
+例如 ， k = k
+m a x
+- 1 时 ， F
+′
+k + 1
+只有一个值 F
+′
+k
+m a x
+， 因此 PSI
+值最小 S
+k
+m a x
+= 0 ； 当 k 值逐渐减小 ， 可观测到的 F
+′
+k + 1
+值逐渐增多 ， PSI 值会随之增加 。 这样 ， 逆向观察
+F
+′
+k + 1
+值的分布 ， 依次计算相应的稳定性指标 S
+k + 1
+， 即
+可找到 S
+k + 1
+值从小到大的突变点 ， 即为逆序视角下
+F
+′
+k + 1
+值从稳定状态向不稳定状态的过渡点 ， 也就是
+正序视角下 F
+′
+k + 1
+值从不稳定状态向稳定状态的过
+渡点 ， 即为 k 的合理取值点 。 本文将所构建的这种
+方法称为逆序群体稳定性指标 (Reverse Population
+Stability Index, RPSI) ， 公式为
+R
+k + 1
+= ∑
+i = k
+n = k
+m a x
+( )f
+′
+k + 1
+- f
+u
+⋅ l n ( )f
+′
+k + 1
+f
+u
+( 7 )
+式 中 ： R
+k + 1
+为 RPSI 取 值 ， f
+′
+k + 1
+= F
+′
+i ∑
+i
+F
+′
+i
+;
+i = { }k + 1 , k + 2 , ⋯ , k
+m a x
+， 即为 F
+′
+k + 1
+的分布函数 ； f
+u
+为
+对 应 的 均 匀 分 布 函 数 { 1 | k + 1 = 1 0 ;
+}0 . 5 , 0 . 5 | k + 1 = 9 ; 0 . 3
+̇
+, 0 . 3
+̇
+, 0 . 3
+̇
+| k + 1 = 8 ; ⋯ 。
+1 . 4 共享单车出行需求预测模型
+利用以上 NMF 分解得到的基矩阵和系数矩
+阵 ， 以及 5 月 10 ~ 18 日的出发数据 ， 本文进一步构建
+了基于 NMF 的 BP 神经网络模型预测 5 月 19 日各
+区域不同时段内共享单车的出行需求 。 同时还构
+334
+ChaoXing
+
+
+================================================================================
+城市公共自行车智能需求预测及调度管理系统.pdf
+设计研发 2022.07
+24
+0 引言
+第一代公共自行车于1965年在荷兰诞生， 但由于技术
+和管理上的缺陷， 他们没有取得令人满意的结果。30 年后在
+丹麦人在其首都建立了第二代公共自行车系统。 第三代公共
+自行车系统在 21 世纪发展起来， 以数字智能管理业务为主要
+特点。2005年， 北京出现了由家庭经营的自行车租赁服务。
+后来， 受到国外第三代公共自行车系统的成功案例的影响和
+政府对低碳环保出行方式的大力倡导， 公共自行车开始真正
+驶入人们的社会生活中
+[1-2]
+。2008年， 杭州成功地将公共自
+行车引入城市公共交通系统 . 杭州 PBS 的运营成功促进了
+国内其他城市的公共自行车项目的建设，2009 年， 国内一线
+城市相继建设了 PBS 系统并投入运营。 目前， 国内公共自行车
+系统的建设和运营开始进入一个高速发展的时期。 半个世纪
+以来国内外学者就其系统特点、 租赁系统设计、 发展模式、 交
+通适应性、 使用安全性等一系列问题进行了理论和实践的探
+索和研究
+[3-4]
+。 同时研究人员开始关注公共自行车系统的利
+用效率和服务能力问题， 站点服务水平、 自行车数量均衡分
+布等智能调度相关问题开始引起越来越多人的重视。
+GPS在地面技术发展中的应用涉猎多个领域， 例如不同
+车辆的交通管制； 应急车辆快速通行； 地面沉降检测与预测；
+地球地理资源勘测； 地面沉降检测与预测； 测量板块内部运
+动状态和地壳变形； 陆地和海洋大地测量学的测定
+[5]
+。GPS
+城市公共自行车智能需求预测及调度管理系统
+丁一丹，张福鼎
+( 江苏第二师范学院 物理与电子工程学院， 江苏南京，210013)
+摘要：城市的公共自行车系统经常因为车站没有车而不能租车， 因为车站已经满了而不能还车。 本文以无车租、 无空还的
+这一社会现象为研究对象， 开展对公共自行车的全球实时定位问题的研究。 随着科技的发展 GPS 全球定位系统被广泛应用
+于现实生活中， 对现代地理位置信息的交流发展起重要的作用。GPS具有获取定位速度快、 定位准确等特点， 在社会生活
+中广泛运用， 目前是世界上最好的定位导航系统。 本文详细介绍了 GPS 接收模块连接 51 单片机在显示模块上实时显示全
+球位置坐标， 根据 GPS 模块数据输出的基本原理， 详细研究了单片机与 GPS 接收模块之间的数据读取和传输， 完成对公共
+自行车全球定位的研究。
+关键词： 公共自行车定位 ； GPS ； 单片机 ； GPS 接收模块
+中图分类号 ：TN929.11    文献识别码 ：A
+Intelligent demand forecasting and dispatching management system 
+for urban public bicycles
+Ding Yidan, Zhang Fuding 
+(School of Physics and Electronic Engineering, Jiangsu Second Normal University, Nanjing Jiangsu, 210013)
+Abstract: The city’s public bicycle system often can’t rent a car because there is no car at the 
+station, and can’t return the car because the station is full. Taking the social phenomenon of no car 
+rental and no empty return as the research object, this paper studies the global real-time positioning 
+of public bicycles. With the development of science and technology, GPS is widely used in real life and 
+plays an important role in the exchange and development of modern geographic information. GPS has the 
+characteristics of fast positioning speed and accurate positioning. It is widely used in social life. 
+At present, it is the best positioning and navigation system in the world. This paper introduces in 
+detail that the GPS receiving module is connected with 51 single chip microcomputer to display the global 
+position coordinates in real time on the display module. According to the basic principle of data output 
+of GPS module, the serial communication method between single chip microcomputer and GPS receiving module 
+is studied in detail to complete the research on the global positioning of public bicycles.
+Keywords: Public bicycle positioning;GPS;singlechip;GPS receiving module
+基金项目： 江苏省高等学校大学生创新创业训练计划项目资助 （202110900003Y） ； 江苏省高校自然科学研究面上项目资助
+（16KJB510007） ； 教育部产学合作协同育人项目资助 （201901163002、202002094006） 。
+ChaoXing
+设计研发2022.07
+25
+技术在海上起着极其重要的作用， 例如确定最佳海上线路；
+实时监测船队航线动态， 确保海上运行的安全， 便于及时调
+整海上路线； GPS线路导航； 海上救助作业； 公海渔船的科
+学研究和作业管理； 确定海上油气平台的位置和故障； 准确
+识别沉船位置； 水下管道安装调查； 沿海地区的地球物理开
+发； 折旧水文测量网； 检测定位海洋垃圾随洋流动向； 海底
+地形勘测； 海上定位便于海上交警执法； 港口监测便于运营
+管理。GPS在航空上的主要应用于民航的定位导航。 飞机准
+确地降落。 确保燃料管理模式的安全性。 导航测量和定位测
+量； 确认物理勘查灾区的飞机尺寸和校对； 遥感飞机飞行状
+态。GPS技术在航空航天领域也发挥着重要作用， 实时测量
+低轨卫星的轨道， 实时测量卫星的进入和回收， 了解铁路船
+舶的安全性， 利用GPS确定目标的大气尺度和参数； 七维参
+数的卫星地面测量。
+因此，GPS技术被推广到多个地区， 但为了实现这些目
+标，GPS信号的接收和调制装置显得尤为重要。 它的主要功
+能是在这个位置设置宽度和UTC时间， 全球有很多GPS手机
+产品接收模块， 为人们的生活提供便利。
+1 公共自行车定位系统设计
+本论文所设计的系统整体框架如图1所示， 主要包含数
+据采集模块、 需求分析模块、 预测算法模块、 历史分析模块、
+智能调度模块、 安全保障模块及智能供电模块。 其中， 数据采
+集模块是用于将当前锁定区域或指定范围内的实时数据进
+行收集， 上传到云端服务器； 需求分析模块是根据历史数据
+状态及当时实时要求进行策略制定； 预测算法模块是基于
+需求分析模块进行算法实时调整， 或者从备选数据库中选择
+最优解， 或者基于人工智能进行自我学习； 历史分析模块是
+用于将大数据所存储的时刻、 人流量、 需求、 交通状况等数据
+进行多元处理， 用于改进预测算法及调度算法； 智能调度模
+块是联合预测算法模块进行车辆调度， 达到满足车辆使用要
+求； 安全保障模块可以实现卫星定位、 远程开锁以及后台传
+输数据等功能； 智能供电模块目前利用太阳能光伏发电， 在
+共享单车车篮底部安装太阳能电池板， 对系统进行供电。
+图 1  系统整体框架
+硬件模型框架如图2所示， 以主控核心单片机、 定位、 摄
+像头、LCD显示、 无线通信、 晶振和复位这几部分构成。 定位
+由 WiFi 定位、WLAN 定位和 GPS 定位多重定位共享单车的踪
+迹， 定位每一辆共享单车实际的位置； 摄像头统计经过租车
+点区域50米范围内的人流量； LCD实时显示租车点使用共
+享单车的量数以及摄像头所统计的人数 ； 无线通信用于每个
+租车点之间数据进行实时交互， 及与总控制中心进行数据实
+时传输， 完成共享单车的智能调度； 晶振器通过结合一个单
+片机内部的控制电路， 产生一个单片机所需要的时钟信号；
+复位方式让单片机在上电的过程中保持一个正常的复位运
+行状态， 避免在上电这个不稳定的过程中对执行器件产生错
+误动作甚至破坏电路。 最终实现共享单车短时需求预测与智
+能调度， 硬件上必须有相应的模块， 同时需要单片机联合各
+个模块实现功能。
+图 2  硬件模型
+算法流程如图3所示， 本文对共享单车短时需求预测
+及智能调度问题进行研究， 通过对人口分布图数据和热力图
+数据进行分析， 不同时段人群流量曲线以及热力图数据进行
+样本处理， 比如在热力图中人多的区域显示红色， 人少的区
+域显示蓝色， 然后按比例进行数据量化， 在人口数量多的地
+方配备相对数量多的共享单车。 可以分为规律状况和特殊
+状况， 规律状况下， 即日常上下班， 根据定位模块通过WiFi、
+WLAN 和 GPS 等功能实现多重精准定位， 得到不同时间段使用
+共享单车的数量， 再基于摄像头模块， 利用人脸识别技术实
+时记录某个区域半径 50 米以内的人流量， 计算出使用共享单
+车的人数占经过这个区域人流量的比例， 即得到短时需求预
+测量 ； 特殊状况下， 要进行异常预测， 例如某地开展大型活动
+时， 也可以根据活动参与人数， 实时预测出使用共享单车的
+需求量。 根据需求预测量， 联合分析历史数据， 比较需求量与
+供应量之间的关系， 不同的关系进行不同的智能调度方式，
+减少成本的同时满足用户的出行需求。
+本设计是为位置信息功能提供微机控制的GPS装置， 数
+据输出模块使用 MCS-51 串扰接收 GPS 信号 sirpstar II， 从
+软件中选择有用的位置数据通过单个处理器的并行接口将
+最终输出连接到 LCD。GPS 接收机模块是接收机的重要部分，
+具有不同类型和功能， 总体结构主要包括低噪声转换器、 并
+行信号、 处理器、 存储器等。GPS 接收模块使用天线接收卫星
+信号， 并通过一系列频率转换、 放大和滤波在天线视场内跟
+ChaoXing
+设计研发 2022.07
+26
+踪、 定位、 测量卫星， 接收卫星位置， 计算信号扩展时间， 然后
+计算卫星天线的状态。
+图 3  流程图
+GPS 定位信息系统的硬件分为以下四个部分 ：
+（1） 接收电路 ： 外接 GPS 接收模块 ；
+（2） 控制电路： STC89C52 单片机对 GPS 模块的数据读取
+和传输 ；
+（3） 显示电路 ： LCD1602 液晶显示器 ；
+（4） 开关元件 ： 系统运行所需的电源。
+单片机系统 ： 本系统采用微处理器 STC51 单片机， 单片机
+对于外接 GPS 模块的数据的接受和读取并且传输到显示模块，
+接收模块接收到相应的数据， 处理并发送到 lcd1602 模块。
+外围电路： 部分外围电路包含lcd602液晶显示器、 电
+源电路、 辅助电路以及外部信号接收模块。GPS接收机模块
+sirfstarii 主要包括变频器和信号传输通道。 对天线接收到
+的卫星信号进行变频、 放大等处理， 对频率进行滤波、 相关固
+定和测量。
+宏处理器控制程序 ： 进行程序设计、 程序初始化、 宏处理
+器控制系统、GPS控制装置， 完成数据采集、 处理相应信号、
+生成所需数据并通过宏处理器接口插入 LCD 模块： GPS 接收
+模块将外部接收模块接收到的卫星导航信息进行调制解调，
+将译码后的信号并发送给芯片。 通过集成的面板内容识别程
+序显示在显示模块中， 最后在LCD1602液晶显示器上显示地
+理位置坐标。
+GPS 方案的核心是单片机与信号接收模块之间的信号传
+输与接受。 单片机对外部信号的调制解调编码译码， 并将译
+码后的信号发送到显示模块在液晶显示器上进行显示。 在本
+软件的开发中， 软件模块设计为LCD模块初始化模块、GPS
+数据记录模块和三个主模块作为单片机模块。
+软件调试是利用Proteus软件进行模拟调试， 用于检
+验程序和硬件的调试。 硬件按照详细设计中的设计连接好总
+体的系统电路图， 将软件仿真生成的HEX文件下载到单片机
+并运行仿真。 根据设想在Proteus中绘制好电路图， 写入程
+序， 观察接口是否正常， 程序是否能正常运行， 观察显示模块
+是否运行， 显示屏上是否显示数据， 检验程序是否正常， 硬
+件是否配适。 确认仿真是否无误， 仿真无误之后再下一步在
+Altium designer 上绘制工程图。
+2 总结与展望
+本研究所做工作首先分析人口分布图数据和热力图数
+据， 根据人口数量按比例分配预测共享单车需求量； 然后基
+于单片机的数据采集模块、 定位模块和需求预测模块等模块
+进行共享单车短时需求预测 ； 在需求预测模块之上对共享单
+车进行智能调度， 根据需求量与供应量之间的不同关系进行
+不同的智能调度， 实现在减少运营成本的同时满足用户使用
+共享单车的需求。
+后续可改进之处共享单车系统短时需求预测与智能调
+度问题是一个复杂的动态共享单车问题， 预测不准确受到很
+多影响因素的控制， 导致智能调度也存在误差。 本文虽然研
+究了一些相关工作， 但是由于实验时间、 论文理论化等一些
+原因， 还存在以下不足， 提出未来升级框架及改进方法 ： 共享
+单车租车点需求量的预测值存在不准确， 存在一些误差的情
+况， 需要多次实验， 比较实际结果与预测结果， 将得到的结果
+进行计算分析得出误差， 然后积极修订； 共享单车智能调度
+的建立过程中， 对共享单车调度划分条件设定不够精细， 没
+能达到全面的智能调度， 还需要根据租还车点的实际情况进
+行分类研究； 一些客观存在的因素也影响预测的准确性， 例
+如天气、 时间段等一系列造成预测不准确的因素， 还需要进
+一步考察分析。
+参考文献
+[1] 肖剑飞 . 嵌入式 GPS 通用卫星模拟器设计与实现 [J]. 空
+间电子技术 ,2007.4.
+[2] 黄少锋 , 张尊泉 , 邓斌 , 黄斌 . 基于单片机采集与显示 GPS
+定位信息系统的设计 [J]. 空军雷达学院学报 ,2007.1.
+[3] 王古猛 .GPS 与单片机接口程序设计 [J]. 电子测试 ,2007,7.
+[4] 黄凌 . 基于单片机的 GPS 信息处理系统 [J]. 现代电子技
+术 ,2009,12.
+[5] 杨平 , 宋贽存 . 基于 GPS 板和单片机的 GPS 接收机的设
+计 [J]. 东北林业大学学报 ,2009,5.
+通讯作者 ： 张福鼎。
+ChaoXing
+
+
+================================================================================
+基于深度学习的共享单车需求预测及调度方法研究.pdf
+ERROR: PdfReadError('Could not read Null object')
+
+================================================================================
+基于时空图的共享单车流量预测.pdf
+
+
+
+
+
+================================================================================
+基于长短期记忆网络的共享单车真实需求预测方法.pdf
+投稿网址:www. stae. com. cn
+2025 年 第 25 卷 第 1 期
+2025, 25(1) :00394 - 10　
+科　 学　 技　 术　 与　 工　 程
+Science Technology and Engineering
+　 ISSN 1671—1815
+CN 11—4688 / T
+收稿日期: 2023-10-08 修订日期: 2024-07-08
+基金项目: 内蒙古自治区自然科学基金(2023MS07005)
+第一作者: 周瑜(1984—) ,男,汉族,内蒙古赤峰人,博士,副教授。 研究方向:商业数据科学。 E-mail:zhouyu@ imu. edu. cn。
+DOI:10. 12404 / j. issn. 1671-1815. 2307788
+引用格式:周瑜, 张梦蝶. 基于长短期记忆网络的共享单车真实需求预测方法[ J] . 科学技术与工程, 2025, 25(1) : 394-403.
+Zhou Yu, Zhang Mengdie. Real demand prediction method of shared bike based on LSTM[ J] . Science Technology and Engineering, 2025,
+25(1) : 394-403.
+基于长短期记忆网络的共享单车真实需求预测方法
+周瑜, 张梦蝶
+( 内蒙古大学经济管理学院, 呼和浩特 010021)
+摘　 要　 共享单车是城市交通的重要组成部分。 共享单车用户需求的随机性导致其时空需求不均衡,甚至出现“ 借车难” 现
+象,无法满足高峰时段的用户需求。 因此出现高频用户高频出行时段到临近站点借车的现象,这意味着存在隐性需求。 对于
+隐性需求,首先应用租借数和归还数刻画站点状态变化,通过挖掘临近站点用户出行情况判断参考站点的临界状态,建立基
+于站点状态变化图和需求判定模型确定站点的隐性需求。 进而依据站点真实需求,建立长短期记忆( long short-term memory,
+LSTM) 网络预测模型,并建立基于真实需求的共享单车区域调度模型。 该模型以成本最小为目标,通过遗传算法求解得到调
+度成本最小的路径,为基于真实需求开展平衡调度提供了参考。 结果显示,在相近的运输成本下,真实需求下的调度方式能
+在一定程度上缓解用户借车难的问题,从而减少高频用户的流失。
+关键词　 共享单车; 需求预测; 隐性需求; 长短期记忆; 调度优化
+中图法分类号　 U484;　 　 　 　 文献标志码　 A
+Real Demand Prediction Method of Shared Bike Based on LSTM
+ZHOU Yu, ZHANG Meng-die
+( College of Economics and Management, Inner Mongolia University, Hohhot 010021, China)
+[ Abstract] 　 Shared bikes represent a crucial component of urban transportation. The randomness of user demand for shared bikes
+with fixed piles leads to unbalanced demand in time and space, and even the difficulty in renting a bike, which cannot meet the user
+demand during peak hours. Therefore, high-frequency users frequently travel to nearby stations to rent a bike for serving, which means
+that there are implicit demands. As for the hidden demand, firstly, the state changes of the site were described by the rental number
+and the return number, and the critical state of the reference site was determined by mining the user travel conditions of nearby sites.
+The hidden demand of the site was determined based on the site state change diagram and the demand judgment model. Then, accord-
+ing to the real needs of the site, the long short-term memory( LSTM) network prediction model was established, and the regional sched-
+uling model of shared bicycles based on the real needs was established. The model takes the cost minimization as the goal, and obtains
+the path with minimum scheduling cost through genetic algorithm, which provides a reference for balanced scheduling based on real de-
+mand. The results demonstrate that, when transportation costs are similar, the scheduling method under real demand can alleviate the
+problem of users􀆳 difficulty in renting a bike, thereby reducing the loss of high-frequency users.
+[ Keywords] 　 shared bike; demand forecasting; implicit needs; long short-term memory; scheduling optimization
+　 　 共享单车作为一种备受欢迎的出行方式,不仅
+具有较高的运行效率,同时也降低了对城市环境的
+污染,是一种经济、高效的绿色出行方式。 它也有
+效地缓解了拥堵、碳排放等城市交通问题,加快了
+城市推进交通节能减排的步伐。 共享单车主要是
+为短距离的出行需求服务,不仅可以为用户的日常
+通勤、休闲娱乐提供不同的交通选择,还可满足用户
+不同层次的出行需求[1] 。 由于人们出行需求的多样
+性和不 确 定 性, 导 致 运 营 站 点 间 出 现 不 均 衡 的 状
+态[2-3] 。 比如在早高峰时,用户在居民区的需求高于
+商业区的需求,晚高峰则反之,导致用户出现“ 借车
+难”的困境。 而由此带来的则是一些用户的流失和共
+享单车系统收益的降低。 借车难导致的用户流失情
+况并没有相应的数据记录,从经济学的角度来看,这
+部分用户的需求 成 为 了 共 享 单 车 系 统 的 “ 隐 性 需
+求” [4] 。 所谓隐性需求,是指用户虽然在某站点有强
+烈的租借共享单车的意愿,但该站点共享单车的可用
+水平不能满足用户需求的现象。 因此,对共享单车用
+户的隐性需求进行研究可以提高用户的满意度,进而
+有助于共享单车的调度优化应用。
+ChaoXing
+投稿网址:www. stae. com. cn
+需求预测对共享单车系统具有重要意义。 魏
+晋等[5] 考虑到建成环境中各影响因素的交互作用,
+采用梯度提升决策树模型预测共享单车出行需求。
+刘恒孜等[6] 针对共享单车骑行数据的周期性、非线
+性和随机性的特点,提出了季节性灰色 Markov 模型
+来预测共享单车需求量。 曹旦旦等[7] 分析时间因
+子、气象因子等对单车需求量的影响,采用长短期
+记忆( long short-term memory,LSTM) 神经网络模型
+对共享单车的短期需求量进行预测。 关于隐性需
+求,Jin 等[8] 以纯电动的共享汽车为研究对象,建立
+并校准了嵌套的 Logit 模型来分析用户的模式选择
+行为,进一步利用实际出行数据估计电动共享汽车
+的隐性 需 求。 此 外, 还 分 析 了 隐 性 需 求 的 时 空 分
+布、纯电动共享汽车对模式分割的影响以及定价策
+略的影响。 研究结果表明,隐性需求都集中发生在
+早晚高峰, 而 且 大 部 分 以 居 住 区 或 综 合 区 域 为 起
+点,以商业区或绿地为终点的两点一线模式。 Kim
+等[9] 也使用预测模型对客户的购买意愿进行研究,
+通过建立的遗传算法模型对客户的隐性需求进行
+预测,预测结果也起到了一定的帮助。 刘林等[10] 通
+过所构建的映射网络( self-organizing map,SOM) 对
+消费者进行研究,发现消费者之间也存在不同的消
+费类别,实现了对不同类别的消费者制定不同的策
+略并有效地对潜在客户进行挖掘。 基于上述的文
+献梳理,大多数学者都是针对共享单车系统产生的
+数据从而对用户的需求进行研究,针对用户想借车
+却无车可借这部分需求的研究较少,现通过站点状
+态变化图和真实需求判定模型更新站点的真实需
+求,在合理假设的范围内建立共享单车系统的区域
+调度模型,并以成本最小化为目标,通过遗传算法
+求解得到调度成本最小的路径,进一步帮助企业制
+定合理的调度策略,解决用户借车困难的问题,使
+想借车的租车用户都有车可借。
+1　 真实需求分析
+用户在高峰时期的真实需求包括成功借还需
+求( 下文简称为显性需求) 和想借车却无车可借需
+求( 下文简称为隐性需求) 两部分。 共享单车的借
+还记录明显体现了站点中存在的显性需求,但对骑
+行数据进一步研究,会发现数据中不仅存在站点的
+显性需求,同时也可以挖掘出站点的隐性需求。 因
+此,接下来首先将隐性需求这部分缺失的数据通过
+需求判定方法进行补全,进而进行租车用户真实需
+求的预测。
+关于站点真实需求的具体研究思路如图 1 所
+示,得到不同站点每隔 10 min 的借还记录后,根据
+图 1　 真实需求分析流程
+Fig. 1　 Analysis process of real demand
+租借数和归还数绘制出站点状态变化图,寻求站点
+的两种临界状态并判断在该状态下,如果有高频用
+户在临近站点借车,则该站点的隐性需求为该时间
+段下在临近站点借车的用户数量,真实需求用隐形
+需求和显性需求之和来更新。 反之,站点不存在隐
+形需求,显性需求则为真实需求。
+1. 1　 站点状态分析
+采集了呼和浩特市共享单车系统 4 年的骑行数
+据进行用户隐形需求挖掘。 为了详细分析站点的
+隐性需求,首先需要了解站点车辆数量随借还行为
+发生的变化情况,随机选取核心通勤类别中的金地
+商城站点并绘制其租车变化情况,由于该数据集中
+不包含站点初始车辆信息,因此将站点的初始状态
+设置为 0,结果如图 2 所示。 当用户发生借车行为
+时,由于站点的共享单车被借走,因此其状态值变
+为负数;当用户在该站点进行还车时,站点的共享单
+图 2　 站点状态变化
+Fig. 2　 Status change of stations
+5932025,25(1) 周瑜,等:基于长短期记忆网络的共享单车真实需求预测方法
+ChaoXing
+投稿网址:www. stae. com. cn
+车增加,则状态值变为正。
+根据该站点状态变化图可以看出,虽然波动但
+站点的共享单车总是处于一种动态平衡中,不难看
+出该站点状态变化图的两条临界线分别是 y = 8 和
+y = - 7 这两条直线,在 68 ~ 76 h,站点处于还车饱
+和状态,在 88 ~ 92 h,站点处于借车饱和状态,也就
+是说该站点在 t 时刻的车辆数 y2 ( t) = 8 时表示该
+时间 段 站 点 已 经 无 桩 可 还, 在 t 时 刻 的 车 辆 数
+y2 ( t) = - 7 时表示已经无车可借。
+对站点 状 态 变 化 图 继 续 进 行 研 究, 若 站 点 在
+y2 ( t) = - 7 的临界状态下维持时间超过 10 min,并
+且在这 10 min 内有用户到达该站点想借车却无车
+可借,则该用户很大程度会选择附近的站点继续借
+车或更改出行方式;同理在 y2 ( t) = 8 的临界状态
+下,若有用户在 10 min 之内想到该站点还车却无桩
+可还,用户则会将共享单车还到临近站点。 由于临
+界状态致使用户在附近站点借还车的需求称为隐
+性需求问题。
+1. 2　 真实需求判定
+由于站点在某一时刻的真实需求由显性需求
+和隐性需求两部分构成,对现有数据进行简单分析
+只能得到租车用户的显性需求,若想判断隐性需求
+还需对数据进一步探究。 以金地商城站点为例,提
+出了判断隐形需求的方法,进而确定站点真实需求。
+首先将站点中的借还车数据按照工作日和周
+末进行分类并将其提取出来,基于此建立站点的车
+辆状态变化图,对其分析无车可借和无桩可还的两
+种临界状态,在两种临界状态下判断是否存在该站
+点的高频用户到附近站点借还车并统计高频用户
+的数量,统计出的用户数量则为该站点该时间段下
+的隐性借车需求,将显性需求和隐性需求之和作为
+该站点该时间段下的真实需求。
+具体来说,以 7 d 作为时间间隔获取站点 1 的
+车辆状态变化图,首先从 3 月 4 日星期四开始获取
+站点 1 的数据,根据 7 d 的时间间隔依次获取 3 月
+11 日、3 月 18 日和 3 月 25 日的借还车数据,最后以
+1 h 为时间间隔绘制车辆状态变化图,具体绘制情
+况如图 3 所示。
+对图 3 的状态变化图进一步分析,以 1 h 为单
+位将一天的 24 h 进行划分,并对不同时间段下共享
+单车的借还情况进行统计,根据站点状态变化曲线
+分析站点车辆数量的变化以及存在两种临界状态
+的时间段,对两种临界状态可以看作是该时刻该站
+点无法满足接下来一段时间内的车辆借 / 还需求,
+即该站点在该时间段具有隐性需求。
+由图 3 可以得到,站点 1 在 3 月 4 日 17:30 之后、
+图 3　 金地商城站点状态连续变化
+Fig. 3　 Continuous change of the Golden Mall station
+3 月 11 日 08:00—09:00、3 月 18 日 17:00—18:00、
+3 月 25 日 19:00—20:00 这几个时间段都达到最大
+借车需求并且持续时间超过 10 min,因此站点 1 在这
+几个时间段都存在隐性借车需求。 以 3 月 4 日 17:30
+之后的时间段为例,找出该站点频繁于该时间段借车
+并且 3 月 4 日 17:30 之后在附近站点借车的用户,得
+到该时间段下的隐性借车需求,从而补充该时间段下
+站点 1 的真实借车需求。 图 4 给出了 3 月第一周中
+金地商城站点真实需求与显性需求的差异图。 可以
+看出,真实需求和显性需求有着明显的不同,两曲线
+之间的部分为站点的隐性需求,存在隐性需求的时间
+段大多分布在早中晚 3 个高峰,也充分证实了“ 借车
+难”在高峰时刻发生的这一现状。 该部分更新后的真
+实需求数据将作为预测的基础数据。
+693
+科　 学　 技　 术　 与　 工　 程
+Science Technology and Engineering 2025,25(1)
+ChaoXing
+
+
+================================================================================
+一种基于Voronoi图的混合公共自行车调度需求预测方法.pdf
+(19)中华人民共和国国家知识产权局
+(12)发明专利申请
+(10)申请公布号  
+(43)申请公布日 
+(21)申请号  202010588754.9
+(22)申请日 2020.06.24
+(71)申请人  东南大学
+地址  210096  江苏省南京市玄武区四牌楼2
+号
+(72)发明人  赵德　王炜　武丽佳　屠雨　
+梁鸣璋　
+(74)专利代理机构  南京众联专利代理有限公司  
+32206
+代理人  蒋昱
+(51)Int.Cl.
+G06Q 10/06(2012.01)
+G06Q 50/30(2012.01)
+G06F 16/901(2019.01)
+G06F 16/9537(2019.01)
+G06F 17/18(2006.01)
+ 
+(54)发明名称
+一种基于Voronoi图的混合公共自行车调度
+需求预测方法
+(57)摘要
+一种基于Voronoi图的混合公共自行车调度
+需求预测方法， 包括以下步骤： S1、 获取有桩与无
+桩公共自行车出行数据； S2、 设置调度区域边界；
+S3、 基于有桩公共自行车站点绘制Voronoi图；
+S4、 提取Voronoi图各子区出行量的时间序列；
+S5、 确定ARMA模型的阶数p和q； S6、 采用标定后的
+ARMA模型预测次日出行量； S7、 计算各子区内调
+度时间与调度量。 本发明方法综合考虑有桩与无
+桩公共自行车进行调度分区与需求预测， 打破了
+传统研究与应用方法只针对单一公共自行车的
+弊端， 减少了两类公共自行车各自为营、 重复调
+度的情况； 同时， 本发明方法生成的调度需求相
+比传统方法更为细致， 也更加准确。
+权利要求书2页  说明书4页  附图2页
+CN 111882158 A
+2020.11.03
+CN 111882158 A
+
+1 . 一种基于Voronoi图的混合公共自行车调度需求预测方法， 其特征在于， 包括如下步
+骤：
+S1、 获取有桩与无桩公共自行车出行数据；
+所述步骤S1中， 有桩公共自行车出行数据包括每次出行的出发站点经度Lon1、 出发站点
+纬度Lat1、 出发时间Time1、 到达站点经度Lon2、 到达站点纬度Lat2、 到达时间Time2； 无桩公共
+自行车出行数据包括每次出行的出发点经度Lon 3、 出发点纬度Lat3、 出发时间Time3、 到达点
+经度Lon4、 到达点纬度Lat4、 到达时间Time4；
+S2、 设置调度区域边界；
+所述步骤S2中调度区域边界为包含所有公共自行车出行起讫点的最小凸多边形X的边
+界， 由最外围公共自行车出行起讫点坐标连接形成；
+S3、 基于有桩公共自行车站点绘制Voronoi图；
+所述步骤S3具体包括： 将有桩公共自行车所有站点Pk组成点集{P 1 , P2 ,… , Pn}， 在平面X
+上， 连接两邻点直线的垂直平分线组成的连续多边形为Voronoi图 ， 任意点Pk的Voronoi区
+域Rk定义为：
+Rk＝{x∈X|d(x , Pk)＜d(x , Pj) , j＝{1 , 2 , 3 ,..., n} , j≠k}；
+S4、 提取Voronoi图各子区出行量的时间序列；
+所述步骤S4为： 对于任意有桩公共自行车所有站点Pk的Voronoi区域R k， 从步骤S1的出
+行数据中统计每个时间t从该区域内出发的有桩与无桩公共自行车出行次数Okt与每个时间
+t到达该区域的有桩与无桩公共自行车出行次数D kt， 分别组成区域Rk的出行发生量时间序
+列与出行吸引量时间序列；
+S5、 确定ARMA模型的阶数p和q；
+S51、 计算阶数p , q∈{0 , 1 , 2 , 3 , 4 , 5}的所有ARMA模型； 针对区域Rk的出行发生量时间序
+列Okt与出行吸引量时间序列Dkt， 采用ARMA模型进行回归分析， 计算公式如下：
+其中， β0 , β1 , β2 ,… , βp , α1 , α2 ,… , αq , 为回归参数， εkt , εkt-1 , εkt-2 ,… , εkt-q为误差项；
+S52、 根据指标AIC确定ARMA模型阶数p和q； 计算时间序列Okt与Dkt的所有p、 q组合下的
+ARMA模型的AIC值， 选择AIC值最小的那组p、 q取值作为ARMA模型阶数的最终取值， 该组取值
+下的ARMA模型为标定后的ARMA模型； AIC的计算公式如下：
+AIC＝2(p+q+2)-2ln(L)
+其中， p、 q为ARMA模型阶数， L为似然函数；
+S6、 采用标定后的ARMA模型预测次日出行量；
+所述步骤S6具体为： 采用标定后的ARMA模型预测区域R k次日m个时间点的出行发生量
+Okt+1 , Okt+2 ,… , Okt+m与出行吸引量D kt+1 , Dkt+2 ,… , Dkt+m， 并计算区域Rk次日第i时间点的净调
+度量DDkt+i：
+S7、 计算各子区内调度时间与调度量；
+权　利　要　求　书 1/2 页
+2
+CN 111882158 A
+2
+所述步骤S7具体为： 如果区域Rk次日第i时间点的净调度量DD kt+i小于调度临界值N， 则
+该时间点区域R k不需要调度； 否则， 该时间点区域Rk需要调度， 调度量为DDkt+i， 调度方向由
+如下公式确定：
+2 . 根据权利1所述的一种基于Voronoi图的混合公共自行车调度需求预测方法， 其特征
+在于， 所述步骤S2中公共自行车出行起讫点包括： 有桩公共自行车的出发站点、 达到站点和
+无桩公共自行车的出发点、 达到点。
+权　利　要　求　书 2/2 页
+3
+CN 111882158 A
+3
+
+

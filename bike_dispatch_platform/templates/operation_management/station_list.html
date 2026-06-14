@@ -1,0 +1,737 @@
+{% extends "base.html" %}
+
+{% block title %}运维管理 - 基于深度学习的城市共享单车调度需求预测与运维管理平台{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+    <div class="hero-title">
+        <i class="bi bi-gear-wide-connected fs-3 text-primary"></i>
+        <div>
+            <h2>运维管理</h2>
+            <p class="hero-note">站点运维与车辆状态与位置查询作为同级模块展示，便于统一查看站点状态、车辆状态与工单。</p>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header"><h5><i class="bi bi-geo-alt"></i> 站点运维</h5></div>
+            <div class="card-body">
+                <div class="small text-muted mb-3">用于查看 62 个站点的实时库存、需求、供需缺口和 T+1 状态。</div>
+                <button type="button" class="btn btn-primary" id="showStationDetailsBtn">查看站点明细</button>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header"><h5><i class="bi bi-bicycle"></i> 车辆状态与位置查询</h5></div>
+            <div class="card-body">
+                <div class="small text-muted mb-3">用于查看车辆状态、位置、故障工单和维修任务。</div>
+                <button type="button" class="btn btn-primary" id="showVehicleDetailsBtn">查看车辆明细</button>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header"><h5><i class="bi bi-clipboard2-check"></i> 调度任务工单</h5></div>
+            <div class="card-body">
+                <div class="small text-muted mb-3">统一查看调度监控页生成、人工创建、自动实施与站点/车辆运维相关工单，确保任务闭环。</div>
+                <button type="button" class="btn btn-primary" id="showTaskDetailsBtn">查看调度任务工单</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="card mt-4" id="stationTableWrap" style="display:none;">
+    <div class="card-header bg-primary text-white">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h5 class="card-title mb-0">站点管理明细</h5>
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+                <span class="badge bg-light text-dark" id="stationRefreshBadge">{{ settings_obj.dashboard_refresh_seconds }}s</span>
+                <input type="text" id="stationSearch" class="form-control form-control-sm" placeholder="搜索站点名称">
+                <button type="button" class="btn btn-light btn-sm" id="stationRefreshBtn">立即刷新</button>
+                <button type="button" class="btn btn-outline-light btn-sm" id="closeStationDetailsBtn">关闭</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="small text-muted mb-3">
+            页面数据来自实时快照服务与 T+1 预测结果，按系统刷新频率自动同步。
+        </div>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>站点编号</th>
+                        <th>站点名称</th>
+                        <th>当前库存</th>
+                        <th>需求</th>
+                        <th>供需缺口</th>
+                        <th>当前状态</th>
+                        <th>T+1 状态</th>
+                        <th>T+1 车辆变化</th>
+                        <th>预测缺少/盈余</th>
+                    </tr>
+                </thead>
+                <tbody id="stationTableBody">
+                    {% for row in stations %}
+                    <tr data-name="{{ row.station.spot_name|lower }}">
+                        <td>{{ row.station.ysu_id }}</td>
+                        <td>{{ row.station.spot_name }}</td>
+                        <td>{{ row.runtime.count|default:row.station.initial_inventory }}</td>
+                        <td>{{ row.runtime.demand|default:0 }}</td>
+                        <td>{{ row.runtime.gap|default:0 }}</td>
+                        <td>{{ row.runtime.current_state_label|default:"--" }}</td>
+                        <td>{{ row.runtime.t_plus_1_state_label|default:"--" }}</td>
+                        <td>{{ row.runtime.t_plus_1_net_flow|default:0 }}</td>
+                        <td>{{ row.runtime.t_plus_1_gap|default:0 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-4" id="taskTableWrap" style="display:none;">
+    <div class="card-header bg-primary text-white">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h5 class="card-title mb-0">调度任务工单明细</h5>
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+                <span class="badge bg-light text-dark">统一工单视图</span>
+                <button type="button" class="btn btn-light btn-sm" id="taskRefreshBtn">立即刷新</button>
+                <a href="{% url 'operation_management:dispatch_dashboard' %}" class="btn btn-outline-light btn-sm">前往调度监控</a>
+                <button type="button" class="btn btn-outline-light btn-sm" id="closeTaskDetailsBtn">关闭</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row g-3 mb-3">
+            <div class="col-md-4"><div class="soft-card p-3 h-100"><div class="section-note">闭环说明</div><div class="small text-muted">调度建议生成后形成调度任务工单；人工实施、系统自动实施、站点工单和车辆维修工单均统一归档到任务体系。</div></div></div>
+            <div class="col-md-4"><div class="soft-card p-3 h-100"><div class="section-note">状态流转</div><div class="small text-muted">待处理 → 进行中 → 已完成 / 已取消。被人工删除的自动任务会转为已取消，并抑制同建议立即重建。</div></div></div>
+            <div class="col-md-4"><div class="soft-card p-3 h-100"><div class="section-note">跨页面联动</div><div class="small text-muted">调度监控页、站点运维、车辆运维共享同一任务数据源，来源、优先级、状态和原因保持一致。</div></div></div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>任务编号</th>
+                        <th>任务类型</th>
+                        <th>来源</th>
+                        <th>起点</th>
+                        <th>终点</th>
+                        <th>调运量</th>
+                        <th>优先级</th>
+                        <th>状态</th>
+                        <th>说明</th>
+                    </tr>
+                </thead>
+                <tbody id="taskTableBody">
+                    <tr><td colspan="9" class="text-center text-muted">暂无任务数据</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-4" id="vehicleTableWrap" style="display:none;">
+    <div class="card-header bg-primary text-white">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h5 class="card-title mb-0">车辆管理明细</h5>
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+                <span class="badge bg-light text-dark" id="vehicleRefreshBadge">{{ settings_obj.dashboard_refresh_seconds }}s</span>
+                <input type="text" id="vehicleSearch" class="form-control form-control-sm" placeholder="搜索车辆编号">
+                <input type="text" id="vehicleStationSearch" class="form-control form-control-sm" placeholder="搜索站点名称">
+                <button type="button" class="btn btn-light btn-sm" id="vehicleRefreshBtn">立即刷新</button>
+                <button type="button" class="btn btn-outline-light btn-sm" id="closeVehicleDetailsBtn">关闭</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="small text-muted mb-3">
+            页面数据来自车辆状态与位置查询服务，点击“查看车辆明细”后会在当前页展开车辆详情面板，便于答辩演示与现场操作。
+        </div>
+        <div class="d-flex gap-2 mb-3">
+            <span class="badge bg-secondary" id="vehicleStationFilterBadge">全部站点</span>
+            <span class="badge bg-secondary" id="vehicleStatusFilterBadge">全部状态</span>
+        </div>
+        <div class="row g-3 mb-3" id="vehiclePreviewStats">
+            <div class="col-md-3"><div class="soft-card p-3 text-center"><div class="section-note">车辆总数</div><div class="fw-bold fs-5" id="previewVehicleTotal">0</div></div></div>
+            <div class="col-md-3"><div class="soft-card p-3 text-center"><div class="section-note">正常</div><div class="fw-bold fs-5" id="previewVehicleNormal">0</div></div></div>
+            <div class="col-md-3"><div class="soft-card p-3 text-center"><div class="section-note">故障</div><div class="fw-bold fs-5" id="previewVehicleFaulty">0</div></div></div>
+            <div class="col-md-3"><div class="soft-card p-3 text-center"><div class="section-note">调度中</div><div class="fw-bold fs-5" id="previewVehicleDispatching">0</div></div></div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>车辆编号</th>
+                        <th>状态</th>
+                        <th>当前所在站点</th>
+                        <th>最后上报时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="vehicleTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let stationRefreshSeconds = Number({{ settings_obj.dashboard_refresh_seconds|default:10 }}) || 10;
+    let stationRefreshTimer = null;
+    let stationRemaining = stationRefreshSeconds;
+    let vehicleRefreshTimer = null;
+    let vehicleRemaining = stationRefreshSeconds;
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return '';
+    }
+
+    const csrfToken = getCookie('csrftoken');
+
+    function hideDetails() {
+        document.getElementById('stationTableWrap').style.display = 'none';
+        document.getElementById('taskTableWrap').style.display = 'none';
+        document.getElementById('vehicleTableWrap').style.display = 'none';
+    }
+
+    function showOnly(targetId) {
+        hideDetails();
+        const wrap = document.getElementById(targetId);
+        wrap.style.display = 'block';
+        wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function filterStations() {
+        const keyword = document.getElementById('stationSearch').value.trim().toLowerCase();
+        document.querySelectorAll('#stationTableBody tr').forEach(function (row) {
+            const name = row.getAttribute('data-name') || '';
+            row.style.display = !keyword || name.includes(keyword) ? '' : 'none';
+        });
+    }
+
+    function filterVehicles() {
+        const vehicleKeyword = document.getElementById('vehicleSearch').value.trim().toLowerCase();
+        const stationKeyword = document.getElementById('vehicleStationSearch').value.trim().toLowerCase();
+        document.querySelectorAll('#vehicleTableBody tr').forEach(function (row) {
+            const vehicleName = row.getAttribute('data-name') || '';
+            const stationName = (row.getAttribute('data-station') || '').toLowerCase();
+            const matchesVehicle = !vehicleKeyword || vehicleName.includes(vehicleKeyword);
+            const matchesStation = !stationKeyword || stationName.includes(stationKeyword);
+            row.style.display = matchesVehicle && matchesStation ? '' : 'none';
+        });
+    }
+
+    function renderStationRows(rows) {
+        const tbody = document.getElementById('stationTableBody');
+        tbody.innerHTML = rows.map(row => `
+            <tr data-name="${String(row.station_name || '').toLowerCase()}">
+                <td>${row.station_id}</td>
+                <td>${row.station_name}</td>
+                <td>${row.count}</td>
+                <td>${Math.round(Number(row.demand || 0))}</td>
+                <td>${Math.round(Number(row.gap || 0))}</td>
+                <td>${row.current_state_label || '--'}</td>
+                <td>${row.t_plus_1_state_label || '--'}</td>
+                <td>${Math.round(Number(row.t_plus_1_net_flow || 0))}</td>
+                <td>${Math.round(Number(row.t_plus_1_gap || 0))}</td>
+            </tr>
+        `).join('');
+        filterStations();
+    }
+
+    function priorityBadgeClass(priority) {
+        if (priority === 'high') return 'bg-danger';
+        if (priority === 'medium') return 'bg-warning text-dark';
+        return 'bg-secondary';
+    }
+
+    function statusBadgeClass(status) {
+        if (status === 'pending') return 'bg-warning text-dark';
+        if (status === 'in_progress') return 'bg-primary';
+        if (status === 'completed') return 'bg-success';
+        if (status === 'cancelled') return 'bg-danger';
+        return 'bg-secondary';
+    }
+
+    function renderTaskRows(rows) {
+        const tbody = document.getElementById('taskTableBody');
+        tbody.innerHTML = rows.length ? rows.map(row => `
+            <tr>
+                <td>${row.id || '--'}</td>
+                <td>${row.task_type_label || row.task_type || '--'}</td>
+                <td>${row.source_label || '--'}</td>
+                <td>${row.start_location || '--'}</td>
+                <td>${row.end_location || '--'}</td>
+                <td>${Number(row.dispatch_count || 0)} 辆</td>
+                <td><span class="badge ${priorityBadgeClass(row.priority)}">${row.priority_label || '--'}</span></td>
+                <td><span class="badge ${statusBadgeClass(row.status)}">${row.status_label || '--'}</span></td>
+                <td class="small text-muted">${row.reason || '--'}</td>
+            </tr>
+        `).join('') : '<tr><td colspan="9" class="text-center text-muted">暂无任务数据</td></tr>';
+    }
+
+    function badgeClass(status) {
+        if (status === 'faulty') return 'bg-danger';
+        if (status === 'dispatching') return 'bg-warning text-dark';
+        if (status === 'locked') return 'bg-secondary text-white';
+        return 'bg-success';
+    }
+
+    function vehicleStatusLabel(status) {
+        if (status === 'available' || status === 'normal') return '正常';
+        if (status === 'faulty') return '故障';
+        if (status === 'in_transit' || status === 'dispatching') return '调度中';
+        if (status === 'locked') return '锁定';
+        return '未知';
+    }
+
+    let vehicleDetailOverlay = null;
+    let statusChangeModal = null;
+    let statusChangeModalInstance = null;
+    let vehicleDetailLoading = false;
+    let vehiclesRefreshInFlight = false;
+    let vehicleUiLocked = false;
+    let vehicleRefreshResumeTimer = null;
+    let pendingStatusPayload = null;
+    let statusChangeActiveButton = null;
+    let vehicleRowsCache = [];
+
+    function closeVehicleDetailOverlay() {
+        if (vehicleDetailOverlay) {
+            vehicleDetailOverlay.remove();
+            vehicleDetailOverlay = null;
+        }
+        vehicleDetailLoading = false;
+    }
+
+    function setVehicleDetailLoading(loading) {
+        const loadingEl = document.getElementById('vehicleDetailLoadingMask');
+        if (!loadingEl) return;
+        loadingEl.style.display = loading ? 'flex' : 'none';
+    }
+
+    function ensureStatusChangeModal() {
+        if (statusChangeModal) return statusChangeModal;
+        statusChangeModal = document.createElement('div');
+        statusChangeModal.id = 'statusChangeModal';
+        statusChangeModal.style.cssText = 'position:fixed;inset:0;z-index:1095;display:none;';
+        statusChangeModal.innerHTML = `
+            <div class="js-status-close" style="position:absolute;inset:0;background:rgba(15,23,42,.34);"></div>
+            <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(360px,94vw);">
+                <div class="bg-white rounded-4 shadow-lg border p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="fw-semibold">状态更改</div>
+                        <button type="button" class="btn-close js-status-close" aria-label="关闭"></button>
+                    </div>
+                    <div class="small text-secondary mb-2" id="statusChangeVehicleLabel"></div>
+                    <div class="mb-2">
+                        <div class="form-label mb-1">目标状态</div>
+                        <div class="d-grid gap-2" id="statusChangeTargetStatusGroup">
+                            <button type="button" class="btn btn-outline-success btn-sm js-status-choice" data-status="available">正常</button>
+                            <button type="button" class="btn btn-outline-danger btn-sm js-status-choice" data-status="faulty">故障</button>
+                            <button type="button" class="btn btn-outline-warning btn-sm js-status-choice" data-status="in_transit">调度中</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm js-status-choice" data-status="locked">锁定</button>
+                        </div>
+                        <input type="hidden" id="statusChangeTargetStatus" value="faulty" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label mb-1">备注</label>
+                        <textarea class="form-control form-control-sm" id="statusChangeDescription" rows="2" placeholder="请输入状态更改说明"></textarea>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2 mt-3">
+                        <button type="button" class="btn btn-secondary btn-sm js-status-close">取消</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="confirmStatusChangeBtn">确认更改</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(statusChangeModal);
+        document.querySelectorAll('.js-status-close').forEach(btn => btn.addEventListener('click', closeStatusChangeOverlay));
+        document.getElementById('confirmStatusChangeBtn').addEventListener('click', submitStatusChangeModal);
+        document.getElementById('statusChangeTargetStatusGroup').addEventListener('click', (event) => {
+            const button = event.target.closest('.js-status-choice');
+            if (!button) return;
+            statusChangeActiveButton = button;
+            document.getElementById('statusChangeTargetStatus').value = button.dataset.status || 'faulty';
+            document.querySelectorAll('#statusChangeTargetStatusGroup .js-status-choice').forEach(item => item.classList.toggle('active', item === button));
+        });
+        return statusChangeModal;
+    }
+
+    function openStatusChangeModal(payload) {
+        ensureStatusChangeModal();
+        pendingStatusPayload = payload;
+        window.__STATUS_CHANGE_CONTEXT__ = payload;
+        document.getElementById('statusChangeVehicleLabel').textContent = payload.title || '';
+        const targetStatus = payload.presetStatus || 'faulty';
+        document.getElementById('statusChangeTargetStatus').value = targetStatus;
+        document.querySelectorAll('#statusChangeTargetStatusGroup .js-status-choice').forEach(item => item.classList.toggle('active', item.dataset.status === targetStatus));
+        document.getElementById('statusChangeDescription').value = '运维人工调整车辆状态';
+        vehicleUiLocked = true;
+        if (vehicleRefreshTimer) clearTimeout(vehicleRefreshTimer);
+        statusChangeModal.style.display = 'block';
+    }
+
+    function closeStatusChangeOverlay() {
+        if (!statusChangeModal) return;
+        statusChangeModal.style.display = 'none';
+        pendingStatusPayload = null;
+        window.__STATUS_CHANGE_CONTEXT__ = null;
+        statusChangeActiveButton = null;
+        if (vehicleRefreshResumeTimer) clearTimeout(vehicleRefreshResumeTimer);
+        vehicleRefreshResumeTimer = setTimeout(() => {
+            vehicleUiLocked = false;
+            refreshVehicles({ force: true });
+            scheduleVehicleRefresh();
+        }, 1800);
+    }
+
+    async function submitStatusChangeModal() {
+        const ctx = pendingStatusPayload || window.__STATUS_CHANGE_CONTEXT__;
+        if (!ctx) return;
+        const targetStatus = document.getElementById('statusChangeTargetStatus').value;
+        const description = document.getElementById('statusChangeDescription').value.trim();
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', csrfToken);
+        formData.append('action', 'change_status');
+        formData.append('vehicle_id', ctx.vehicleId);
+        formData.append('target_status', targetStatus);
+        formData.append('description', description);
+        const confirmBtn = document.getElementById('confirmStatusChangeBtn');
+        const originalText = confirmBtn.textContent;
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = '提交中...';
+        try {
+            const response = await fetch('{% url "operation_management:vehicle_management" %}', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken },
+                body: formData,
+            });
+            if (!response.ok) throw new Error('status change failed');
+            const vehicleId = ctx.vehicleId;
+            const newStatus = targetStatus;
+            if (vehicleRowsCache.length) {
+                vehicleRowsCache = vehicleRowsCache.map(row => row.id === vehicleId ? { ...row, status: newStatus, status_label: vehicleStatusLabel(newStatus) } : row);
+                patchVehicleRows(vehicleRowsCache);
+            }
+            closeStatusChangeOverlay();
+            await refreshVehicles({ force: true });
+        } catch (error) {
+            console.error('status change failed:', error);
+            alert('状态更改失败，请稍后重试');
+        } finally {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = originalText;
+        }
+    }
+
+    function buildVehicleDetailHtml(payload) {
+        const historyRows = (payload.history_rows || []).slice(0, 10).map(row => `
+            <tr>
+                <td>${row.changed_at}</td>
+                <td>${row.previous_station}</td>
+                <td>${row.current_station}</td>
+                <td>${row.previous_status}</td>
+                <td>${row.current_status}</td>
+                <td>${row.change_reason}</td>
+            </tr>
+        `).join('') || '<tr><td colspan="6" class="text-center">暂无轨迹记录</td></tr>';
+        return `
+            <div class="row g-3 mb-3">
+                <div class="col-md-3"><div class="soft-card p-3"><div class="section-note">车辆编号</div><div class="fw-bold">${payload.vehicle.id}</div></div></div>
+                <div class="col-md-3"><div class="soft-card p-3"><div class="section-note">状态</div><div class="fw-bold">${payload.vehicle.status_label}</div></div></div>
+                <div class="col-md-3"><div class="soft-card p-3"><div class="section-note">当前站点</div><div class="fw-bold">${payload.vehicle.station_name}</div></div></div>
+                <div class="col-md-3"><div class="soft-card p-3"><div class="section-note">最后更新时间</div><div class="fw-bold">${payload.vehicle.update_time}</div></div></div>
+            </div>
+            <div class="card mb-3">
+                <div class="card-header py-2"><h6 class="mb-0">最近 10 次站点变更记录</h6></div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>变更时间</th><th>前一站点</th><th>当前站点</th><th>变更前状态</th><th>变更后状态</th><th>变更原因</th>
+                                </tr>
+                            </thead>
+                            <tbody>${historyRows}</tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex justify-content-end gap-2 flex-wrap align-items-center">
+                <button type="button" class="btn btn-outline-primary btn-sm js-reload-detail" data-vehicle-id="${payload.vehicle.id}">同步实时快照</button>
+                <button type="button" class="btn btn-warning btn-sm js-overlay-status" data-vehicle-id="${payload.vehicle.id}">状态更改</button>
+            </div>
+        `;
+    }
+
+    async function openVehicleDetailOverlay(vehicleId) {
+        if (vehicleDetailLoading) return;
+        vehicleDetailLoading = true;
+        closeVehicleDetailOverlay();
+        vehicleDetailOverlay = document.createElement('div');
+        vehicleDetailOverlay.className = 'position-fixed top-0 start-0 w-100 h-100';
+        vehicleDetailOverlay.style.zIndex = '1080';
+        vehicleDetailOverlay.innerHTML = `
+            <div class="position-absolute top-0 start-0 w-100 h-100" style="background: rgba(15, 23, 42, 0.45);"></div>
+            <div class="position-absolute top-50 start-50 translate-middle bg-white rounded-4 shadow-lg" style="width:min(980px, 94vw); max-height: 88vh; overflow:auto;">
+                <div class="d-flex justify-content-between align-items-center px-4 py-3 border-bottom">
+                    <div>
+                        <h5 class="mb-0">车辆详情</h5>
+                        <div class="text-secondary small mt-1" id="vehicleDetailSubtitle">正在读取车辆实时状态与轨迹</div>
+                    </div>
+                    <button type="button" class="btn btn-outline-secondary btn-sm js-close-overlay">关闭</button>
+                </div>
+                <div class="p-4" id="vehicleDetailBody">
+                    <div class="d-flex align-items-center justify-content-center" style="min-height: 320px;">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary mb-3" role="status"></div>
+                            <div class="fw-semibold">正在加载车辆明细...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(vehicleDetailOverlay);
+        vehicleDetailOverlay.querySelector('.js-close-overlay').addEventListener('click', closeVehicleDetailOverlay);
+        try {
+            const response = await fetch(`{% url "operation_management:vehicle_detail_api" "000000" %}`.replace('000000', vehicleId), { cache: 'no-store' });
+            const payload = await response.json();
+            if (!payload.success) throw new Error(payload.error || 'vehicle detail load failed');
+            if (!vehicleDetailOverlay) return;
+            const body = vehicleDetailOverlay.querySelector('#vehicleDetailBody');
+            const subtitle = vehicleDetailOverlay.querySelector('#vehicleDetailSubtitle');
+            if (subtitle) subtitle.textContent = `当前站点：${payload.vehicle.station_name} · 状态：${payload.vehicle.status_label} · 最后更新时间：${payload.vehicle.update_time}`;
+            if (body) body.innerHTML = buildVehicleDetailHtml(payload);
+            vehicleDetailOverlay.querySelector('.js-reload-detail')?.addEventListener('click', () => refreshVehicleDetail(vehicleId));
+            vehicleDetailOverlay.querySelector('.js-overlay-status')?.addEventListener('click', () => {
+                openStatusChangeModal({ vehicleId, title: `车辆 ${vehicleId} 状态更改`, presetStatus: 'faulty' });
+            });
+            vehicleDetailLoading = false;
+        } catch (error) {
+            console.error('open vehicle detail failed:', error);
+            vehicleDetailLoading = false;
+            alert('车辆详情加载失败，请稍后重试');
+            closeVehicleDetailOverlay();
+        }
+    }
+
+    async function refreshVehicleDetail(vehicleId) {
+        if (!vehicleDetailOverlay) return;
+        const body = vehicleDetailOverlay.querySelector('#vehicleDetailBody');
+        if (body) body.innerHTML = '<div class="d-flex align-items-center justify-content-center" style="min-height: 320px;"><div class="text-center"><div class="spinner-border text-primary mb-3" role="status"></div><div class="fw-semibold">正在同步实时快照...</div></div></div>';
+        try {
+            const response = await fetch(`{% url "operation_management:vehicle_detail_api" "000000" %}`.replace('000000', vehicleId), { cache: 'no-store' });
+            const payload = await response.json();
+            if (!payload.success) throw new Error(payload.error || 'vehicle detail refresh failed');
+            const subtitle = vehicleDetailOverlay.querySelector('#vehicleDetailSubtitle');
+            if (subtitle) subtitle.textContent = `当前站点：${payload.vehicle.station_name} · 状态：${payload.vehicle.status_label} · 最后更新时间：${payload.vehicle.update_time}`;
+            if (body) body.innerHTML = buildVehicleDetailHtml(payload);
+        } catch (error) {
+            console.error('refresh vehicle detail failed:', error);
+        }
+    }
+
+    function patchVehicleRows(rows) {
+        const tbody = document.getElementById('vehicleTableBody');
+        if (!tbody) return;
+        const nextRows = rows || [];
+        const prevMap = new Map(vehicleRowsCache.map(item => [String(item.id), item]));
+        const currentIds = nextRows.map(item => String(item.id));
+        const existingIds = Array.from(prevMap.keys());
+        if (!vehicleRowsCache.length || currentIds.length !== existingIds.length) {
+            tbody.innerHTML = nextRows.length ? nextRows.map(row => vehicleRowHtml(row)).join('') : '<tr><td colspan="5" class="text-center">暂无车辆记录</td></tr>';
+            vehicleRowsCache = nextRows.slice();
+            filterVehicles();
+            return;
+        }
+        nextRows.forEach(row => {
+            const rowId = String(row.id);
+            const prev = prevMap.get(rowId);
+            const tr = tbody.querySelector(`tr[data-vehicle-id="${rowId}"]`);
+            if (!tr) return;
+            const statusText = vehicleStatusLabel(row.status);
+            const badgeEl = tr.querySelector('.badge');
+            if (badgeEl) badgeEl.textContent = statusText;
+            if (badgeEl) badgeEl.className = `badge ${badgeClass(row.status)}`;
+            const cells = tr.querySelectorAll('td');
+            if (cells[1]) cells[1].innerHTML = `<span class="badge ${badgeClass(row.status)}">${statusText}</span>`;
+            if (cells[2] && (!prev || prev.station_name !== row.station_name)) cells[2].textContent = row.station_name;
+            if (cells[3] && (!prev || prev.updated_at !== row.updated_at)) cells[3].textContent = row.updated_at;
+        });
+        vehicleRowsCache = nextRows.slice();
+        filterVehicles();
+    }
+
+    function vehicleRowHtml(row) {
+        return `
+            <tr data-vehicle-id="${row.id}" data-name="${String(row.id || '').toLowerCase()}" data-station="${String(row.station_name || '').toLowerCase()}">
+                <td>${row.id}</td>
+                <td><span class="badge ${badgeClass(row.status)}">${row.status_label || vehicleStatusLabel(row.status)}</span></td>
+                <td>${row.station_name}</td>
+                <td>${row.updated_at}</td>
+                <td>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button type="button" class="btn btn-sm btn-primary js-open-detail" data-vehicle-id="${row.id}">查看车辆明细</button>
+                        <button type="button" class="btn btn-sm btn-warning js-change-status" data-vehicle-id="${row.id}">状态更改</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+
+    async function refreshStations() {
+        try {
+            const response = await fetch('{% url "operation_management:station_runtime_api" %}', { cache: 'no-store' });
+            const payload = await response.json();
+            if (!payload.success) throw new Error(payload.error || 'station runtime refresh failed');
+            if (payload.refresh_seconds) {
+                stationRefreshSeconds = Number(payload.refresh_seconds) || stationRefreshSeconds;
+            }
+            stationRemaining = stationRefreshSeconds;
+            renderStationRows(payload.rows || []);
+        } catch (error) {
+            console.error('Station runtime refresh failed:', error);
+        } finally {
+            scheduleStationRefresh();
+        }
+    }
+
+    async function refreshVehicles(options = {}) {
+        const { force = false } = options;
+        if (vehiclesRefreshInFlight) return;
+        if (!force && (vehicleUiLocked || vehicleRefreshResumeTimer)) return;
+        vehiclesRefreshInFlight = true;
+        try {
+            const response = await fetch('{% url "operation_management:vehicle_runtime_api" %}', { cache: 'no-store' });
+            const payload = await response.json();
+            if (!payload.success) throw new Error(payload.error || 'vehicle runtime refresh failed');
+            if (payload.refresh_seconds) {
+                stationRefreshSeconds = Number(payload.refresh_seconds) || stationRefreshSeconds;
+            }
+            vehicleRemaining = stationRefreshSeconds;
+            const totalEl = document.getElementById('previewVehicleTotal');
+            const normalEl = document.getElementById('previewVehicleNormal');
+            const faultyEl = document.getElementById('previewVehicleFaulty');
+            const dispatchingEl = document.getElementById('previewVehicleDispatching');
+            if (window.BSDPUI && totalEl) window.BSDPUI.animateNumber(totalEl, payload.stats.total || 0);
+            if (window.BSDPUI && normalEl) window.BSDPUI.animateNumber(normalEl, payload.stats.normal || 0);
+            if (window.BSDPUI && faultyEl) window.BSDPUI.animateNumber(faultyEl, payload.stats.faulty || 0);
+            if (window.BSDPUI && dispatchingEl) window.BSDPUI.animateNumber(dispatchingEl, payload.stats.dispatching || 0);
+            patchVehicleRows(payload.rows || []);
+        } catch (error) {
+            console.error('Vehicle runtime refresh failed:', error);
+        } finally {
+            vehiclesRefreshInFlight = false;
+            scheduleVehicleRefresh();
+        }
+    }
+
+    async function refreshTasks() {
+        try {
+            const response = await fetch('{% url "operation_management:get_realtime_task_data" %}', { cache: 'no-store' });
+            const payload = await response.json();
+            if (!payload.success) throw new Error(payload.error || 'task runtime refresh failed');
+            renderTaskRows(payload.tasks || payload.data || []);
+        } catch (error) {
+            console.error('Task runtime refresh failed:', error);
+        }
+    }
+
+    function scheduleStationRefresh() {
+        if (stationRefreshTimer) clearTimeout(stationRefreshTimer);
+        stationRefreshTimer = setTimeout(refreshStations, stationRefreshSeconds * 1000);
+    }
+
+    function scheduleVehicleRefresh() {
+        if (vehicleRefreshTimer) clearTimeout(vehicleRefreshTimer);
+        vehicleRefreshTimer = setTimeout(refreshVehicles, stationRefreshSeconds * 1000);
+    }
+
+    function tickStationCountdown() {
+        const badge = document.getElementById('stationRefreshBadge');
+        if (!badge || badge.closest('#stationTableWrap')?.style.display === 'none') return;
+        stationRemaining = stationRemaining <= 0 ? stationRefreshSeconds : stationRemaining - 1;
+        badge.textContent = `${stationRemaining}s`;
+    }
+
+    function tickVehicleCountdown() {
+        const badge = document.getElementById('vehicleRefreshBadge');
+        if (!badge || badge.closest('#vehicleTableWrap')?.style.display === 'none') return;
+        vehicleRemaining = vehicleRemaining <= 0 ? stationRefreshSeconds : vehicleRemaining - 1;
+        badge.textContent = `${vehicleRemaining}s`;
+    }
+
+    document.getElementById('showStationDetailsBtn').addEventListener('click', function () {
+        const wrap = document.getElementById('stationTableWrap');
+        if (wrap.style.display === 'block') {
+            hideDetails();
+            return;
+        }
+        showOnly('stationTableWrap');
+        if (!document.getElementById('stationTableBody').children.length) {
+            refreshStations();
+        }
+    });
+    document.getElementById('showTaskDetailsBtn').addEventListener('click', function () {
+        const wrap = document.getElementById('taskTableWrap');
+        if (wrap.style.display === 'block') {
+            hideDetails();
+            return;
+        }
+        showOnly('taskTableWrap');
+        refreshTasks();
+    });
+    document.getElementById('showVehicleDetailsBtn').addEventListener('click', function () {
+        const wrap = document.getElementById('vehicleTableWrap');
+        if (wrap.style.display === 'block') {
+            hideDetails();
+            return;
+        }
+        showOnly('vehicleTableWrap');
+        refreshVehicles();
+    });
+    document.getElementById('closeStationDetailsBtn').addEventListener('click', hideDetails);
+    document.getElementById('closeTaskDetailsBtn').addEventListener('click', hideDetails);
+    document.getElementById('closeVehicleDetailsBtn').addEventListener('click', hideDetails);
+    document.getElementById('stationSearch').addEventListener('input', filterStations);
+    document.getElementById('vehicleSearch').addEventListener('input', filterVehicles);
+    document.getElementById('vehicleStationSearch').addEventListener('input', filterVehicles);
+    document.getElementById('stationRefreshBtn').addEventListener('click', () => refreshStations());
+    document.getElementById('taskRefreshBtn').addEventListener('click', () => refreshTasks());
+    document.getElementById('vehicleRefreshBtn').addEventListener('click', () => refreshVehicles({ force: true }));
+
+    document.getElementById('vehicleTableBody').addEventListener('click', function (event) {
+        const detailButton = event.target.closest('.js-open-detail');
+        if (detailButton) {
+            openVehicleDetailOverlay(detailButton.dataset.vehicleId);
+            return;
+        }
+        const button = event.target.closest('.js-change-status');
+        if (!button) return;
+        const vehicleId = button.dataset.vehicleId;
+        openStatusChangeModal({
+            vehicleId,
+            title: `车辆 ${vehicleId} 状态更改`,
+            currentStatus: button.closest('tr')?.querySelector('.badge')?.textContent || 'unknown',
+            presetStatus: 'faulty'
+        });
+    });
+
+    document.getElementById('stationRefreshBadge').textContent = `${stationRefreshSeconds}s`;
+    document.getElementById('vehicleRefreshBadge').textContent = `${stationRefreshSeconds}s`;
+    setInterval(tickStationCountdown, 1000);
+    setInterval(tickVehicleCountdown, 1000);
+    refreshVehicles();
+</script>
+{% endblock %}

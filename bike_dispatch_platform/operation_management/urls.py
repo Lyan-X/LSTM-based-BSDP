@@ -18,9 +18,11 @@ urlpatterns = [
     path("stations/<int:station_id>/work-order/", views.create_work_order, name="create_work_order"),
     path("vehicles/", views.vehicle_management, name="vehicle_management"),
     path("vehicles/<str:vehicle_id>/", views.vehicle_detail, name="vehicle_detail"),
+    path("api/vehicles/<str:vehicle_id>/detail/", views.vehicle_detail_api, name="vehicle_detail_api"),
     path("api/parking-data/", views.get_realtime_parking_data, name="get_realtime_parking_data"),
     path("api/station-runtime/", views.station_runtime_api, name="station_runtime_api"),
     path("api/vehicle-runtime/", views.vehicle_runtime_api, name="vehicle_runtime_api"),
     path("api/task-data/", views.get_realtime_task_data, name="get_realtime_task_data"),
     path("api/update-task-status/", views.update_task_status, name="update_task_status"),
+    path("tasks/<int:task_id>/delete/", views.delete_task, name="delete_task"),
 ]

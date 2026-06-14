@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}预测结果 - 基于深度学习的城市共享单车调度需求预测与运维管理平台{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+    <div class="hero-title">
+        <i class="bi bi-file-earmark-bar-graph fs-3 text-primary"></i>
+        <div>
+            <h2>预测结果</h2>
+            <p class="hero-note">预测结果页保留导出和解释用途，不再展示效果较弱的“未来 48 小时预测趋势”标题块。</p>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5><i class="bi bi-table"></i> 结果说明</h5>
+        <span class="small">用于文档与导出</span>
+    </div>
+    <div class="card-body">
+        <p class="mb-0">这里展示的是系统生成的逐小时预测明细，可直接用于导出报告、绘制论文图表和解释模型在各站点上的输出逻辑。</p>
+    </div>
+</div>
+{% endblock %}

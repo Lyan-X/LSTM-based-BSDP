@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+
+{% block title %}需求预测 - 基于深度学习的校园共享单车调度需求预测与运维管理平台{% endblock %}
+
+{% block content %}
+{{ prediction_batch|json_script:"prediction-batch-data" }}
+<style>
+.loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.78);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 0.5rem;
+    z-index: 5;
+}
+.loading-overlay.show { display: flex; }
+.loading-host { position: relative; }
+</style>
+<div class="page-hero">
+    <div>
+        <div class="hero-title">
+            <i class="bi bi-graph-up-arrow fs-3 text-primary"></i>
+            <div>
+                <h2>需求预测</h2>
+                <p class="hero-note">本页专注单站点分析：查看单个站点的历史真实值、模型预测结果、未来 48 小时车辆变化量与库存推演，不再重复首页总览功能。</p>
+            </div>
+        </div>
+        <div class="hero-meta">
+            <span class="data-badge"><i class="bi bi-database-check"></i> 单站点真实预测结果</span>
+            <span class="data-badge"><i class="bi bi-arrow-repeat"></i> 10 秒自动刷新</span>
+            <span class="data-badge"><i class="bi bi-activity"></i> 车辆变化量按整数展示</span>
+        </div>
+        <div class="refresh-strip mt-3">
+            <div class="d-flex justify-content-between small text-secondary mb-2">
+                <span id="predictionRefreshLabel">正在读取最新单站点预测批次</span>
+                <span id="predictionRefreshCountdown">10s</span>
+            </div>
+            <div class="refresh-track"><div class="refresh-bar" id="predictionRefreshBar"></div></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon"><i class="bi bi-diagram-3"></i></div>
+            <div class="stat-value" id="predictStationCount">0</div>
+            <div class="stat-label">预测站点数</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon"><i class="bi bi-clock-history"></i></div>
+            <div class="stat-value">48h</div>
+            <div class="stat-label">预测时长</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon"><i class="bi bi-layers"></i></div>
+            <div class="stat-value" id="predictSchemeClassCount">-</div>
+            <div class="stat-label">状态档数</div>
+            <div class="stat-meta" id="predictSchemeKey">--</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon"><i class="bi bi-calendar-event"></i></div>
+            <div class="stat-value" style="font-size: 1rem;" id="predictBatchTime">--</div>
+            <div class="stat-label">批次时间</div>
+            <div class="stat-meta" id="predictModelAlias">--</div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5><i class="bi bi-bullseye"></i> 单站点分析控制台</h5>
+        <div class="d-flex align-items-center gap-2">
+            <select id="predictStationSelector" class="form-select form-select-sm" style="width:auto;min-width:220px;"></select>
+            <select id="compareHoursSelector" class="form-select form-select-sm" style="width:auto;min-width:120px;">
+                <option value="24">最近24点</option>
+                <option value="48" selected>最近48点</option>
+            </select>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row g-3 align-items-stretch">
+            <div class="col-lg-3 col-md-6">
+                <div class="soft-card p-3 h-100">
+                    <div class="section-note">活动模型 <i class="bi bi-info-circle" data-bs-toggle="tooltip" data-bs-placement="top" title="当前用于生成该批次预测结果的模型别名。"></i></div>
+                    <div class="fw-bold fs-5" id="runtimeActiveAlias">--</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="soft-card p-3 h-100 loading-host">
+                    <div class="section-note">状态准确率（分类） <i class="bi bi-info-circle" data-bs-toggle="tooltip" data-bs-placement="top" title="分类任务准确率，表示预测状态标签与真实状态标签一致的比例。"></i></div>
+                    <div class="fw-bold fs-5" id="runtimeAccuracy">加载中...</div>
+                    <div class="loading-overlay" id="accuracyLoadingOverlay"><div class="spinner-border spinner-border-sm text-primary" role="status"></div><div class="small text-secondary">加载中...</div><div class="small text-muted" id="accuracyCountdown"></div></div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="soft-card p-4 h-100 loading-host" style="border:2px solid rgba(79,70,229,.18); box-shadow:0 16px 32px rgba(79,70,229,.08);">
+                    <div class="section-note">误差准确率（加权评分） <i class="bi bi-info-circle" data-bs-toggle="tooltip" data-bs-placement="top" title="score = 1 - |y-ŷ| / ((|y|+|ŷ|)/2)。系统在此基础上叠加绝对误差惩罚做加权平均，分值越高表示预测偏差越小。"></i></div>
+                    <div class="fw-bold" id="runtimeErrorAccuracy" style="font-size:2rem; line-height:1.15; color:#4f46e5;">加载中...</div>
+                    <div class="small text-secondary mt-2">用于衡量预测值与真实值偏差的综合表现，越接近 100% 越好。</div>
+                    <div class="loading-overlay" id="errorAccuracyLoadingOverlay"><div class="spinner-border spinner-border-sm text-primary" role="status"></div><div class="small text-secondary">加载中...</div><div class="small text-muted" id="errorAccuracyCountdown"></div></div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="soft-card p-4 h-100 loading-host" style="border:2px solid rgba(15,118,110,.18); box-shadow:0 16px 32px rgba(15,118,110,.08);">
+                    <div class="section-note">MAE / RMSE（误差分析） <i class="bi bi-info-circle" data-bs-toggle="tooltip" data-bs-placement="top" title="MAE=mean(|y-ŷ|)，RMSE=sqrt(mean((y-ŷ)^2))。两者越小，表示回归预测越准确。"></i></div>
+                    <div class="fw-bold" id="runtimeErrorMetrics" style="font-size:1.55rem; line-height:1.2; color:#0f766e;">加载中...</div>
+                    <div class="small text-secondary mt-2">用于评估模型在站点级预测中的误差水平与波动特征，帮助判断预测结果的稳定性和可用性。</div>
+                    <div class="loading-overlay" id="errorMetricsLoadingOverlay"><div class="spinner-border spinner-border-sm text-primary" role="status"></div><div class="small text-secondary">加载中...</div><div class="small text-muted" id="errorMetricsCountdown"></div></div>
+                </div>
+            </div>
+        </div>
+        <div class="mt-3" id="stationStateSummary"></div>
+    </div>
+</div>
+
+
+
+<div class="card mb-4 loading-host">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5><i class="bi bi-arrow-left-right"></i> 历史真实值 vs 预测值 <i class="bi bi-info-circle" data-bs-toggle="tooltip" data-bs-placement="top" title="对比历史窗口内的真实库存值与模型预测库存值。"></i></h5>
+        <span class="small" id="compareSummaryText">正在加载历史对比数据...</span>
+    </div>
+    <div class="card-body">
+        <div id="compareChart" style="height: 420px;"></div>
+        <div class="loading-overlay" id="compareChartLoadingOverlay"><div class="spinner-border text-primary" role="status"></div><div class="small text-secondary">图表加载中...</div><div class="small text-muted" id="compareChartCountdown"></div></div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5><i class="bi bi-table"></i> 站点级 T+1 摘要</h5>
+        <span class="small">数值按运营展示口径取整；模型内部仍使用连续值推演库存</span>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>站点编号</th>
+                        <th>站点名称</th>
+                        <th>T+1 状态</th>
+                        <th>T+1 车辆变化</th>
+                        <th>T+1 库存</th>
+                        <th>T+1 缺口</th>
+                    </tr>
+                </thead>
+                <tbody id="predictionTableBody">
+                    <tr><td colspan="6" class="text-center text-muted py-4">正在加载预测数据...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const predictionNode = document.getElementById('prediction-batch-data');
+    const initialBatch = predictionNode ? JSON.parse(predictionNode.textContent) : null;
+    const compareChart = echarts.init(document.getElementById('compareChart'));
+    let refreshSeconds = 10;
+    let predictionRefreshController = null;
+    const predictState = { batch: initialBatch };
+
+    function ensureStationSelectors(stations) {
+        const selectors = [document.getElementById('predictStationSelector')];
+        selectors.forEach(selector => {
+            const currentValue = selector.value;
+            selector.innerHTML = (stations || []).map(station =>
+                `<option value="${station.station_id}">${station.station_id} - ${station.station_name}</option>`
+            ).join('');
+            if (currentValue && (stations || []).some(item => String(item.station_id) === String(currentValue))) {
+                selector.value = currentValue;
+            }
+        });
+    }
+
+
+    function renderTopCards(batch) {
+        const summary = batch.model_runtime_summary || {};
+        const scheme = summary.active_state_scheme || {};
+        window.BSDPUI.animateNumber(document.getElementById('predictStationCount'), (batch.stations || []).length);
+        document.getElementById('predictSchemeClassCount').textContent = scheme.class_count || '--';
+        document.getElementById('predictSchemeKey').textContent = summary.active_state_scheme_key || '--';
+        document.getElementById('predictBatchTime').textContent = window.BSDPUI.formatDateTime(batch.batch_time);
+        document.getElementById('predictModelAlias').textContent = batch.model_alias || summary.active_alias || '--';
+    }
+
+    async function renderRuntimeSummary(batch) {
+        const summary = batch.model_runtime_summary || {};
+        const metrics = summary.active_state_scheme_metrics?.test_metrics || {};
+        document.getElementById('runtimeActiveAlias').textContent = summary.active_alias || '--';
+        document.getElementById('runtimeAccuracy').textContent = metrics.classification_accuracy != null ? (metrics.classification_accuracy * 100).toFixed(2) + '%' : '--';
+
+        const stationId = document.getElementById('predictStationSelector').value || String((batch.stations || [])[0]?.station_id || '');
+        try {
+            const response = await fetch(`{% url "demand_prediction:compare_api" %}?station_id=${stationId}&hours=48`, { cache: 'no-store' });
+            const payload = await response.json();
+            const reg = payload.regression_metrics || {};
+            const weightedAccuracy = reg.error_score_accuracy != null ? Number(reg.error_score_accuracy) : null;
+            const displayAccuracy = weightedAccuracy == null ? '--' : (weightedAccuracy * 100).toFixed(2) + '%';
+            document.getElementById('runtimeErrorAccuracy').textContent = displayAccuracy;
+            const maeText = reg.mae != null ? Number(reg.mae).toFixed(4) : '--';
+            const rmseText = reg.rmse != null ? Number(reg.rmse).toFixed(4) : '--';
+            document.getElementById('runtimeErrorMetrics').textContent = `${maeText} / ${rmseText}`;
+        } catch (error) {
+            document.getElementById('runtimeErrorAccuracy').textContent = '--';
+            document.getElementById('runtimeErrorMetrics').textContent = '--';
+        }
+
+        if (batch.metrics && batch.metrics.refresh_seconds) {
+            refreshSeconds = Number(batch.metrics.refresh_seconds) || refreshSeconds;
+            if (predictionRefreshController) {
+                predictionRefreshController.setIntervalSeconds(refreshSeconds);
+            }
+        }
+    }
+
+    function renderStateSummary(station) {
+        if (!station) return;
+        document.getElementById('stationStateSummary').innerHTML = `
+            <div class="soft-card p-3">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <div class="section-note">当前选中站点</div>
+                        <div class="fw-bold">${station.station_name}</div>
+                    </div>
+                    <span class="badge" style="background-color:${station.t_plus_1_state_color || '#6c757d'};">${station.t_plus_1_state_label || '--'}</span>
+                </div>
+                <div class="row g-3 mt-2">
+                    <div class="col-md-4"><div class="section-note">T+1 车辆变化</div><div class="fw-bold">${Math.round(Number(station.t_plus_1_prediction || 0))}</div></div>
+                    <div class="col-md-4"><div class="section-note">T+1 库存</div><div class="fw-bold">${Math.round(Number(station.t_plus_1_inventory || 0))}</div></div>
+                    <div class="col-md-4"><div class="section-note">T+1 缺口</div><div class="fw-bold">${Math.round(Number(station.t_plus_1_gap || 0))}</div></div>
+                </div>
+                <div class="small text-muted mt-2">净流量在系统中的作用是做库存推演和调度判定；页面展示时已转成更可读的整数车辆变化量。</div>
+            </div>
+        `;
+    }
+
+    function renderStationStateForSelection(stationId) {
+        const station = (predictState.batch?.stations || []).find(s => String(s.station_id) === String(stationId));
+        if (!station) return;
+        renderStateSummary(station);
+    }
+
+    function renderPredictionTable(batch) {
+        const stations = (batch.stations || []).slice(0, 20);
+        document.getElementById('predictionTableBody').innerHTML = stations.length ? stations.map(station => `
+            <tr>
+                <td>${station.station_id}</td>
+                <td>${station.station_name}</td>
+                <td><span class="badge" style="background-color:${station.t_plus_1_state_color || '#6c757d'};">${station.t_plus_1_state_label || '--'}</span></td>
+                <td>${Math.round(Number(station.t_plus_1_prediction || 0))}</td>
+                <td>${Math.round(Number(station.t_plus_1_inventory || 0))}</td>
+                <td>${Math.round(Number(station.t_plus_1_gap || 0))}</td>
+            </tr>
+        `).join('') : '<tr><td colspan="6" class="text-center text-muted py-4">暂无预测数据</td></tr>';
+    }
+
+    async function loadCompareData() {
+        const stationId = document.getElementById('predictStationSelector').value;
+        const hours = document.getElementById('compareHoursSelector').value;
+        const summary = document.getElementById('compareSummaryText');
+        if (!stationId) {
+            summary.textContent = '暂无可用于回溯的站点';
+            compareChart.clear();
+            return;
+        }
+        summary.textContent = '正在加载历史对比数据...';
+        const response = await fetch(`{% url "demand_prediction:compare_api" %}?station_id=${stationId}&hours=${hours}`, { cache: 'no-store' });
+        const payload = await response.json();
+        if (!response.ok) {
+            summary.textContent = payload.error || '历史对比数据加载失败';
+            return;
+        }
+        summary.textContent = `当前模型：${payload.model_alias}，状态方案：${payload.state_scheme_key}，站点：${payload.station_name}，展示最近 ${payload.hours} 个历史样本；页面数值按运营展示口径取整。`;
+        compareChart.setOption({
+            tooltip: {
+                trigger: 'axis',
+                formatter: function (params) {
+                    const index = params[0].dataIndex;
+                    return [
+                        payload.timestamps[index],
+                        `真实值：${Math.round(Number(payload.actual_values[index] || 0))}`,
+                        `预测值：${Math.round(Number(payload.predicted_values[index] || 0))}`,
+                        `真实状态：${payload.actual_states[index]}`,
+                        `预测状态：${payload.predicted_states[index]}`,
+                        `状态区间：${payload.state_ranges[index]}`
+                    ].join('<br>');
+                }
+            },
+            legend: { data: ['真实值', '预测值'] },
+            grid: { left: 44, right: 18, top: 28, bottom: 36 },
+            xAxis: { type: 'category', data: payload.timestamps || [] },
+            yAxis: { type: 'value', name: '库存值' },
+            series: [
+                {
+                    name: '真实值',
+                    type: 'line',
+                    smooth: true,
+                    symbol: 'circle',
+                    symbolSize: 5,
+                    lineStyle: { width: 3, color: '#4f46e5' },
+                    data: (payload.actual_values || []).map(item => Math.round(Number(item || 0)))
+                },
+                {
+                    name: '预测值',
+                    type: 'line',
+                    smooth: true,
+                    symbol: 'none',
+                    lineStyle: { width: 3, color: '#0f766e' },
+                    areaStyle: { opacity: 0.08 },
+                    data: (payload.predicted_values || []).map(item => Math.round(Number(item || 0)))
+                }
+            ]
+        });
+    }
+
+    async function renderBatch(batch) {
+        if (!batch) return;
+        predictState.batch = batch;
+        renderTopCards(batch);
+        renderPredictionTable(batch);
+        ensureStationSelectors(batch.stations || []);
+        await renderRuntimeSummary(batch);
+        const selectedId = document.getElementById('predictStationSelector').value || String((batch.stations || [])[0]?.station_id || '');
+        renderStationStateForSelection(selectedId);
+        document.getElementById('predictionRefreshLabel').textContent = `最新批次时间：${window.BSDPUI.formatDateTime(batch.batch_time)} · 数据来自真实预测服务`;
+    }
+
+    async function refreshPredictionBatch() {
+        try {
+            const response = await fetch('{% url "demand_prediction:predict_48h_api" %}', { cache: 'no-store' });
+            const payload = await response.json();
+            if (!response.ok) throw new Error(payload.error || '预测批次刷新失败');
+            await renderBatch(payload);
+            await loadCompareData();
+        } catch (error) {
+            console.error('Prediction batch refresh failed:', error);
+            document.getElementById('predictionRefreshLabel').textContent = '刷新失败，当前保留上一批真实预测数据';
+        }
+    }
+
+    document.getElementById('predictStationSelector').addEventListener('change', async function() {
+        renderStationStateForSelection(this.value);
+        await renderRuntimeSummary(predictState.batch || {});
+        loadCompareData();
+    });
+    document.getElementById('compareHoursSelector').addEventListener('change', loadCompareData);
+
+    renderBatch(initialBatch);
+    loadCompareData();
+    predictionRefreshController = window.BSDPUI.createRefreshController({
+        countdownElement: document.getElementById('predictionRefreshCountdown'),
+        progressBar: document.getElementById('predictionRefreshBar'),
+        alignToInterval: false,
+        intervalSeconds: refreshSeconds,
+        onRefresh: refreshPredictionBatch
+    });
+    predictionRefreshController.start();
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+        new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    window.addEventListener('resize', function () {
+        compareChart.resize();
+    });
+</script>
+{% endblock %}

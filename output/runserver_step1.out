@@ -1,0 +1,8 @@
+Performing system checks...
+
+System check identified no issues (0 silenced).
+April 20, 2026 - 20:18:52
+Django version 4.2.10, using settings 'bike_dispatch_platform.bike_dispatch_platform.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+

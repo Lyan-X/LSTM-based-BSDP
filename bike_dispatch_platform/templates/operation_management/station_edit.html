@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}站点编辑 - 基于深度学习的城市共享单车调度需求预测与运维管理平台{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h4 class="mb-0">站点运维字段编辑</h4>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">站点编号</label>
+                        <input class="form-control" value="{{ station.ysu_id }}" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">站点名称</label>
+                        <input class="form-control" value="{{ station.spot_name }}" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">最大容量</label>
+                        <input class="form-control" value="{{ station.max_capacity }}" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">低预警阈值</label>
+                        <input class="form-control" type="number" name="low_warning_threshold" value="{{ station.low_warning_threshold }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">高预警阈值</label>
+                        <input class="form-control" type="number" name="high_warning_threshold" value="{{ station.high_warning_threshold }}">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="is_active" id="is_active" {% if station.is_active %}checked{% endif %}>
+                            <label class="form-check-label" for="is_active">站点启用</label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">运维备注</label>
+                        <textarea class="form-control" name="notes" rows="5">{{ station.notes }}</textarea>
+                    </div>
+                </div>
+                <div class="mt-4 d-flex gap-2 flex-wrap">
+                    <button type="submit" class="btn btn-primary">保存</button>
+                    <a href="{% url 'operation_management:create_work_order' station.ysu_id %}" class="btn btn-warning">生成运维工单</a>
+                    <a href="{% url 'operation_management:station_list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> 返回运维管理</a>
+                    <a href="javascript:history.back()" class="btn btn-secondary"><i class="bi bi-reply"></i> 返回上一页</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
